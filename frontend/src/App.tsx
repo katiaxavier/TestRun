@@ -4,6 +4,7 @@ import DashboardPage from './pages/DashboardPage';
 import ConfigPage from './pages/ConfigPage';
 import SuiteDetailPage from './pages/SuiteDetailPage';
 import ExecutionRunPage from './pages/ExecutionRunPage';
+import BatchExecutionPage from './pages/BatchExecutionPage';
 import './index.css';
 
 export default function App() {
@@ -17,6 +18,7 @@ export default function App() {
             <Route path="/config" element={<ConfigPage />} />
             <Route path="/suites/:id" element={<SuiteDetailPage />} />
             <Route path="/executions/:id" element={<ExecutionRunPage />} />
+            <Route path="/executions/batch/:id" element={<BatchExecutionPage />} />
           </Routes>
         </main>
       </div>

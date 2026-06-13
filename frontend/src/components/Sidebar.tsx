@@ -1,19 +1,16 @@
 import { NavLink } from 'react-router-dom';
-import { Gauge, Flask, Gear } from '@phosphor-icons/react';
+import { Flask, Gear } from '@phosphor-icons/react';
 
 const links = [
-  { to: '/', label: 'Dashboard', icon: Gauge, end: true },
-  { to: '/config', label: 'Configurações', icon: Gear },
+  { to: '/', label: 'Suites de Teste', icon: Flask, end: true },
+  { to: '/config', label: 'Jira Sync', icon: Gear },
 ];
 
 export function Sidebar() {
   return (
     <nav className="sidebar">
       <div className="sidebar-logo">
-        <div className="sidebar-logo-icon">
-          <Flask size={18} weight="fill" color="#fff" />
-        </div>
-        <span className="sidebar-logo-text">Testrun</span>
+        <img src="/testrun-logo.png" alt="Testrun" style={{ height: 28 }} />
       </div>
 
       <span className="sidebar-section-label">Navegação</span>

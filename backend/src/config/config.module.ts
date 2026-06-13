@@ -8,4 +8,4 @@ import { ConfigController } from './config.controller';
   controllers: [ConfigController],
   exports: [ConfigService],
 })
-export class ConfigModule { }
+export class ConfigModule {}

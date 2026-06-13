@@ -4,10 +4,19 @@ import { PrismaService } from '../prisma/prisma.service';
 export class CreateExecutionDto {
   suiteId!: string;
   sprint!: string;
-  version!: string;
+  version?: string;
   startDate!: string;
   endDate!: string;
-  testedFeature!: string;
+  responsible!: string;
+}
+
+export class CreateBatchExecutionDto {
+  suiteIds!: string[];
+  name?: string;
+  sprint!: string;
+  version?: string;
+  startDate!: string;
+  endDate!: string;
   responsible!: string;
 }
 
@@ -50,7 +59,10 @@ export class ExecutionsService {
     });
 
     if (!execution) {
-      throw new HttpException('Ciclo de execução não encontrado.', HttpStatus.NOT_FOUND);
+      throw new HttpException(
+        'Ciclo de execução não encontrado.',
+        HttpStatus.NOT_FOUND,
+      );
     }
     return execution;
   }
@@ -63,11 +75,17 @@ export class ExecutionsService {
     });
 
     if (!suite) {
-      throw new HttpException('Suíte de testes não encontrada.', HttpStatus.NOT_FOUND);
+      throw new HttpException(
+        'Suíte de testes não encontrada.',
+        HttpStatus.NOT_FOUND,
+      );
     }
 
     if (suite.testCases.length === 0) {
-      throw new HttpException('A suíte de testes não possui nenhum caso de teste importado.', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'A suíte de testes não possui nenhum caso de teste importado.',
+        HttpStatus.BAD_REQUEST,
+      );
     }
 
     // 2. Criar execução
@@ -75,10 +93,9 @@ export class ExecutionsService {
       data: {
         suiteId: dto.suiteId,
         sprint: dto.sprint,
-        version: dto.version,
+        version: dto.version || '',
         startDate: new Date(dto.startDate),
         endDate: new Date(dto.endDate),
-        testedFeature: dto.testedFeature,
         responsible: dto.responsible,
         status: 'IN_PROGRESS',
       },
@@ -105,14 +122,18 @@ export class ExecutionsService {
     });
 
     if (!etc) {
-      throw new HttpException('Item de execução de teste não encontrado.', HttpStatus.NOT_FOUND);
+      throw new HttpException(
+        'Item de execução de teste não encontrado.',
+        HttpStatus.NOT_FOUND,
+      );
     }
 
     const updated = await this.prisma.executionTestCase.update({
       where: { id: execTestCaseId },
       data: {
         status: dto.status !== undefined ? dto.status.toUpperCase() : undefined,
-        responsible: dto.responsible !== undefined ? dto.responsible : undefined,
+        responsible:
+          dto.responsible !== undefined ? dto.responsible : undefined,
         comments: dto.comments !== undefined ? dto.comments : undefined,
       },
       include: {
@@ -130,7 +151,10 @@ export class ExecutionsService {
     });
 
     if (!etc) {
-      throw new HttpException('Item de execução de teste não encontrado.', HttpStatus.NOT_FOUND);
+      throw new HttpException(
+        'Item de execução de teste não encontrado.',
+        HttpStatus.NOT_FOUND,
+      );
     }
 
     const issue = await this.prisma.issue.create({
@@ -170,14 +194,20 @@ export class ExecutionsService {
     });
 
     if (!execution) {
-      throw new HttpException('Ciclo de execução não encontrado.', HttpStatus.NOT_FOUND);
+      throw new HttpException(
+        'Ciclo de execução não encontrado.',
+        HttpStatus.NOT_FOUND,
+      );
     }
 
     await this.prisma.execution.delete({
       where: { id },
     });
 
-    return { success: true, message: 'Ciclo de execução excluído com sucesso!' };
+    return {
+      success: true,
+      message: 'Ciclo de execução excluído com sucesso!',
+    };
   }
 
   async updateStatus(id: string, status: string) {
@@ -186,12 +216,144 @@ export class ExecutionsService {
     });
 
     if (!execution) {
-      throw new HttpException('Ciclo de execução não encontrado.', HttpStatus.NOT_FOUND);
+      throw new HttpException(
+        'Ciclo de execução não encontrado.',
+        HttpStatus.NOT_FOUND,
+      );
     }
 
     return this.prisma.execution.update({
       where: { id },
       data: { status: status.toUpperCase() },
     });
+  }
+
+  async createBatch(dto: CreateBatchExecutionDto) {
+    // 1. Validar suites
+const suites = await this.prisma.suite.findMany({
+       where: { id: { in: dto.suiteIds } },
+       include: { testCases: { orderBy: { jiraKey: 'asc' } } },
+     });
+
+    if (suites.length !== dto.suiteIds.length) {
+      throw new HttpException(
+        'Uma ou mais suites não foram encontradas.',
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    if (suites.some((s) => s.testCases.length === 0)) {
+      throw new HttpException(
+        'Todas as suites devem possuir casos de teste importados.',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    // 2. Criar batch
+    const batch = await this.prisma.executionBatch.create({
+      data: {
+        name: dto.name || null,
+        suiteIds: dto.suiteIds as any,
+        sprint: dto.sprint,
+        version: dto.version || '',
+        startDate: new Date(dto.startDate),
+        endDate: new Date(dto.endDate),
+        responsible: dto.responsible,
+        status: 'IN_PROGRESS',
+      },
+    });
+
+    // 3. Criar UMA execução para o lote (sem suiteId, apenas batchId)
+    const execution = await this.prisma.execution.create({
+      data: {
+        batchId: batch.id,
+        sprint: dto.sprint,
+        version: dto.version || '',
+        startDate: new Date(dto.startDate),
+        endDate: new Date(dto.endDate),
+        responsible: dto.responsible,
+        status: 'IN_PROGRESS',
+      },
+    });
+
+    // 4. Vincular casos de teste de TODAS as suites do lote
+    for (const suite of suites) {
+      for (const tc of suite.testCases) {
+        await this.prisma.executionTestCase.create({
+          data: {
+            executionId: execution.id,
+            testCaseId: tc.id,
+            status: 'PENDING',
+            responsible: dto.responsible,
+          },
+        });
+      }
+    }
+
+    return this.prisma.executionBatch.findUnique({
+      where: { id: batch.id },
+      include: {
+        executions: {
+          include: {
+            suite: true,
+            testCases: {
+              include: { testCase: true, issues: true },
+            },
+          },
+        },
+      },
+    });
+  }
+
+  async findBatch(id: string) {
+    const batch = await this.prisma.executionBatch.findUnique({
+      where: { id },
+      include: {
+        executions: {
+          include: {
+            suite: true,
+            testCases: {
+              include: { testCase: true, issues: true },
+            },
+          },
+        },
+      },
+    });
+
+    if (!batch) {
+      throw new HttpException('Batch não encontrado.', HttpStatus.NOT_FOUND);
+    }
+
+    return batch;
+  }
+
+  async findAllBatches() {
+    return this.prisma.executionBatch.findMany({
+      orderBy: { createdAt: 'desc' },
+      include: {
+        executions: {
+          include: {
+            suite: true,
+            _count: { select: { testCases: true } },
+          },
+        },
+      },
+    });
+  }
+
+  async deleteBatch(id: string) {
+    const batch = await this.prisma.executionBatch.findUnique({
+      where: { id },
+    });
+
+    if (!batch) {
+      throw new HttpException('Batch não encontrado.', HttpStatus.NOT_FOUND);
+    }
+
+    await this.prisma.executionBatch.delete({
+      where: { id },
+    });
+
+    return { success: true, message: 'Batch excluído com sucesso!' };
   }
 }

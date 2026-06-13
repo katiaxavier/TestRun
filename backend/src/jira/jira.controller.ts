@@ -1,4 +1,12 @@
-import { Controller, Get, Post, Body, Query, HttpException, HttpStatus } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Query,
+  HttpException,
+  HttpStatus,
+} from '@nestjs/common';
 import { JiraService } from './jira.service';
 
 @Controller('jira')
@@ -14,13 +22,19 @@ export class JiraController {
         HttpStatus.UNAUTHORIZED,
       );
     }
-    return { success: true, message: 'Conexão com o Jira estabelecida com sucesso!' };
+    return {
+      success: true,
+      message: 'Conexão com o Jira estabelecida com sucesso!',
+    };
   }
 
   @Post('import')
   async importSuite(@Body('key') key: string) {
     if (!key) {
-      throw new HttpException('A chave da suíte é obrigatória.', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'A chave da suíte é obrigatória.',
+        HttpStatus.BAD_REQUEST,
+      );
     }
     return await this.jiraService.importSuite(key.trim().toUpperCase());
   }

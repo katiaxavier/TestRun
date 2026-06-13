@@ -105,7 +105,12 @@ let ReportsService = class ReportsService {
         ws.mergeCells('A1:G1');
         const titleCell = ws.getCell('A1');
         titleCell.value = 'Relatório de Execução';
-        titleCell.font = { name: 'Arial', size: 14, bold: true, color: { argb: '000000' } };
+        titleCell.font = {
+            name: 'Arial',
+            size: 14,
+            bold: true,
+            color: { argb: '000000' },
+        };
         titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
         ws.getRow(1).height = 30;
         const boldLabelFont = { name: 'Arial', size: 11, bold: true };
@@ -128,7 +133,8 @@ let ReportsService = class ReportsService {
         ws.getCell('A3').font = boldLabelFont;
         ws.getCell('C3').value = execution.version;
         ws.getCell('C3').font = normalFont;
-        ws.getCell('D3').value = 'Descontando os Blocked (Passou/(Total - Blocked))';
+        ws.getCell('D3').value =
+            'Descontando os Blocked (Passou/(Total - Blocked))';
         ws.getCell('D3').font = normalFont;
         ws.getCell('E3').value = { formula: 'IF((G6-G4)>0, G2/(G6-G4), 0)' };
         ws.getCell('E3').font = normalFont;
@@ -161,7 +167,15 @@ let ReportsService = class ReportsService {
         ws.getCell('F6').font = normalFont;
         ws.getCell('G6').value = execution.testCases.length;
         ws.getCell('G6').font = normalFont;
-        ws.getRow(7).values = ['', 'Key', 'Título do teste', 'Status', 'Responsável', 'Comentarios', 'Issue'];
+        ws.getRow(7).values = [
+            '',
+            'Key',
+            'Título do teste',
+            'Status',
+            'Responsável',
+            'Comentarios',
+            'Issue',
+        ];
         ws.getRow(7).font = { name: 'Arial', size: 11, bold: true };
         ws.getRow(7).height = 20;
         let rowIndex = 8;
@@ -177,9 +191,17 @@ let ReportsService = class ReportsService {
             row.getCell(7).value = jiraIssues || '';
             row.getCell(1).font = { name: 'Calibri', size: 11 };
             row.getCell(1).alignment = { horizontal: 'center' };
-            row.getCell(2).font = { name: 'Calibri', size: 11, color: { argb: '0000FF' }, underline: true };
+            row.getCell(2).font = {
+                name: 'Calibri',
+                size: 11,
+                color: { argb: '0000FF' },
+                underline: true,
+            };
             if (etc.testCase.link) {
-                row.getCell(2).value = { text: etc.testCase.jiraKey, hyperlink: etc.testCase.link };
+                row.getCell(2).value = {
+                    text: etc.testCase.jiraKey,
+                    hyperlink: etc.testCase.link,
+                };
             }
             row.getCell(3).font = { name: 'Calibri', size: 12 };
             row.getCell(4).font = { name: 'Calibri', size: 12 };
@@ -262,13 +284,452 @@ let ReportsService = class ReportsService {
                 issue.responsible,
             ];
             row.font = { name: 'Arial', size: 11 };
-            if (issue.jiraKey !== 'N/A' && execution.suite.jiraKey) {
-                const config = this.prisma;
-            }
             bugsRowIndex++;
         });
         const buffer = await workbook.xlsx.writeBuffer();
         return Buffer.from(buffer);
+    }
+    async getBatchReport(batchId) {
+        const batch = await this.prisma.executionBatch.findUnique({
+            where: { id: batchId },
+            include: {
+                executions: {
+                    include: {
+                        suite: true,
+                        testCases: {
+                            include: { testCase: true, issues: true },
+                            orderBy: { testCase: { jiraKey: 'asc' } },
+                        },
+                    },
+                },
+            },
+        });
+        if (!batch) {
+            throw new common_1.HttpException('Batch não encontrado.', common_1.HttpStatus.NOT_FOUND);
+        }
+        const allTestCases = batch.executions.flatMap((ex) => ex.testCases);
+        const summary = {
+            totalTests: allTestCases.length,
+            passed: allTestCases.filter((tc) => tc.status === 'PASSED').length,
+            failed: allTestCases.filter((tc) => tc.status === 'FAILED').length,
+            blocked: allTestCases.filter((tc) => tc.status === 'BLOCKED').length,
+            inProgress: allTestCases.filter((tc) => tc.status === 'IN_PROGRESS')
+                .length,
+            pending: allTestCases.filter((tc) => tc.status === 'PENDING').length,
+        };
+        return {
+            batch: {
+                id: batch.id,
+                name: batch.name,
+                sprint: batch.sprint,
+                version: batch.version,
+                startDate: batch.startDate,
+                endDate: batch.endDate,
+                testedFeature: batch.testedFeature,
+                responsible: batch.responsible,
+                status: batch.status,
+                suiteIds: batch.suiteIds,
+            },
+            summary,
+            executions: batch.executions.map((ex) => ({
+                id: ex.id,
+                suite: ex.suite,
+                sprint: ex.sprint,
+                version: ex.version,
+                startDate: ex.startDate,
+                endDate: ex.endDate,
+                testedFeature: ex.testedFeature,
+                responsible: ex.responsible,
+                status: ex.status,
+                testCases: ex.testCases,
+            })),
+        };
+    }
+    async generateBatchXlsx(batchId) {
+        const report = await this.getBatchReport(batchId);
+        const batch = report.batch;
+        const summary = report.summary;
+        const workbook = new ExcelJS.Workbook();
+        const ws = workbook.addWorksheet('Relatório Consolidado');
+        ws.columns = [
+            { key: 'index', width: 6 },
+            { key: 'suite', width: 15 },
+            { key: 'key', width: 12 },
+            { key: 'title', width: 65 },
+            { key: 'status', width: 18 },
+            { key: 'responsible', width: 15 },
+            { key: 'comments', width: 20 },
+            { key: 'issue', width: 15 },
+        ];
+        ws.mergeCells('A1:H1');
+        const titleCell = ws.getCell('A1');
+        titleCell.value = `Relatório Consolidado - ${batch.name || 'Batch ' + batch.id}`;
+        titleCell.font = {
+            name: 'Arial',
+            size: 14,
+            bold: true,
+            color: { argb: '000000' },
+        };
+        titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+        ws.getRow(1).height = 30;
+        const boldLabelFont = { name: 'Arial', size: 11, bold: true };
+        const normalFont = { name: 'Arial', size: 11 };
+        let rowIdx = 2;
+        ws.getCell(`A${rowIdx}`).value = 'Sprint';
+        ws.getCell(`A${rowIdx}`).font = boldLabelFont;
+        ws.getCell(`C${rowIdx}`).value = batch.sprint;
+        ws.getCell(`C${rowIdx}`).font = normalFont;
+        rowIdx++;
+        ws.getCell(`A${rowIdx}`).value = 'Versão do sistema';
+        ws.getCell(`A${rowIdx}`).font = boldLabelFont;
+        ws.getCell(`C${rowIdx}`).value = batch.version;
+        ws.getCell(`C${rowIdx}`).font = normalFont;
+        rowIdx++;
+        ws.getCell(`A${rowIdx}`).value = 'Total de Testes';
+        ws.getCell(`A${rowIdx}`).font = boldLabelFont;
+        ws.getCell(`C${rowIdx}`).value = summary.totalTests;
+        ws.getCell(`C${rowIdx}`).font = normalFont;
+        ws.getCell(`D${rowIdx}`).value = 'Passou';
+        ws.getCell(`D${rowIdx}`).font = normalFont;
+        ws.getCell(`E${rowIdx}`).value = summary.passed;
+        ws.getCell(`E${rowIdx}`).font = normalFont;
+        ws.getCell(`F${rowIdx}`).value = 'Falhou';
+        ws.getCell(`F${rowIdx}`).font = normalFont;
+        ws.getCell(`G${rowIdx}`).value = summary.failed;
+        ws.getCell(`G${rowIdx}`).font = normalFont;
+        rowIdx++;
+        ws.getCell(`A${rowIdx}`).value = 'Data de início';
+        ws.getCell(`A${rowIdx}`).font = boldLabelFont;
+        ws.getCell(`C${rowIdx}`).value = this.formatDate(batch.startDate);
+        ws.getCell(`C${rowIdx}`).font = normalFont;
+        rowIdx++;
+        ws.getCell(`A${rowIdx}`).value = 'Data de fim';
+        ws.getCell(`A${rowIdx}`).font = boldLabelFont;
+        ws.getCell(`C${rowIdx}`).value = this.formatDate(batch.endDate);
+        ws.getCell(`C${rowIdx}`).font = normalFont;
+        rowIdx++;
+        ws.getCell(`A${rowIdx}`).value = 'Funcionalidade';
+        ws.getCell(`A${rowIdx}`).font = boldLabelFont;
+        ws.getCell(`C${rowIdx}`).value = batch.testedFeature;
+        ws.getCell(`C${rowIdx}`).font = normalFont;
+        rowIdx++;
+        ws.getCell(`A${rowIdx}`).value = 'Responsável';
+        ws.getCell(`A${rowIdx}`).font = boldLabelFont;
+        ws.getCell(`C${rowIdx}`).value = batch.responsible;
+        ws.getCell(`C${rowIdx}`).font = normalFont;
+        rowIdx++;
+        ws.getRow(rowIdx).values = [
+            '',
+            '',
+            'Suite',
+            'Key',
+            'Título do teste',
+            'Status',
+            'Responsável',
+            'Issue',
+        ];
+        ws.getRow(rowIdx).font = { name: 'Arial', size: 11, bold: true };
+        ws.getRow(rowIdx).height = 20;
+        rowIdx++;
+        let testIndex = 1;
+        report.executions.forEach((ex) => {
+            ex.testCases.forEach((etc) => {
+                const row = ws.getRow(rowIdx);
+                const jiraIssues = etc.issues
+                    .map((i) => i.jiraKey || i.title)
+                    .join(', ');
+                row.getCell(1).value = testIndex++;
+                row.getCell(2).value = '';
+                row.getCell(3).value = ex.suite?.jiraKey || '';
+                row.getCell(4).value = etc.testCase.jiraKey;
+                row.getCell(5).value = etc.testCase.title;
+                row.getCell(6).value = etc.status;
+                row.getCell(7).value = etc.responsible || '';
+                row.getCell(8).value = jiraIssues || '';
+                row.getCell(1).font = { name: 'Calibri', size: 11 };
+                row.getCell(1).alignment = { horizontal: 'center' };
+                row.getCell(3).font = { name: 'Calibri', size: 11 };
+                row.getCell(4).font = {
+                    name: 'Calibri',
+                    size: 11,
+                    color: { argb: '0000FF' },
+                    underline: true,
+                };
+                row.getCell(5).font = { name: 'Calibri', size: 12 };
+                row.getCell(6).font = { name: 'Calibri', size: 12 };
+                row.getCell(7).font = { name: 'Calibri', size: 12 };
+                row.getCell(8).font = { name: 'Calibri', size: 11 };
+                const statusValue = String(etc.status).toUpperCase();
+                let statusColor = 'FFFFFF';
+                if (statusValue === 'PASSED')
+                    statusColor = 'E2EFDA';
+                else if (statusValue === 'FAILED')
+                    statusColor = 'FCE4D6';
+                else if (statusValue === 'BLOCKED')
+                    statusColor = 'FFF2CC';
+                else if (statusValue === 'IN_PROGRESS')
+                    statusColor = 'DDEBF7';
+                if (statusColor !== 'FFFFFF') {
+                    row.getCell(6).fill = {
+                        type: 'pattern',
+                        pattern: 'solid',
+                        fgColor: { argb: statusColor },
+                    };
+                }
+                rowIdx++;
+            });
+        });
+        const buffer = await workbook.xlsx.writeBuffer();
+        return Buffer.from(buffer);
+    }
+    async generateBatchPdf(batchId) {
+        const report = await this.getBatchReport(batchId);
+        const batch = report.batch;
+        const summary = report.summary;
+        const approvalRate = summary.totalTests > 0 ? (summary.passed / summary.totalTests) * 100 : 0;
+        const adjustedRate = summary.totalTests - summary.blocked > 0
+            ? (summary.passed / (summary.totalTests - summary.blocked)) * 100
+            : 0;
+        const executedTests = summary.passed + summary.failed + summary.blocked;
+        const chartSegments = [
+            { label: 'Passou', count: summary.passed, color: '#22c55e' },
+            { label: 'Falhou', count: summary.failed, color: '#ef4444' },
+            { label: 'Bloqueado', count: summary.blocked, color: '#ffd15a' },
+            { label: 'Pendente', count: summary.pending, color: '#0066ff' },
+        ];
+        const chartWidth = 460;
+        let chartCurrentX = 0;
+        const chartCanvas = [];
+        if (summary.totalTests > 0) {
+            chartCanvas.push({
+                type: 'rect',
+                x: 0,
+                y: 0,
+                w: chartWidth,
+                h: 16,
+                color: '#f8fafc',
+            });
+            chartSegments.forEach((segment) => {
+                if (segment.count <= 0)
+                    return;
+                const width = Math.max((segment.count / summary.totalTests) * chartWidth, 12);
+                chartCanvas.push({
+                    type: 'rect',
+                    x: chartCurrentX,
+                    y: 0,
+                    w: width,
+                    h: 16,
+                    color: segment.color,
+                });
+                chartCurrentX += width;
+            });
+        }
+        const allIssues = [];
+        report.executions.forEach((ex) => {
+            ex.testCases.forEach((etc) => {
+                etc.issues.forEach((issue) => {
+                    allIssues.push({
+                        type: issue.type === 'BUG' ? 'Bug' : 'Melhoria',
+                        key: issue.jiraKey || 'N/A',
+                        title: issue.title,
+                        severity: issue.severity || '-',
+                        status: issue.status || 'Open',
+                        responsible: issue.responsible || '-',
+                    });
+                });
+            });
+        });
+        const docDefinition = {
+            content: [
+                {
+                    text: 'RELATÓRIO CONSOLIDADO DE TESTES',
+                    style: 'docTitle',
+                    alignment: 'center',
+                    margin: [0, 0, 0, 15],
+                },
+                {
+                    columns: [
+                        {
+                            width: '55%',
+                            stack: [
+                                {
+                                    text: [
+                                        { text: 'Sprint: ', bold: true },
+                                        `${batch.sprint}\n`,
+                                        { text: 'Versão do sistema: ', bold: true },
+                                        `${batch.version}\n`,
+                                        { text: 'Data de início: ', bold: true },
+                                        `${this.formatDate(batch.startDate)}\n`,
+                                        { text: 'Data de fim: ', bold: true },
+                                        `${this.formatDate(batch.endDate)}\n`,
+                                        { text: 'Funcionalidade: ', bold: true },
+                                        `${batch.testedFeature}\n`,
+                                        { text: 'Responsável: ', bold: true },
+                                        `${batch.responsible}\n`,
+                                    ],
+                                    lineHeight: 1.4,
+                                    fontSize: 10,
+                                },
+                            ],
+                        },
+                        {
+                            width: '45%',
+                            table: {
+                                widths: ['60%', '40%'],
+                                body: [
+                                    [
+                                        { text: 'Métrica', bold: true, fillColor: '#EEEEEE' },
+                                        { text: 'Valor', bold: true, fillColor: '#EEEEEE' },
+                                    ],
+                                    ['Total de Testes', `${summary.totalTests}`],
+                                    ['Total Executado', `${executedTests}`],
+                                    ['Total Passou', `${summary.passed}`],
+                                    ['Total Falhou', `${summary.failed}`],
+                                    ['Total Bloqueado', `${summary.blocked}`],
+                                    ['% Aprovação', `${approvalRate.toFixed(1)}%`],
+                                    ['% Sem Bloqueios', `${adjustedRate.toFixed(1)}%`],
+                                ],
+                            },
+                            fontSize: 9,
+                        },
+                    ],
+                    margin: [0, 0, 0, 20],
+                },
+                {
+                    text: 'Gráfico de Execução',
+                    style: 'sectionHeader',
+                    margin: [0, 10, 0, 5],
+                },
+                {
+                    canvas: [
+                        { type: 'rect', x: 0, y: 0, w: 460, h: 18, color: '#e2e8f0' },
+                        ...(summary.totalTests > 0 ? chartCanvas : []),
+                    ],
+                    margin: [0, 0, 0, 10],
+                },
+                {
+                    columns: chartSegments
+                        .filter((s) => s.count > 0)
+                        .map((segment) => ({
+                        width: 'auto',
+                        stack: [
+                            { text: segment.label, bold: true, fontSize: 9 },
+                            {
+                                text: `${segment.count} (${summary.totalTests > 0 ? ((segment.count / summary.totalTests) * 100).toFixed(0) : 0}%)`,
+                                fontSize: 9,
+                                color: segment.color,
+                            },
+                        ],
+                        margin: [0, 0, 16, 0],
+                    })),
+                    margin: [0, 0, 0, 20],
+                },
+                {
+                    text: 'Detalhamento por Suíte',
+                    style: 'sectionHeader',
+                    margin: [0, 10, 0, 5],
+                },
+                ...report.executions.map((ex) => [
+                    ex.suite ? {
+                        text: `${ex.suite.jiraKey} — ${ex.suite.title}`,
+                        style: 'suiteHeader',
+                        margin: [0, 10, 0, 5],
+                    } : {
+                        text: 'Execução do Lote',
+                        style: 'suiteHeader',
+                        margin: [0, 10, 0, 5],
+                    },
+                    {
+                        table: {
+                            headerRows: 1,
+                            widths: ['10%', '45%', '15%', '15%', '15%'],
+                            body: [
+                                [
+                                    { text: 'Key', bold: true, fillColor: '#D9E1F2' },
+                                    { text: 'Caso de Teste', bold: true, fillColor: '#D9E1F2' },
+                                    { text: 'Status', bold: true, fillColor: '#D9E1F2' },
+                                    { text: 'Responsável', bold: true, fillColor: '#D9E1F2' },
+                                    { text: 'Issues', bold: true, fillColor: '#D9E1F2' },
+                                ],
+                                ...ex.testCases.map((tc) => {
+                                    const statusColor = tc.status === 'PASSED'
+                                        ? '#E2EFDA'
+                                        : tc.status === 'FAILED'
+                                            ? '#FCE4D6'
+                                            : tc.status === 'BLOCKED'
+                                                ? '#FFF2CC'
+                                                : '#DDEBF7';
+                                    const issueText = tc.issues.map((i) => i.jiraKey || i.title).join(', ') ||
+                                        '-';
+                                    return [
+                                        {
+                                            text: tc.testCase.jiraKey,
+                                            color: 'blue',
+                                            decoration: 'underline',
+                                        },
+                                        tc.testCase.title,
+                                        { text: tc.status, fillColor: statusColor },
+                                        tc.responsible || '-',
+                                        issueText,
+                                    ];
+                                }),
+                            ],
+                        },
+                        fontSize: 8,
+                        margin: [0, 0, 0, 15],
+                    },
+                ]),
+                {
+                    text: 'Bugs e Melhorias Reportados',
+                    style: 'sectionHeader',
+                    margin: [0, 10, 0, 5],
+                },
+                allIssues.length === 0
+                    ? {
+                        text: 'Nenhum bug ou melhoria reportado neste batch.',
+                        italics: true,
+                        fontSize: 9,
+                    }
+                    : {
+                        table: {
+                            headerRows: 1,
+                            widths: ['15%', '15%', '40%', '15%', '15%'],
+                            body: [
+                                [
+                                    { text: 'Tipo', bold: true, fillColor: '#F2F2F2' },
+                                    { text: 'ID/Key', bold: true, fillColor: '#F2F2F2' },
+                                    { text: 'Título', bold: true, fillColor: '#F2F2F2' },
+                                    { text: 'Severidade', bold: true, fillColor: '#F2F2F2' },
+                                    { text: 'Status', bold: true, fillColor: '#F2F2F2' },
+                                ],
+                                ...allIssues.map((issue) => [
+                                    issue.type,
+                                    issue.key,
+                                    issue.title,
+                                    issue.severity,
+                                    issue.status,
+                                ]),
+                            ],
+                        },
+                        fontSize: 8,
+                    },
+            ],
+            defaultStyle: { font: 'DejaVuSans' },
+            styles: {
+                docTitle: { fontSize: 16, bold: true },
+                sectionHeader: { fontSize: 12, bold: true, color: '#1F4E78' },
+                suiteHeader: { fontSize: 11, bold: true, color: '#334155' },
+            },
+        };
+        const pdfDoc = printer.createPdfKitDocument(docDefinition);
+        const chunks = [];
+        pdfDoc.on('data', (chunk) => chunks.push(chunk));
+        pdfDoc.end();
+        return await new Promise((resolve) => {
+            pdfDoc.on('end', () => {
+                resolve(Buffer.concat(chunks));
+            });
+        });
     }
     async generatePdf(executionId) {
         const execution = await this.prisma.execution.findUnique({
@@ -297,7 +758,9 @@ let ReportsService = class ReportsService {
         const blockedTests = execution.testCases.filter((tc) => tc.status === 'BLOCKED').length;
         const executedTests = passedTests + failedTests + blockedTests;
         const approvalRate = totalTests > 0 ? (passedTests / totalTests) * 100 : 0;
-        const adjustedRate = (totalTests - blockedTests) > 0 ? (passedTests / (totalTests - blockedTests)) * 100 : 0;
+        const adjustedRate = totalTests - blockedTests > 0
+            ? (passedTests / (totalTests - blockedTests)) * 100
+            : 0;
         const pendingTests = totalTests - executedTests;
         const chartSegments = [
             { label: 'Passou', count: passedTests, color: '#22c55e' },
@@ -309,13 +772,27 @@ let ReportsService = class ReportsService {
         let chartCurrentX = 0;
         const chartCanvas = [];
         if (totalTests > 0) {
-            chartCanvas.push({ type: 'rect', x: 0, y: 0, w: chartWidth, h: 16, color: '#f8fafc' });
+            chartCanvas.push({
+                type: 'rect',
+                x: 0,
+                y: 0,
+                w: chartWidth,
+                h: 16,
+                color: '#f8fafc',
+            });
             chartSegments.forEach((segment) => {
                 if (segment.count <= 0) {
                     return;
                 }
                 const width = Math.max((segment.count / totalTests) * chartWidth, 12);
-                chartCanvas.push({ type: 'rect', x: chartCurrentX, y: 0, w: width, h: 16, color: segment.color });
+                chartCanvas.push({
+                    type: 'rect',
+                    x: chartCurrentX,
+                    y: 0,
+                    w: width,
+                    h: 16,
+                    color: segment.color,
+                });
                 chartCurrentX += width;
             });
         }
@@ -334,7 +811,12 @@ let ReportsService = class ReportsService {
         });
         const docDefinition = {
             content: [
-                { text: 'RELATÓRIO DE EXECUÇÃO DE TESTES', style: 'docTitle', alignment: 'center', margin: [0, 0, 0, 15] },
+                {
+                    text: 'RELATÓRIO DE EXECUÇÃO DE TESTES',
+                    style: 'docTitle',
+                    alignment: 'center',
+                    margin: [0, 0, 0, 15],
+                },
                 {
                     columns: [
                         {
@@ -342,24 +824,33 @@ let ReportsService = class ReportsService {
                             stack: [
                                 {
                                     text: [
-                                        { text: 'Sprint: ', bold: true }, `${execution.sprint}\n`,
-                                        { text: 'Versão do sistema: ', bold: true }, `${execution.version}\n`,
-                                        { text: 'Data de início: ', bold: true }, `${this.formatDate(execution.startDate)}\n`,
-                                        { text: 'Data de fim: ', bold: true }, `${this.formatDate(execution.endDate)}\n`,
-                                        { text: 'Funcionalidade: ', bold: true }, `${execution.testedFeature}\n`,
-                                        { text: 'Responsável: ', bold: true }, `${execution.responsible}\n`,
+                                        { text: 'Sprint: ', bold: true },
+                                        `${execution.sprint}\n`,
+                                        { text: 'Versão do sistema: ', bold: true },
+                                        `${execution.version}\n`,
+                                        { text: 'Data de início: ', bold: true },
+                                        `${this.formatDate(execution.startDate)}\n`,
+                                        { text: 'Data de fim: ', bold: true },
+                                        `${this.formatDate(execution.endDate)}\n`,
+                                        { text: 'Funcionalidade: ', bold: true },
+                                        `${execution.testedFeature}\n`,
+                                        { text: 'Responsável: ', bold: true },
+                                        `${execution.responsible}\n`,
                                     ],
                                     lineHeight: 1.4,
                                     fontSize: 10,
-                                }
-                            ]
+                                },
+                            ],
                         },
                         {
                             width: '45%',
                             table: {
                                 widths: ['60%', '40%'],
                                 body: [
-                                    [{ text: 'Métrica', bold: true, fillColor: '#EEEEEE' }, { text: 'Valor', bold: true, fillColor: '#EEEEEE' }],
+                                    [
+                                        { text: 'Métrica', bold: true, fillColor: '#EEEEEE' },
+                                        { text: 'Valor', bold: true, fillColor: '#EEEEEE' },
+                                    ],
                                     ['Total de Testes', `${totalTests}`],
                                     ['Total Executado', `${executedTests}`],
                                     ['Total Passou', `${passedTests}`],
@@ -370,11 +861,15 @@ let ReportsService = class ReportsService {
                                 ],
                             },
                             fontSize: 9,
-                        }
+                        },
                     ],
                     margin: [0, 0, 0, 20],
                 },
-                { text: 'Gráfico de Execução', style: 'sectionHeader', margin: [0, 10, 0, 5] },
+                {
+                    text: 'Gráfico de Execução',
+                    style: 'sectionHeader',
+                    margin: [0, 10, 0, 5],
+                },
                 {
                     canvas: [
                         { type: 'rect', x: 0, y: 0, w: 460, h: 18, color: '#e2e8f0' },
@@ -384,18 +879,28 @@ let ReportsService = class ReportsService {
                 },
                 {
                     columns: [
-                        ...chartSegments.filter((s) => s.count > 0).map((segment) => ({
+                        ...chartSegments
+                            .filter((s) => s.count > 0)
+                            .map((segment) => ({
                             width: 'auto',
                             stack: [
                                 { text: segment.label, bold: true, fontSize: 9 },
-                                { text: `${segment.count} (${totalTests > 0 ? ((segment.count / totalTests) * 100).toFixed(0) : 0}%)`, fontSize: 9, color: segment.color },
+                                {
+                                    text: `${segment.count} (${totalTests > 0 ? ((segment.count / totalTests) * 100).toFixed(0) : 0}%)`,
+                                    fontSize: 9,
+                                    color: segment.color,
+                                },
                             ],
                             margin: [0, 0, 16, 0],
                         })),
                     ],
                     margin: [0, 0, 0, 20],
                 },
-                { text: 'Detalhamento dos Casos de Teste', style: 'sectionHeader', margin: [0, 10, 0, 5] },
+                {
+                    text: 'Detalhamento dos Casos de Teste',
+                    style: 'sectionHeader',
+                    margin: [0, 10, 0, 5],
+                },
                 {
                     table: {
                         headerRows: 1,
@@ -409,12 +914,20 @@ let ReportsService = class ReportsService {
                                 { text: 'Issues', bold: true, fillColor: '#D9E1F2' },
                             ],
                             ...execution.testCases.map((tc) => {
-                                const statusColor = tc.status === 'PASSED' ? '#E2EFDA' :
-                                    tc.status === 'FAILED' ? '#FCE4D6' :
-                                        tc.status === 'BLOCKED' ? '#FFF2CC' : '#DDEBF7';
+                                const statusColor = tc.status === 'PASSED'
+                                    ? '#E2EFDA'
+                                    : tc.status === 'FAILED'
+                                        ? '#FCE4D6'
+                                        : tc.status === 'BLOCKED'
+                                            ? '#FFF2CC'
+                                            : '#DDEBF7';
                                 const issueText = tc.issues.map((i) => i.jiraKey || i.title).join(', ') || '-';
                                 return [
-                                    { text: tc.testCase.jiraKey, color: 'blue', decoration: 'underline' },
+                                    {
+                                        text: tc.testCase.jiraKey,
+                                        color: 'blue',
+                                        decoration: 'underline',
+                                    },
                                     tc.testCase.title,
                                     { text: tc.status, fillColor: statusColor },
                                     tc.responsible || '-',
@@ -426,9 +939,17 @@ let ReportsService = class ReportsService {
                     fontSize: 8,
                     margin: [0, 0, 0, 20],
                 },
-                { text: 'Bugs e Melhorias Reportados', style: 'sectionHeader', margin: [0, 10, 0, 5] },
+                {
+                    text: 'Bugs e Melhorias Reportados',
+                    style: 'sectionHeader',
+                    margin: [0, 10, 0, 5],
+                },
                 allIssues.length === 0
-                    ? { text: 'Nenhum bug ou melhoria reportado neste ciclo.', italics: true, fontSize: 9 }
+                    ? {
+                        text: 'Nenhum bug ou melhoria reportado neste ciclo.',
+                        italics: true,
+                        fontSize: 9,
+                    }
                     : {
                         table: {
                             headerRows: 1,

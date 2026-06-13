@@ -25,7 +25,10 @@ let JiraController = class JiraController {
         if (!success) {
             throw new common_1.HttpException('Falha na conexão com o Jira. Verifique a URL, usuário e API Token.', common_1.HttpStatus.UNAUTHORIZED);
         }
-        return { success: true, message: 'Conexão com o Jira estabelecida com sucesso!' };
+        return {
+            success: true,
+            message: 'Conexão com o Jira estabelecida com sucesso!',
+        };
     }
     async importSuite(key) {
         if (!key) {

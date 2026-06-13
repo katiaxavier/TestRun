@@ -22,6 +22,7 @@ export declare class SuitesController {
             title: string;
             createdAt: Date;
             updatedAt: Date;
+            priority: string | null;
             suiteId: string;
         }[];
         executions: ({
@@ -32,12 +33,13 @@ export declare class SuitesController {
             id: string;
             createdAt: Date;
             updatedAt: Date;
-            suiteId: string;
+            suiteId: string | null;
+            batchId: string | null;
             sprint: string;
             version: string;
             startDate: Date;
             endDate: Date;
-            testedFeature: string;
+            testedFeature: string | null;
             responsible: string;
             status: string;
         })[];
@@ -56,6 +58,7 @@ export declare class SuitesController {
             title: string;
             createdAt: Date;
             updatedAt: Date;
+            priority: string | null;
             suiteId: string;
         }[];
         executions: ({
@@ -66,12 +69,13 @@ export declare class SuitesController {
             id: string;
             createdAt: Date;
             updatedAt: Date;
-            suiteId: string;
+            suiteId: string | null;
+            batchId: string | null;
             sprint: string;
             version: string;
             startDate: Date;
             endDate: Date;
-            testedFeature: string;
+            testedFeature: string | null;
             responsible: string;
             status: string;
         })[];

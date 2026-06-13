@@ -9,7 +9,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ExecutionsService = exports.CreateIssueDto = exports.UpdateTestCaseDto = exports.CreateExecutionDto = void 0;
+exports.ExecutionsService = exports.CreateIssueDto = exports.UpdateTestCaseDto = exports.CreateBatchExecutionDto = exports.CreateExecutionDto = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../prisma/prisma.service");
 class CreateExecutionDto {
@@ -18,10 +18,19 @@ class CreateExecutionDto {
     version;
     startDate;
     endDate;
-    testedFeature;
     responsible;
 }
 exports.CreateExecutionDto = CreateExecutionDto;
+class CreateBatchExecutionDto {
+    suiteIds;
+    name;
+    sprint;
+    version;
+    startDate;
+    endDate;
+    responsible;
+}
+exports.CreateBatchExecutionDto = CreateBatchExecutionDto;
 class UpdateTestCaseDto {
     status;
     responsible;
@@ -80,10 +89,9 @@ let ExecutionsService = class ExecutionsService {
             data: {
                 suiteId: dto.suiteId,
                 sprint: dto.sprint,
-                version: dto.version,
+                version: dto.version || '',
                 startDate: new Date(dto.startDate),
                 endDate: new Date(dto.endDate),
-                testedFeature: dto.testedFeature,
                 responsible: dto.responsible,
                 status: 'IN_PROGRESS',
             },
@@ -163,7 +171,10 @@ let ExecutionsService = class ExecutionsService {
         await this.prisma.execution.delete({
             where: { id },
         });
-        return { success: true, message: 'Ciclo de execução excluído com sucesso!' };
+        return {
+            success: true,
+            message: 'Ciclo de execução excluído com sucesso!',
+        };
     }
     async updateStatus(id, status) {
         const execution = await this.prisma.execution.findUnique({
@@ -176,6 +187,110 @@ let ExecutionsService = class ExecutionsService {
             where: { id },
             data: { status: status.toUpperCase() },
         });
+    }
+    async createBatch(dto) {
+        const suites = await this.prisma.suite.findMany({
+            where: { id: { in: dto.suiteIds } },
+            include: { testCases: { orderBy: { jiraKey: 'asc' } } },
+        });
+        if (suites.length !== dto.suiteIds.length) {
+            throw new common_1.HttpException('Uma ou mais suites não foram encontradas.', common_1.HttpStatus.NOT_FOUND);
+        }
+        if (suites.some((s) => s.testCases.length === 0)) {
+            throw new common_1.HttpException('Todas as suites devem possuir casos de teste importados.', common_1.HttpStatus.BAD_REQUEST);
+        }
+        const batch = await this.prisma.executionBatch.create({
+            data: {
+                name: dto.name || null,
+                suiteIds: dto.suiteIds,
+                sprint: dto.sprint,
+                version: dto.version || '',
+                startDate: new Date(dto.startDate),
+                endDate: new Date(dto.endDate),
+                responsible: dto.responsible,
+                status: 'IN_PROGRESS',
+            },
+        });
+        const execution = await this.prisma.execution.create({
+            data: {
+                batchId: batch.id,
+                sprint: dto.sprint,
+                version: dto.version || '',
+                startDate: new Date(dto.startDate),
+                endDate: new Date(dto.endDate),
+                responsible: dto.responsible,
+                status: 'IN_PROGRESS',
+            },
+        });
+        for (const suite of suites) {
+            for (const tc of suite.testCases) {
+                await this.prisma.executionTestCase.create({
+                    data: {
+                        executionId: execution.id,
+                        testCaseId: tc.id,
+                        status: 'PENDING',
+                        responsible: dto.responsible,
+                    },
+                });
+            }
+        }
+        return this.prisma.executionBatch.findUnique({
+            where: { id: batch.id },
+            include: {
+                executions: {
+                    include: {
+                        suite: true,
+                        testCases: {
+                            include: { testCase: true, issues: true },
+                        },
+                    },
+                },
+            },
+        });
+    }
+    async findBatch(id) {
+        const batch = await this.prisma.executionBatch.findUnique({
+            where: { id },
+            include: {
+                executions: {
+                    include: {
+                        suite: true,
+                        testCases: {
+                            include: { testCase: true, issues: true },
+                        },
+                    },
+                },
+            },
+        });
+        if (!batch) {
+            throw new common_1.HttpException('Batch não encontrado.', common_1.HttpStatus.NOT_FOUND);
+        }
+        return batch;
+    }
+    async findAllBatches() {
+        return this.prisma.executionBatch.findMany({
+            orderBy: { createdAt: 'desc' },
+            include: {
+                executions: {
+                    include: {
+                        suite: true,
+                        _count: { select: { testCases: true } },
+                    },
+                },
+            },
+        });
+    }
+    async deleteBatch(id) {
+        const batch = await this.prisma.executionBatch.findUnique({
+            where: { id },
+        });
+        if (!batch) {
+            throw new common_1.HttpException('Batch não encontrado.', common_1.HttpStatus.NOT_FOUND);
+        }
+        await this.prisma.executionBatch.delete({
+            where: { id },
+        });
+        return { success: true, message: 'Batch excluído com sucesso!' };
     }
 };
 exports.ExecutionsService = ExecutionsService;

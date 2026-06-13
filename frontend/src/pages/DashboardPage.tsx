@@ -1,11 +1,12 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Plus, ArrowSquareOut, Trash, Flask, MagnifyingGlass,
-  WarningCircle, CloudArrowDown, ChartBar,
+  Plus, Trash, Flask, MagnifyingGlass,
+  WarningCircle, CloudArrowDown, ChartBar, DotsThreeVertical, Check,
 } from '@phosphor-icons/react';
-import { suitesApi } from '../api/client';
+import { suitesApi, executionsApi } from '../api/client';
+import BatchExecutionModal from '../components/BatchExecutionModal';
 import type { Suite } from '../api/client';
 import { Modal } from '../components/Modal';
 
@@ -100,13 +101,120 @@ function DeleteConfirmModal({ open, suite, onClose, onConfirm }: { open: boolean
   );
 }
 
+function DeleteBatchModal({ open, batch, onClose, onConfirm }: { open: boolean; batch: any | null; onClose: () => void; onConfirm: () => void }) {
+  const [loading, setLoading] = useState(false);
+  const handleConfirm = async () => {
+    setLoading(true);
+    await onConfirm();
+    setLoading(false);
+  };
+  return (
+    <Modal open={open} onClose={onClose} title="Excluir Suite em Lote"
+      footer={
+        <>
+          <button className="btn btn-secondary" onClick={onClose}>Cancelar</button>
+          <button className="btn btn-danger" onClick={handleConfirm} disabled={loading}>
+            {loading ? <div className="spinner" style={{ width: 14, height: 14 }} /> : <Trash size={16} />}
+            Excluir
+          </button>
+        </>
+      }
+    >
+      <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+        Tem certeza que deseja excluir a suite em lote <strong style={{ color: 'var(--text-primary)' }}>{batch?.name || batch?.id}</strong>?
+        <br /><br />
+        <span style={{ color: 'var(--status-failed)', fontSize: '0.85rem' }}>
+          Esta ação excluirá também todas as execuções vinculadas. Esta operação não pode ser desfeita.
+        </span>
+      </p>
+    </Modal>
+  );
+}
+
+// Custom Dropdown Menu Component
+function DropdownMenu({ trigger, items }: {
+  trigger: React.ReactNode;
+  items: Array<{ label: string; icon?: React.ReactNode; danger?: boolean; onClick: () => void }>;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, []);
+
+  return (
+    <div ref={ref} style={{ position: 'relative' }}>
+      <div onClick={e => { e.stopPropagation(); e.preventDefault(); setOpen(o => !o); }} style={{ cursor: 'pointer' }}>{trigger}</div>
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            style={{
+              position: 'absolute', top: '100%', right: 0, marginTop: 4,
+              background: 'var(--bg-surface)', border: '1px solid var(--border)',
+              borderRadius: 'var(--radius-sm)', minWidth: 140, zIndex: 100,
+              boxShadow: '0 4px 12px rgba(0,0,0,0.15)', padding: '0.25rem 0',
+            }}
+          >
+            {items.map((item, i) => (
+              <button
+                key={i}
+                onClick={(e) => { e.stopPropagation(); item.onClick(); setOpen(false); }}
+                style={{
+                  width: '100%', display: 'flex', alignItems: 'center', gap: '0.5rem',
+                  padding: '0.5rem 0.75rem', fontSize: '0.85rem',
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  color: item.danger ? 'var(--status-failed)' : 'var(--text-primary)',
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-subtle)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'none'}
+              >
+                {item.icon}
+                {item.label}
+              </button>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+// Custom Checkbox Component
+function CustomCheckbox({ checked, onChange }: { checked: boolean; onChange: (checked: boolean) => void }) {
+  return (
+    <label style={{
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      width: 18, height: 18, borderRadius: 'var(--radius-sm)',
+      border: `1px solid ${checked ? 'var(--accent)' : 'var(--border)'}`,
+      background: checked ? 'var(--accent)' : 'transparent',
+      cursor: 'pointer', transition: 'all 0.15s',
+    }}>
+      <input type="checkbox" checked={checked} onChange={e => onChange(e.target.checked)} style={{ display: 'none' }} />
+      {checked && <Check size={12} weight="bold" style={{ color: '#fff' }} />}
+    </label>
+  );
+}
+
 export default function DashboardPage() {
   const navigate = useNavigate();
   const [suites, setSuites] = useState<Suite[]>([]);
+  const [batches, setBatches] = useState<any[]>([]);
+  const [selectedSuites, setSelectedSuites] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [importOpen, setImportOpen] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<Suite | null>(null);
+  const [deleteTargetSuite, setDeleteTargetSuite] = useState<Suite | null>(null);
+  const [deleteTargetBatch, setDeleteTargetBatch] = useState<any | null>(null);
   const [search, setSearch] = useState('');
+  const [filter, setFilter] = useState<'all' | 'suites' | 'batches'>('all');
+  const [batchModalOpen, setBatchModalOpen] = useState(false);
 
   const fetchSuites = useCallback(async () => {
     try {
@@ -116,7 +224,17 @@ export default function DashboardPage() {
     finally { setLoading(false); }
   }, []);
 
-  useEffect(() => { fetchSuites(); }, [fetchSuites]);
+  const fetchBatches = useCallback(async () => {
+    try {
+      const { data } = await executionsApi.getAllBatches();
+      setBatches(data);
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    fetchSuites();
+    fetchBatches();
+  }, [fetchSuites, fetchBatches]);
 
   const handleImportSuccess = (suite: Suite) => {
     setSuites(prev => {
@@ -125,102 +243,119 @@ export default function DashboardPage() {
     });
   };
 
-  const handleDelete = async () => {
-    if (!deleteTarget) return;
-    await suitesApi.delete(deleteTarget.id);
-    setSuites(prev => prev.filter(s => s.id !== deleteTarget.id));
-    setDeleteTarget(null);
+  const handleDeleteSuite = async () => {
+    if (!deleteTargetSuite) return;
+    await suitesApi.delete(deleteTargetSuite.id);
+    setSuites(prev => prev.filter(s => s.id !== deleteTargetSuite.id));
+    setDeleteTargetSuite(null);
   };
 
-  const filtered = suites.filter(s =>
+  const handleDeleteBatch = async () => {
+    if (!deleteTargetBatch) return;
+    await executionsApi.deleteBatch(deleteTargetBatch.id);
+    setBatches(prev => prev.filter(b => b.id !== deleteTargetBatch.id));
+    setDeleteTargetBatch(null);
+  };
+
+  const filteredSuites = suites.filter(s =>
     s.jiraKey.toLowerCase().includes(search.toLowerCase()) ||
     s.title.toLowerCase().includes(search.toLowerCase())
   );
 
+  const filteredBatches = batches.filter(b =>
+    (b.name?.toLowerCase() || '').includes(search.toLowerCase()) ||
+    b.sprint.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const combinedItems = [
+    ...(filter !== 'suites' ? filteredBatches.map(b => ({ type: 'batch' as const, data: b })) : []),
+    ...(filter !== 'batches' ? filteredSuites.map(s => ({ type: 'suite' as const, data: s })) : []),
+  ];
+
+  const filterCounts = {
+    all: { suites: suites.length, batches: batches.length, total: suites.length + batches.length },
+    suites: { suites: filteredSuites.length, batches: 0, total: filteredSuites.length },
+    batches: { suites: 0, batches: filteredBatches.length, total: filteredBatches.length },
+  };
+
   return (
     <div className="page">
       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
-        {/* Header */}
         <div className="page-header">
           <div>
-            <h1 className="page-title">Dashboard</h1>
-            <p className="page-subtitle">Gerencie suas suítes de teste importadas do Jira</p>
+            <h1 className="page-title">Suites de Teste</h1>
+            <p className="page-subtitle">Gerencie suas suítes de teste e lotes de suites</p>
           </div>
           <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
             <div style={{ position: 'relative' }}>
               <MagnifyingGlass size={15} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
               <input
-                placeholder="Buscar suíte..."
+                placeholder="Buscar suite..."
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                style={{ width: 220, paddingLeft: '2.25rem' }}
+                style={{ width: 220, paddingLeft: '2.25rem', height: 48 }}
               />
             </div>
-            <button className="btn btn-primary" onClick={() => setImportOpen(true)}>
-              <Plus size={16} /> Importar do Jira
+            <button className={`btn-create-batch ${selectedSuites.length >= 2 ? 'active' : ''}`} onClick={() => setBatchModalOpen(true)} disabled={selectedSuites.length < 2} title={selectedSuites.length < 2 ? 'Selecione 2 ou mais suites para criar um lote' : ''}>
+              <ChartBar size={16} /> Criar Lote de Suites
+            </button>
+            <button className="btn btn-primary" style={{ height: 48 }} onClick={() => setImportOpen(true)}>
+              <Plus size={16} /> Importar Suite do Jira
             </button>
           </div>
         </div>
 
-        {/* Content */}
+        <div className="filters" style={{ marginBottom: '2rem' }}>
+          <button className={`filter-item ${filter === 'all' ? 'active' : ''}`} onClick={() => setFilter('all')}>
+            Todas <span className="filter-count">{filterCounts.all.total}</span>
+          </button>
+          <button className={`filter-item ${filter === 'suites' ? 'active' : ''}`} onClick={() => setFilter('suites')}>
+            Individuais <span className="filter-count">{filterCounts.suites.suites}</span>
+          </button>
+          <button className={`filter-item ${filter === 'batches' ? 'active' : ''}`} onClick={() => setFilter('batches')}>
+            Lotes <span className="filter-count">{filterCounts.batches.batches}</span>
+          </button>
+        </div>
+        <div style={{ height: 1, background: 'var(--border-subtle)', marginBottom: '1.5rem' }}></div>
+
         {loading ? (
-          <div className="loading-page"><div className="spinner" /> Carregando suítes...</div>
-        ) : filtered.length === 0 ? (
+          <div className="loading-page"><div className="spinner" /> Carregando...</div>
+        ) : combinedItems.length === 0 ? (
           <div className="empty-state" style={{ marginTop: '3rem' }}>
             <Flask size={56} />
-            <h3>{search ? 'Nenhuma suíte encontrada' : 'Nenhuma suíte importada'}</h3>
-            <p>{search ? 'Tente outro termo de busca.' : 'Clique em "Importar do Jira" para começar. Informe o ID da suíte de testes no Jira.'}</p>
+            <h3>{search ? 'Nenhum item encontrado' : 'Nenhuma suite ou lote importado'}</h3>
+            <p>{search ? 'Tente outro termo de busca.' : 'Clique em "Importar Suite do Jira" para começar. Informe o ID da suíte de testes no Jira.'}</p>
             {!search && (
               <button className="btn btn-primary" onClick={() => setImportOpen(true)} style={{ marginTop: '0.5rem' }}>
-                <Plus size={16} /> Importar do Jira
+                <Plus size={16} /> Importar Suite do Jira
               </button>
             )}
           </div>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '1rem' }}>
             <AnimatePresence>
-              {filtered.map((suite, i) => (
+              {combinedItems.map((item, i) => (
                 <motion.div
-                  key={suite.id}
+                  key={item.type === 'batch' ? `batch-${item.data.id}` : `suite-${item.data.id}`}
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95 }}
                   transition={{ delay: i * 0.04 }}
                   className="card card-clickable"
-                  onClick={() => navigate(`/suites/${suite.id}`)}
+                  style={{
+                    background: selectedSuites.includes(item.data.id) ? 'var(--accent-subtle)' : undefined,
+                    borderColor: selectedSuites.includes(item.data.id) ? 'var(--accent)' : undefined,
+                  }}
+                  onClick={() => navigate(item.type === 'batch' ? `/executions/batch/${item.data.id}` : `/suites/${item.data.id}`)}
                 >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.75rem' }}>
-                    <div style={{ minWidth: 0 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem' }}>
-                        <span className="tag" style={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>{suite.jiraKey}</span>
-                      </div>
-                      <h3 style={{ fontSize: '0.95rem', fontWeight: 600, lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-                        {suite.title}
-                      </h3>
-                    </div>
-                    <button
-                      className="btn btn-ghost btn-icon btn-sm"
-                      onClick={e => { e.stopPropagation(); setDeleteTarget(suite); }}
-                      style={{ flexShrink: 0 }}
-                    >
-                      <Trash size={15} />
-                    </button>
-                  </div>
-
-                  <div style={{ display: 'flex', gap: '1.25rem', marginTop: '1rem', paddingTop: '0.85rem', borderTop: '1px solid var(--border-subtle)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                      <Flask size={14} style={{ color: 'var(--accent)' }} />
-                      <strong style={{ color: 'var(--text-primary)' }}>{suite._count?.testCases ?? 0}</strong> casos
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                      <ChartBar size={14} style={{ color: 'var(--status-inprogress)' }} />
-                      <strong style={{ color: 'var(--text-primary)' }}>{suite._count?.executions ?? 0}</strong> execuções
-                    </div>
-                    <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                      <ArrowSquareOut size={12} />
-                      Ver detalhes
-                    </div>
-                  </div>
+                  {item.type === 'suite' ? (
+                    <SuiteCard suite={item.data} selected={selectedSuites.includes(item.data.id)} onSelect={(id, checked) => {
+                      if (checked) setSelectedSuites(prev => [...prev, id]);
+                      else setSelectedSuites(prev => prev.filter(i => i !== id));
+                    }} onDelete={(s) => setDeleteTargetSuite(s)} />
+                  ) : (
+                    <BatchCard batch={item.data} onDelete={(b) => setDeleteTargetBatch(b)} />
+                  )}
                 </motion.div>
               ))}
             </AnimatePresence>
@@ -229,7 +364,109 @@ export default function DashboardPage() {
       </motion.div>
 
       <ImportModal open={importOpen} onClose={() => setImportOpen(false)} onSuccess={handleImportSuccess} />
-      <DeleteConfirmModal open={!!deleteTarget} suite={deleteTarget} onClose={() => setDeleteTarget(null)} onConfirm={handleDelete} />
+      <DeleteConfirmModal open={!!deleteTargetSuite} suite={deleteTargetSuite} onClose={() => setDeleteTargetSuite(null)} onConfirm={handleDeleteSuite} />
+      <DeleteBatchModal open={!!deleteTargetBatch} batch={deleteTargetBatch} onClose={() => setDeleteTargetBatch(null)} onConfirm={handleDeleteBatch} />
+      <BatchExecutionModal
+        open={batchModalOpen}
+        onClose={() => setBatchModalOpen(false)}
+        suites={suites.filter(s => selectedSuites.includes(s.id))}
+        onCreated={(batch) => {
+          setSelectedSuites([]);
+          setBatchModalOpen(false);
+          fetchBatches();
+          navigate(`/executions/batch/${batch.id}`);
+        }}
+      />
     </div>
+  );
+}
+
+function SuiteCard({ suite, selected, onSelect, onDelete }: { suite: Suite; selected?: boolean; onSelect?: (id: string, checked: boolean) => void; onDelete: (s: Suite) => void }) {
+  const formatDate = (date: string | Date | undefined) => {
+    if (!date) return '';
+    return new Date(date).toLocaleDateString('pt-BR');
+  };
+
+  return (
+    <>
+      {onSelect && (
+        <div style={{ position: 'absolute', right: 38, top: 12, zIndex: 10 }} onClick={e => e.stopPropagation()}>
+          <CustomCheckbox checked={!!selected} onChange={checked => onSelect(suite.id, checked)} />
+        </div>
+      )}
+      <span className="tag" style={{ position: 'absolute', left: 12, top: 12, fontFamily: 'monospace', fontSize: '0.7rem', background: 'var(--accent-subtle)', color: 'var(--accent)' }}>SUITE</span>
+      <div style={{ position: 'absolute', right: 12, top: 12, zIndex: 11, cursor: 'pointer', padding: '0.25rem', borderRadius: 'var(--radius-sm)' }} onClick={e => e.stopPropagation()}>
+        <DropdownMenu
+          trigger={<DotsThreeVertical size={18} style={{ color: 'var(--text-secondary)' }} />}
+          items={[{ label: 'Excluir', icon: <Trash size={14} />, danger: true, onClick: () => onDelete(suite) }]}
+        />
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.75rem', marginTop: 26 }}>
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <span className="tag" style={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>{suite.jiraKey}</span>
+          <h3 style={{ fontSize: '0.95rem', fontWeight: 600, lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', marginTop: '0.4rem' }}>
+            {suite.title}
+          </h3>
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', gap: '1.25rem', marginTop: '1rem', paddingTop: '0.85rem', borderTop: '1px solid var(--border-subtle)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+          <Flask size={14} style={{ color: 'var(--accent)' }} />
+          <strong style={{ color: 'var(--text-primary)' }}>{suite._count?.testCases ?? 0}</strong> casos
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+          <ChartBar size={14} style={{ color: 'var(--status-inprogress)' }} />
+          <strong style={{ color: 'var(--text-primary)' }}>{suite._count?.executions ?? 0}</strong> execuções
+        </div>
+        <div style={{ marginLeft: 'auto', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+          {formatDate(suite.updatedAt)}
+        </div>
+      </div>
+    </>
+  );
+}
+
+function BatchCard({ batch, onDelete }: { batch: any; onDelete: (b: any) => void }) {
+  const totalCases = batch.executions.reduce((s: number, e: any) => s + (e._count?.testCases ?? e.testCases?.length ?? 0), 0);
+  const formatDate = (date: string | Date | undefined) => {
+    if (!date) return '';
+    return new Date(date).toLocaleDateString('pt-BR');
+  };
+
+  return (
+    <>
+      <span className="tag" style={{ position: 'absolute', left: 12, top: 12, fontFamily: 'monospace', fontSize: '0.7rem', background: 'rgba(139, 92, 246, 0.15)', color: '#8b5cf6' }}>LOTE</span>
+      <div style={{ position: 'absolute', right: 12, top: 12, zIndex: 11, cursor: 'pointer', padding: '0.25rem', borderRadius: 'var(--radius-sm)' }} onClick={e => e.stopPropagation()}>
+        <DropdownMenu
+          trigger={<DotsThreeVertical size={18} style={{ color: 'var(--text-secondary)' }} />}
+          items={[{ label: 'Excluir', icon: <Trash size={14} />, danger: true, onClick: () => onDelete(batch) }]}
+        />
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.75rem', marginTop: 26 }}>
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <h3 style={{ fontSize: '0.95rem', fontWeight: 600, marginBottom: '0.25rem', paddingRight: '2rem' }}>
+            {batch.name || 'Batch ' + batch.id.substring(0, 8)}
+          </h3>
+          <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+            {batch.sprint} • {batch.responsible}
+          </div>
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', gap: '1.25rem', marginTop: '1rem', paddingTop: '0.85rem', borderTop: '1px solid var(--border-subtle)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+          <Flask size={14} style={{ color: 'var(--accent)' }} />
+          <strong style={{ color: 'var(--text-primary)' }}>{batch.executions.length}</strong> suites
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+          <ChartBar size={14} style={{ color: 'var(--status-inprogress)' }} />
+          <strong style={{ color: 'var(--text-primary)' }}>{totalCases}</strong> casos
+        </div>
+        <div style={{ marginLeft: 'auto', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+          {formatDate(batch.updatedAt)}
+        </div>
+      </div>
+    </>
   );
 }

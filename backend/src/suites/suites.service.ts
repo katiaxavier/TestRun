@@ -46,7 +46,7 @@ export class SuitesService {
 
   async importFromJira(jiraKey: string) {
     const key = jiraKey.trim().toUpperCase();
-    
+
     // 1. Buscar do Jira
     const jiraData = await this.jiraService.importSuite(key);
 
@@ -75,6 +75,7 @@ export class SuitesService {
             jiraKey: tc.key,
             title: tc.title,
             link: tc.link,
+            priority: tc.priority,
             suiteId: suite.id,
           },
         });
@@ -82,7 +83,7 @@ export class SuitesService {
         // Atualizar título do caso existente se mudou
         await this.prisma.testCase.updateMany({
           where: { suiteId: suite.id, jiraKey: tc.key },
-          data: { title: tc.title, link: tc.link },
+          data: { title: tc.title, link: tc.link, priority: tc.priority },
         });
       }
     }
@@ -103,7 +104,10 @@ export class SuitesService {
       where: { id },
     });
     if (!tc) {
-      throw new HttpException('Caso de teste não encontrado.', HttpStatus.NOT_FOUND);
+      throw new HttpException(
+        'Caso de teste não encontrado.',
+        HttpStatus.NOT_FOUND,
+      );
     }
 
     await this.prisma.testCase.delete({

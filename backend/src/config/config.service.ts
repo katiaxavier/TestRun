@@ -26,7 +26,11 @@ export class ConfigService {
 
   private writeConfig(config: { jira: JiraConfig }) {
     try {
-      fs.writeFileSync(this.configPath, JSON.stringify(config, null, 2), 'utf8');
+      fs.writeFileSync(
+        this.configPath,
+        JSON.stringify(config, null, 2),
+        'utf8',
+      );
     } catch (error) {
       console.error('Error writing config.json:', error);
       throw new Error('Failed to save configuration locally.');

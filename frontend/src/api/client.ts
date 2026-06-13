@@ -31,18 +31,19 @@ export interface TestCase {
   jiraKey: string;
   title: string;
   link?: string;
+  priority?: string;
   suiteId: string;
 }
 
 export interface Execution {
   id: string;
-  suiteId: string;
+  suiteId?: string;
   suite?: Suite;
+  batchId?: string;
   sprint: string;
-  version: string;
+  version?: string;
   startDate: string;
   endDate: string;
-  testedFeature: string;
   responsible: string;
   status: string;
   testCases: ExecutionTestCase[];
@@ -87,27 +88,34 @@ export const suitesApi = {
 
 export const executionsApi = {
   get: (id: string) => api.get<Execution>(`/executions/${id}`),
+  delete: (id: string) => api.delete(`/executions/${id}`),
+  getBatch: (id: string) => api.get<any>(`/executions/batch/${id}`),
+  getAllBatches: () => api.get<any[]>(`/executions/batches`),
+  deleteBatch: (id: string) => api.delete(`/executions/batch/${id}`),
   create: (data: {
     suiteId: string;
     sprint: string;
-    version: string;
+    version?: string;
     startDate: string;
     endDate: string;
-    testedFeature: string;
     responsible: string;
   }) => api.post<Execution>('/executions', data),
+  createBatch: (suiteIds: string[], data: {
+    name?: string;
+    sprint: string;
+    version?: string;
+    startDate: string;
+    endDate: string;
+    responsible: string;
+  }) => api.post('/executions/batch', { suiteIds, ...data }),
   updateStatus: (id: string, status: string) => api.patch(`/executions/${id}/status`, { status }),
-  delete: (id: string) => api.delete(`/executions/${id}`),
   updateTestCase: (
     executionId: string,
     etcId: string,
     data: { status?: string; responsible?: string; comments?: string }
-  ) => api.patch<ExecutionTestCase>(`/executions/${executionId}/test-cases/${etcId}`, data),
-  addIssue: (
-    executionId: string,
-    etcId: string,
-    data: { type: string; jiraKey?: string; title: string; severity?: string; status?: string; responsible?: string }
-  ) => api.post<Issue>(`/executions/${executionId}/test-cases/${etcId}/issues`, data),
+  ) => api.patch(`/executions/${executionId}/test-cases/${etcId}`, data),
+  addIssue: (executionId: string, etcId: string, data: { type: string; jiraKey?: string; title: string; severity?: string; status?: string; responsible?: string }) =>
+    api.post(`/executions/${executionId}/test-cases/${etcId}/issues`, data),
   removeIssue: (executionId: string, etcId: string, issueId: string) =>
     api.delete(`/executions/${executionId}/test-cases/${etcId}/issues/${issueId}`),
 };
@@ -117,4 +125,9 @@ export const reportsApi = {
     api.get(`/reports/${executionId}/xlsx`, { responseType: 'blob' }),
   pdf: (executionId: string) =>
     api.get(`/reports/${executionId}/pdf`, { responseType: 'blob' }),
+  getBatchReport: (batchId: string) => api.get<any>(`/reports/batch/${batchId}`),
+  downloadBatchXlsx: (batchId: string) =>
+    api.get(`/reports/batch/${batchId}/xlsx`, { responseType: 'blob' }),
+  downloadBatchPdf: (batchId: string) =>
+    api.get(`/reports/batch/${batchId}/pdf`, { responseType: 'blob' }),
 };

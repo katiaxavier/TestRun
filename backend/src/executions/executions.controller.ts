@@ -1,9 +1,29 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Patch } from '@nestjs/common';
-import { ExecutionsService, CreateExecutionDto, UpdateTestCaseDto, CreateIssueDto } from './executions.service';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Body,
+  Param,
+  Patch,
+} from '@nestjs/common';
+import {
+  ExecutionsService,
+  CreateExecutionDto,
+  UpdateTestCaseDto,
+  CreateIssueDto,
+  CreateBatchExecutionDto,
+} from './executions.service';
 
 @Controller('executions')
 export class ExecutionsController {
   constructor(private readonly executionsService: ExecutionsService) {}
+
+  @Get('batches')
+  async findAllBatches() {
+    return this.executionsService.findAllBatches();
+  }
 
   @Get(':id')
   async findOne(@Param('id') id: string) {
@@ -13,6 +33,21 @@ export class ExecutionsController {
   @Post()
   async create(@Body() dto: CreateExecutionDto) {
     return this.executionsService.create(dto);
+  }
+
+  @Post('batch')
+  async createBatch(@Body() dto: CreateBatchExecutionDto) {
+    return this.executionsService.createBatch(dto);
+  }
+
+  @Get('batch/:id')
+  async findBatch(@Param('id') id: string) {
+    return this.executionsService.findBatch(id);
+  }
+
+  @Delete('batch/:id')
+  async deleteBatch(@Param('id') id: string) {
+    return this.executionsService.deleteBatch(id);
   }
 
   @Delete(':id')
@@ -26,7 +61,10 @@ export class ExecutionsController {
   }
 
   @Patch(':executionId/test-cases/:id')
-  async updateTestCase(@Param('id') id: string, @Body() dto: UpdateTestCaseDto) {
+  async updateTestCase(
+    @Param('id') id: string,
+    @Body() dto: UpdateTestCaseDto,
+  ) {
     return this.executionsService.updateTestCase(id, dto);
   }
 

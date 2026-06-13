@@ -19,9 +19,10 @@ model Suite {
 
 model TestCase {
   id                 String              @id @default(uuid())
-  jiraKey            String              // ex: PD-2105
+  jiraKey            String // ex: PD-2105
   title              String
   link               String?
+  priority           String? // High, Medium, Low, Critical
   suiteId            String
   suite              Suite               @relation(fields: [suiteId], references: [id], onDelete: Cascade)
   executionTestCases ExecutionTestCase[]
@@ -30,44 +31,67 @@ model TestCase {
 }
 
 model Execution {
-  id             String              @id @default(uuid())
-  suiteId        String
-  suite          Suite               @relation(fields: [suiteId], references: [id], onDelete: Cascade)
-  sprint         String
-  version        String
-  startDate      DateTime
-  endDate        DateTime
-  testedFeature  String
-  responsible    String
-  status         String              @default("IN_PROGRESS") // IN_PROGRESS, COMPLETED
-  testCases      ExecutionTestCase[]
-  createdAt      DateTime            @default(now())
-  updatedAt      DateTime            @updatedAt
+  id            String   @id @default(uuid())
+  suiteId       String?
+  suite         Suite?   @relation(fields: [suiteId], references: [id])
+
+  batchId       String?
+  batch         ExecutionBatch? @relation(fields: [batchId], references: [id])
+
+  sprint        String
+  version       String
+  startDate     DateTime
+  endDate       DateTime
+  testedFeature String?
+  responsible   String
+  status        String              @default("IN_PROGRESS") // IN_PROGRESS, COMPLETED
+  testCases     ExecutionTestCase[]
+
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+}
+
+model ExecutionBatch {
+  id            String   @id @default(uuid())
+  name          String?
+  suiteIds      Json
+  sprint        String
+  version       String
+  startDate     DateTime
+  endDate       DateTime
+  testedFeature String?
+  responsible   String
+  status        String   @default("IN_PROGRESS")
+
+  executions Execution[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model ExecutionTestCase {
-  id           String    @id @default(uuid())
-  executionId  String
-  execution    Execution @relation(fields: [executionId], references: [id], onDelete: Cascade)
-  testCaseId   String
-  testCase     TestCase  @relation(fields: [testCaseId], references: [id], onDelete: Cascade)
-  status       String    @default("PENDING") // PENDING, PASSED, FAILED, IN_PROGRESS, BLOCKED
-  responsible  String?
-  comments     String?
-  issues       Issue[]
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  id          String    @id @default(uuid())
+  executionId String
+  execution   Execution @relation(fields: [executionId], references: [id], onDelete: Cascade)
+  testCaseId  String
+  testCase    TestCase  @relation(fields: [testCaseId], references: [id], onDelete: Cascade)
+  status      String    @default("PENDING") // PENDING, PASSED, FAILED, IN_PROGRESS, BLOCKED
+  responsible String?
+  comments    String?
+  issues      Issue[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 }
 
 model Issue {
   id                  String            @id @default(uuid())
   executionTestCaseId String
   executionTestCase   ExecutionTestCase @relation(fields: [executionTestCaseId], references: [id], onDelete: Cascade)
-  type                String            // BUG, IMPROVEMENT
-  jiraKey             String?           // ex: PD-2110 (opcional)
+  type                String // BUG, IMPROVEMENT
+  jiraKey             String? // ex: PD-2110 (opcional)
   title               String
-  severity            String?           // Low, Medium, High, Critical
-  status              String?           // Open, In Progress, Resolved
+  severity            String? // Low, Medium, High, Critical
+  status              String? // Open, In Progress, Resolved
   responsible         String?
   createdAt           DateTime          @default(now())
   updatedAt           DateTime          @updatedAt

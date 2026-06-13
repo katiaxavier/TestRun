@@ -8,6 +8,7 @@ export interface JiraImportResult {
     key: string;
     title: string;
     link: string;
+    priority?: string;
   }>;
 }
 
@@ -87,7 +88,7 @@ export class JiraService {
       const issueData = await response.json();
       const suiteTitle = issueData.fields?.summary || `Suíte ${suiteKey}`;
 
-      const testCases: Array<{ key: string; title: string; link: string }> = [];
+      const testCases: Array<{ key: string; title: string; link: string; priority?: string }> = [];
 
       // Buscar casos de teste vinculados por links de relacionamento
       const links = issueData.fields?.issuelinks || [];
@@ -115,43 +116,61 @@ export class JiraService {
           // Se a relação interna do link indica "is parent of" (o que significa que a suite é filha de outro?),
           // na verdade, dependendo de como o Jira registra, vamos olhar as duas pontas.
           // Vamos adicionar o ticket associado que não seja a própria suíte.
-          
+
           let targetIssue = link.outwardIssue || link.inwardIssue;
-          
+
           // Se o outward description for "is parent of", a issue de fora é a filha (test case).
           // Se o inward description for "is parent of", a issue de dentro (que é referenciada) é a filha.
           // Para garantir consistência com o que o Jira API retorna, vamos mapear:
-          if (link.outwardIssue && (outward.includes('parent') || outward.includes('pai') || outward.includes('mãe'))) {
+          if (
+            link.outwardIssue &&
+            (outward.includes('parent') ||
+              outward.includes('pai') ||
+              outward.includes('mãe'))
+          ) {
             targetIssue = link.outwardIssue;
-          } else if (link.inwardIssue && (inward.includes('parent') || inward.includes('pai') || inward.includes('mãe'))) {
+          } else if (
+            link.inwardIssue &&
+            (inward.includes('parent') ||
+              inward.includes('pai') ||
+              inward.includes('mãe'))
+          ) {
             targetIssue = link.inwardIssue;
           }
 
-          if (targetIssue && targetIssue.key !== suiteKey) {
-            testCases.push({
-              key: targetIssue.key,
-              title: targetIssue.fields?.summary || `Caso de Teste ${targetIssue.key}`,
-              link: `${config.url}/browse/${targetIssue.key}`,
-            });
-          }
+if (targetIssue && targetIssue.key !== suiteKey) {
+             testCases.push({
+               key: targetIssue.key,
+               title:
+                 targetIssue.fields?.summary ||
+                 `Caso de Teste ${targetIssue.key}`,
+               link: `${config.url}/browse/${targetIssue.key}`,
+               priority: targetIssue.fields?.priority?.name,
+             });
+           }
         }
       }
 
-      // Se nenhum caso foi encontrado usando o filtro específico, vamos tentar recuperar qualquer link como fallback
-      // caso o tipo de relacionamento não tenha o nome exato "parent".
-      if (testCases.length === 0 && links.length > 0) {
-        console.warn('Nenhum relacionamento do tipo "parent" identificado. Importando links disponíveis como fallback...');
-        for (const link of links) {
-          const targetIssue = link.outwardIssue || link.inwardIssue;
-          if (targetIssue && targetIssue.key !== suiteKey) {
-            testCases.push({
-              key: targetIssue.key,
-              title: targetIssue.fields?.summary || `Caso de Teste ${targetIssue.key}`,
-              link: `${config.url}/browse/${targetIssue.key}`,
-            });
-          }
-        }
-      }
+// Se nenhum caso foi encontrado usando o filtro específico, vamos tentar recuperar qualquer link como fallback
+       // caso o tipo de relacionamento não tenha o nome exato "parent".
+       if (testCases.length === 0 && links.length > 0) {
+         console.warn(
+           'Nenhum relacionamento do tipo "parent" identificado. Importando links disponíveis como fallback...',
+         );
+         for (const link of links) {
+           const targetIssue = link.outwardIssue || link.inwardIssue;
+           if (targetIssue && targetIssue.key !== suiteKey) {
+             testCases.push({
+               key: targetIssue.key,
+               title:
+                 targetIssue.fields?.summary ||
+                 `Caso de Teste ${targetIssue.key}`,
+               link: `${config.url}/browse/${targetIssue.key}`,
+               priority: targetIssue.fields?.priority?.name,
+             });
+           }
+         }
+       }
 
       return {
         suiteKey,

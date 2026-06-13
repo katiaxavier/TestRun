@@ -52,6 +52,41 @@ let ReportsController = class ReportsController {
             });
         }
     }
+    async getBatchReport(id) {
+        return this.reportsService.getBatchReport(id);
+    }
+    async downloadBatchXlsx(id, res) {
+        try {
+            const buffer = await this.reportsService.generateBatchXlsx(id);
+            res.status(common_1.HttpStatus.OK);
+            res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+            res.setHeader('Content-Disposition', `attachment; filename=relatorio_batch_${id}.xlsx`);
+            res.end(buffer);
+        }
+        catch (error) {
+            console.error('Error exporting batch XLSX:', error);
+            res.status(common_1.HttpStatus.INTERNAL_SERVER_ERROR).json({
+                message: 'Erro ao gerar planilha XLSX do batch.',
+                error: error instanceof Error ? error.message : String(error),
+            });
+        }
+    }
+    async downloadBatchPdf(id, res) {
+        try {
+            const buffer = await this.reportsService.generateBatchPdf(id);
+            res.status(common_1.HttpStatus.OK);
+            res.setHeader('Content-Type', 'application/pdf');
+            res.setHeader('Content-Disposition', `attachment; filename=relatorio_batch_${id}.pdf`);
+            res.end(buffer);
+        }
+        catch (error) {
+            console.error('Error exporting batch PDF:', error);
+            res.status(common_1.HttpStatus.INTERNAL_SERVER_ERROR).json({
+                message: 'Erro ao gerar relatório PDF do batch.',
+                error: error instanceof Error ? error.message : String(error),
+            });
+        }
+    }
 };
 exports.ReportsController = ReportsController;
 __decorate([
@@ -70,6 +105,29 @@ __decorate([
     __metadata("design:paramtypes", [String, Object]),
     __metadata("design:returntype", Promise)
 ], ReportsController.prototype, "downloadPdf", null);
+__decorate([
+    (0, common_1.Get)('batch/:id'),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], ReportsController.prototype, "getBatchReport", null);
+__decorate([
+    (0, common_1.Get)('batch/:id/xlsx'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Res)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], ReportsController.prototype, "downloadBatchXlsx", null);
+__decorate([
+    (0, common_1.Get)('batch/:id/pdf'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Res)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], ReportsController.prototype, "downloadBatchPdf", null);
 exports.ReportsController = ReportsController = __decorate([
     (0, common_1.Controller)('reports'),
     __metadata("design:paramtypes", [reports_service_1.ReportsService])

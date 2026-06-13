@@ -6,6 +6,7 @@ export interface JiraImportResult {
         key: string;
         title: string;
         link: string;
+        priority?: string;
     }>;
 }
 export declare class JiraService {

@@ -84,17 +84,25 @@ let JiraService = class JiraService {
                     outward.includes('pai');
                 if (isParentRelation) {
                     let targetIssue = link.outwardIssue || link.inwardIssue;
-                    if (link.outwardIssue && (outward.includes('parent') || outward.includes('pai') || outward.includes('mãe'))) {
+                    if (link.outwardIssue &&
+                        (outward.includes('parent') ||
+                            outward.includes('pai') ||
+                            outward.includes('mãe'))) {
                         targetIssue = link.outwardIssue;
                     }
-                    else if (link.inwardIssue && (inward.includes('parent') || inward.includes('pai') || inward.includes('mãe'))) {
+                    else if (link.inwardIssue &&
+                        (inward.includes('parent') ||
+                            inward.includes('pai') ||
+                            inward.includes('mãe'))) {
                         targetIssue = link.inwardIssue;
                     }
                     if (targetIssue && targetIssue.key !== suiteKey) {
                         testCases.push({
                             key: targetIssue.key,
-                            title: targetIssue.fields?.summary || `Caso de Teste ${targetIssue.key}`,
+                            title: targetIssue.fields?.summary ||
+                                `Caso de Teste ${targetIssue.key}`,
                             link: `${config.url}/browse/${targetIssue.key}`,
+                            priority: targetIssue.fields?.priority?.name,
                         });
                     }
                 }
@@ -106,8 +114,10 @@ let JiraService = class JiraService {
                     if (targetIssue && targetIssue.key !== suiteKey) {
                         testCases.push({
                             key: targetIssue.key,
-                            title: targetIssue.fields?.summary || `Caso de Teste ${targetIssue.key}`,
+                            title: targetIssue.fields?.summary ||
+                                `Caso de Teste ${targetIssue.key}`,
                             link: `${config.url}/browse/${targetIssue.key}`,
+                            priority: targetIssue.fields?.priority?.name,
                         });
                     }
                 }

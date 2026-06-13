@@ -1,4 +1,13 @@
-import { Controller, Get, Post, Delete, Param, Body, HttpException, HttpStatus } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Delete,
+  Param,
+  Body,
+  HttpException,
+  HttpStatus,
+} from '@nestjs/common';
 import { SuitesService } from './suites.service';
 
 @Controller('suites')
@@ -18,7 +27,10 @@ export class SuitesController {
   @Post('import')
   async importSuite(@Body('jiraKey') jiraKey: string) {
     if (!jiraKey) {
-      throw new HttpException('A chave do Jira é obrigatória.', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'A chave do Jira é obrigatória.',
+        HttpStatus.BAD_REQUEST,
+      );
     }
     return this.suitesService.importFromJira(jiraKey);
   }

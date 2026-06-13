@@ -74,6 +74,7 @@ let SuitesService = class SuitesService {
                         jiraKey: tc.key,
                         title: tc.title,
                         link: tc.link,
+                        priority: tc.priority,
                         suiteId: suite.id,
                     },
                 });
@@ -81,7 +82,7 @@ let SuitesService = class SuitesService {
             else {
                 await this.prisma.testCase.updateMany({
                     where: { suiteId: suite.id, jiraKey: tc.key },
-                    data: { title: tc.title, link: tc.link },
+                    data: { title: tc.title, link: tc.link, priority: tc.priority },
                 });
             }
         }
