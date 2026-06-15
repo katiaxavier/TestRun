@@ -8,7 +8,7 @@ import {
 import { suitesApi, executionsApi } from '../api/client';
 import type { Suite, Execution } from '../api/client';
 import { Modal } from '../components/Modal';
-import { StatusBadge } from '../components/StatusBadge';
+import { ExecutionCard } from '../components/ExecutionCard';
 
 type PriorityFilter = 'all' | 'Gravíssima' | 'Crítica' | 'Alta' | 'Média' | 'Normal' | 'Trivial';
 
@@ -20,16 +20,6 @@ const PRIORITY_COLORS: Record<string, string> = {
   Normal: '#3B82F6',
   Trivial: '#6B7280',
 };
-
-function formatDate(value?: string) {
-  if (!value) return '—';
-  return new Date(value).toLocaleDateString('pt-BR');
-}
-
-function formatPeriod(start?: string, end?: string) {
-  if (!start && !end) return '—';
-  return `${formatDate(start)} - ${formatDate(end)}`;
-}
 
 function normalize(value: string) {
   return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
@@ -56,23 +46,6 @@ function priorityLabel(priority?: string | null): PriorityFilter | string {
   return labels[normalized] ?? priority;
 }
 
-function getExecutionCounts(exec: Execution) {
-  const testCases = (exec as any).testCases ?? [];
-  const total = (exec as any)._count?.testCases ?? testCases.length;
-  const passed = testCases.filter((tc: any) => tc.status === 'PASSED').length;
-  const failed = testCases.filter((tc: any) => tc.status === 'FAILED').length;
-  const blocked = testCases.filter((tc: any) => tc.status === 'BLOCKED').length;
-  const executed = passed + failed + blocked;
-  return {
-    total,
-    passed,
-    failed,
-    blocked,
-    executed,
-    percent: total > 0 ? Math.round((passed / total) * 100) : 0,
-    progress: total > 0 ? Math.round((executed / total) * 100) : 0,
-  };
-}
 
 function NewExecutionModal({ open, suiteId, onClose, onCreated }: {
   open: boolean; suiteId: string; onClose: () => void; onCreated: (e: Execution) => void;
@@ -233,65 +206,14 @@ export default function SuiteDetailPage() {
               </div>
             </div>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
-              {executions.map(exec => {
-                const counts = getExecutionCounts(exec);
-                return (
-                  <div
-                    key={exec.id}
-                    className="card"
-                    style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem' }}>
-                      <div>
-                        <span className="tag">{exec.sprint}</span>
-                        <h3 style={{ fontSize: '0.95rem', margin: '0.4rem 0 0' }}>Execução {formatDate(exec.startDate)}</h3>
-                      </div>
-                      <StatusBadge status={exec.status} />
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-                      <div style={{ padding: '0.65rem', background: 'var(--bg-overlay)', borderRadius: 'var(--radius-sm)' }}>
-                        <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Responsável</p>
-                        <strong style={{ fontSize: '0.82rem' }}>{exec.responsible || '—'}</strong>
-                      </div>
-                      <div style={{ padding: '0.65rem', background: 'var(--bg-overlay)', borderRadius: 'var(--radius-sm)' }}>
-                        <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Período</p>
-                        <strong style={{ fontSize: '0.82rem' }}>{formatPeriod(exec.startDate, exec.endDate)}</strong>
-                      </div>
-                    </div>
-
-                    <div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '0.4rem' }}>
-                        <span>Progresso</span>
-                        <strong>{counts.executed}/{counts.total} · {counts.progress}%</strong>
-                      </div>
-                      <div style={{ height: 8, background: 'var(--bg-overlay)', borderRadius: 99, overflow: 'hidden' }}>
-                        <div style={{ width: `${counts.progress}%`, height: '100%', background: 'var(--accent)', transition: 'width 0.3s ease' }} />
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem' }}>
-                      <div style={{ padding: '0.65rem', background: 'rgba(34,197,94,0.1)', borderRadius: 'var(--radius-sm)' }}>
-                        <p style={{ fontSize: '0.7rem', color: 'var(--status-passed)' }}>Passou</p>
-                        <strong>{counts.passed}</strong>
-                      </div>
-                      <div style={{ padding: '0.65rem', background: 'rgba(239,68,68,0.1)', borderRadius: 'var(--radius-sm)' }}>
-                        <p style={{ fontSize: '0.7rem', color: 'var(--status-failed)' }}>Falhou</p>
-                        <strong>{counts.failed}</strong>
-                      </div>
-                      <div style={{ padding: '0.65rem', background: 'rgba(245,158,11,0.12)', borderRadius: 'var(--radius-sm)' }}>
-                        <p style={{ fontSize: '0.7rem', color: 'var(--status-blocked)' }}>Bloqueado</p>
-                        <strong>{counts.blocked}</strong>
-                      </div>
-                    </div>
-
-                    <button className="btn btn-primary" onClick={() => navigate(`/executions/${exec.id}`)} style={{ justifyContent: 'center' }}>
-                      Abrir Execução
-                    </button>
-                  </div>
-                );
-              })}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              {executions.map(exec => (
+                <ExecutionCard
+                  key={exec.id}
+                  execution={exec}
+                  onClick={() => navigate(`/executions/${exec.id}`)}
+                />
+              ))}
             </div>
           )}
         </div>
