@@ -3,12 +3,12 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   ArrowLeft, Play, Trash, ArrowSquareOut,
-  Flask, Clock, WarningCircle, MagnifyingGlass,
+  Flask, WarningCircle, MagnifyingGlass,
 } from '@phosphor-icons/react';
 import { suitesApi, executionsApi } from '../api/client';
 import type { Suite, Execution } from '../api/client';
 import { Modal } from '../components/Modal';
-import { ExecutionCard } from '../components/ExecutionCard';
+import { ExecutionList } from '../components/ExecutionList';
 
 type PriorityFilter = 'all' | 'Gravíssima' | 'Crítica' | 'Alta' | 'Média' | 'Normal' | 'Trivial';
 
@@ -197,25 +197,10 @@ export default function SuiteDetailPage() {
             <span className="badge">{executions.length}</span>
           </div>
 
-          {executions.length === 0 ? (
-            <div className="card">
-              <div className="empty-state" style={{ padding: '1.5rem' }}>
-                <Clock size={32} />
-                <h3 style={{ fontSize: '0.9rem' }}>Sem execuções</h3>
-                <p style={{ fontSize: '0.8rem' }}>Inicie um novo ciclo de execução.</p>
-              </div>
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              {executions.map(exec => (
-                <ExecutionCard
-                  key={exec.id}
-                  execution={exec}
-                  onClick={() => navigate(`/executions/${exec.id}`)}
-                />
-              ))}
-            </div>
-          )}
+          <ExecutionList
+            executions={executions}
+            onExecutionClick={exec => navigate(`/executions/${exec.id}`)}
+          />
         </div>
 
         <div>
