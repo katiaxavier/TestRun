@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { executionsApi, reportsApi } from '../api/client';
+import { executionsApi, reportsApi, suitesApi } from '../api/client';
 import { ArrowLeft, MicrosoftExcelLogo, FilePdf, Funnel } from '@phosphor-icons/react';
+import type { Suite } from '../api/client';
 
 interface BatchReport {
   batch: {
@@ -27,27 +28,42 @@ interface BatchReport {
 }
 
 export default function BatchExecutionPage() {
-  const { id } = useParams();
-  const [batch, setBatch] = useState<any>(null);
-  const [report, setReport] = useState<BatchReport | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+   const { id } = useParams();
+   const [batch, setBatch] = useState<any>(null);
+   const [report, setReport] = useState<BatchReport | null>(null);
+   const [suites, setSuites] = useState<Suite[]>([]);
+   const [loading, setLoading] = useState(true);
+   const [statusFilter, setStatusFilter] = useState<string>('all');
 
-  useEffect(() => {
-    if (!id) return;
-    (async () => {
-      setLoading(true);
-      try {
-        const [{ data: batchData }, { data: reportData }] = await Promise.all([
-          executionsApi.getBatch(id),
-          reportsApi.getBatchReport(id),
-        ]);
-        setBatch(batchData);
-        setReport(reportData);
-      } catch (err) {}
-      setLoading(false);
-    })();
-  }, [id]);
+   useEffect(() => {
+     if (!id) return;
+     (async () => {
+       setLoading(true);
+       try {
+         const [{ data: batchData }, { data: reportData }] = await Promise.all([
+           executionsApi.getBatch(id),
+           reportsApi.getBatchReport(id),
+         ]);
+         setBatch(batchData);
+         setReport(reportData);
+         const suiteIds: string[] = batchData.suiteIds ?? [];
+         if (suiteIds.length > 0) {
+           const suitesData = await Promise.all(
+             suiteIds.map(async (suiteId) => {
+               try {
+                 const { data } = await suitesApi.get(suiteId);
+                 return data;
+               } catch {
+                 return null;
+               }
+             })
+           );
+           setSuites(suitesData.filter((s): s is Suite => !!s));
+         }
+       } catch (err) {}
+       setLoading(false);
+     })();
+   }, [id]);
 
   const handleExportXlsx = async () => {
     if (!id) return;
@@ -86,7 +102,18 @@ export default function BatchExecutionPage() {
     <div className="page">
       <div className="page-header">
         <div>
-          <h1 className="page-title">{batch.name || 'Batch ' + batch.id}</h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+            <span className="tag" style={{ fontFamily: 'var(--font-inter)' }}>LOTE</span>
+            {batch.name ? (
+              <h1 className="page-title">{batch.name}</h1>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                {suites.map((suite) => (
+                  <h1 key={suite.id} className="page-title" style={{ margin: 0 }}>{suite.title}</h1>
+                ))}
+              </div>
+            )}
+          </div>
           <p className="page-subtitle">{batch.sprint} — {batch.version} — {batch.responsible}</p>
         </div>
         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>

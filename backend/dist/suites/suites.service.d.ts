@@ -18,12 +18,12 @@ export declare class SuitesService {
     })[]>;
     findOne(id: string): Promise<{
         testCases: {
-            link: string | null;
             id: string;
             jiraKey: string;
             title: string;
             createdAt: Date;
             updatedAt: Date;
+            link: string | null;
             priority: string | null;
             suiteId: string;
         }[];
@@ -45,6 +45,10 @@ export declare class SuitesService {
             responsible: string;
             status: string;
         })[];
+        _count: {
+            testCases: number;
+            executions: number;
+        };
     } & {
         id: string;
         jiraKey: string;
@@ -54,12 +58,12 @@ export declare class SuitesService {
     }>;
     importFromJira(jiraKey: string): Promise<{
         testCases: {
-            link: string | null;
             id: string;
             jiraKey: string;
             title: string;
             createdAt: Date;
             updatedAt: Date;
+            link: string | null;
             priority: string | null;
             suiteId: string;
         }[];
@@ -81,6 +85,10 @@ export declare class SuitesService {
             responsible: string;
             status: string;
         })[];
+        _count: {
+            testCases: number;
+            executions: number;
+        };
     } & {
         id: string;
         jiraKey: string;

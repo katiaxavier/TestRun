@@ -9,8 +9,8 @@ import {
 import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts';
-import { executionsApi, reportsApi } from '../api/client';
-import type { Execution, ExecutionTestCase, Issue } from '../api/client';
+import { executionsApi, reportsApi, suitesApi } from '../api/client';
+import type { Execution, ExecutionTestCase, Issue, Suite } from '../api/client';
 import { StatusBadge } from '../components/StatusBadge';
 import { Modal } from '../components/Modal';
 
@@ -278,6 +278,7 @@ export default function ExecutionRunPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [execution, setExecution] = useState<Execution | null>(null);
+  const [batchSuites, setBatchSuites] = useState<Suite[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedEtc, setSelectedEtc] = useState<ExecutionTestCase | null>(null);
   const [exporting, setExporting] = useState<'xlsx' | 'pdf' | null>(null);
@@ -292,6 +293,25 @@ export default function ExecutionRunPage() {
     try {
       const { data } = await executionsApi.get(id);
       setExecution(data);
+      if (data.batchId) {
+        try {
+          const { data: batchData } = await executionsApi.getBatch(data.batchId);
+          const suiteIds: string[] = batchData.suiteIds ?? [];
+          const suites = await Promise.all(
+            suiteIds.map(async (suiteId) => {
+              try {
+                const { data } = await suitesApi.get(suiteId);
+                return data;
+              } catch {
+                return null;
+              }
+            })
+          );
+          setBatchSuites(suites.filter((s): s is Suite => !!s));
+        } catch {
+          setBatchSuites([]);
+        }
+      }
     } catch { navigate('/'); }
     finally { setLoading(false); }
   }, [id, navigate]);
@@ -367,8 +387,7 @@ export default function ExecutionRunPage() {
   const currentPage = Math.min(page, totalPages);
   const pageStartIndex = (currentPage - 1) * pageSize;
   const pageTcs = filteredTcs.slice(pageStartIndex, pageStartIndex + pageSize);
-  const executionTitle = execution.suite?.jiraKey ?? (execution.batchId ? 'Lote de Execuções' : 'Execução');
-  const executionSubtitle = execution.suite?.title ?? (execution.batchId ? 'Execução em lote' : '');
+  const isBatch = !!execution.batchId;
 
   const chartData = [
     { name: 'Passed', value: counts.passed, color: STATUS_COLORS.PASSED },
@@ -381,16 +400,27 @@ export default function ExecutionRunPage() {
   return (
     <div className="page">
       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
-        <div className="page-header">
+        <div className="page-header" style={{ alignItems: 'flex-start' }}>
           <div>
             <button className="btn btn-ghost btn-sm" onClick={() => navigate(execution?.batchId ? `/executions/batch/${execution.batchId}` : `/suites/${execution.suiteId}`)} style={{ marginBottom: '0.5rem', paddingLeft: 0 }}>
               <ArrowLeft size={15} /> {execution?.batchId ? 'Voltar ao Lote' : execution.suite?.jiraKey}
             </button>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <h1 className="page-title" style={{ fontSize: '1.3rem' }}>{executionTitle}</h1>
-              <StatusBadge status={execution.status} />
-            </div>
-            {executionSubtitle && <p className="page-subtitle">{executionSubtitle}</p>}
+            {isBatch ? (
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
+                <span className="tag" style={{ fontFamily: 'var(--font-inter)' }}>LOTE</span>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                  {batchSuites.map((suite) => (
+                    <h1 key={suite.id} className="page-title" style={{ fontSize: '1.3rem', margin: 0 }}>{suite.title}</h1>
+                  ))}
+                </div>
+                <StatusBadge status={execution.status} />
+              </div>
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <h1 className="page-title" style={{ fontSize: '1.3rem' }}>{execution.suite?.jiraKey ?? 'Execução'}</h1>
+                <StatusBadge status={execution.status} />
+              </div>
+            )}
           </div>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
             <button className="btn btn-secondary" onClick={() => handleExport('xlsx')} disabled={!!exporting}>

@@ -35,48 +35,46 @@ export declare class ExecutionsService {
     findOne(id: string): Promise<{
         suite: {
             id: string;
-            jiraKey: string;
-            title: string;
             createdAt: Date;
             updatedAt: Date;
+            jiraKey: string;
+            title: string;
         } | null;
         testCases: ({
             testCase: {
-                link: string | null;
                 id: string;
-                jiraKey: string;
-                title: string;
+                suiteId: string;
                 createdAt: Date;
                 updatedAt: Date;
+                link: string | null;
+                jiraKey: string;
+                title: string;
                 priority: string | null;
-                suiteId: string;
             };
             issues: {
                 id: string;
-                jiraKey: string | null;
-                title: string;
-                createdAt: Date;
-                updatedAt: Date;
                 responsible: string | null;
                 status: string | null;
+                createdAt: Date;
+                updatedAt: Date;
+                jiraKey: string | null;
+                title: string;
+                executionTestCaseId: string;
                 type: string;
                 severity: string | null;
-                executionTestCaseId: string;
             }[];
         } & {
             id: string;
-            createdAt: Date;
-            updatedAt: Date;
             responsible: string | null;
             status: string;
-            comments: string | null;
+            createdAt: Date;
+            updatedAt: Date;
             executionId: string;
             testCaseId: string;
+            comments: string | null;
         })[];
     } & {
         id: string;
-        createdAt: Date;
-        updatedAt: Date;
         suiteId: string | null;
         batchId: string | null;
         sprint: string;
@@ -86,52 +84,52 @@ export declare class ExecutionsService {
         testedFeature: string | null;
         responsible: string;
         status: string;
+        createdAt: Date;
+        updatedAt: Date;
     }>;
     create(dto: CreateExecutionDto): Promise<{
         suite: {
             id: string;
-            jiraKey: string;
-            title: string;
             createdAt: Date;
             updatedAt: Date;
+            jiraKey: string;
+            title: string;
         } | null;
         testCases: ({
             testCase: {
-                link: string | null;
                 id: string;
-                jiraKey: string;
-                title: string;
+                suiteId: string;
                 createdAt: Date;
                 updatedAt: Date;
+                link: string | null;
+                jiraKey: string;
+                title: string;
                 priority: string | null;
-                suiteId: string;
             };
             issues: {
                 id: string;
-                jiraKey: string | null;
-                title: string;
-                createdAt: Date;
-                updatedAt: Date;
                 responsible: string | null;
                 status: string | null;
+                createdAt: Date;
+                updatedAt: Date;
+                jiraKey: string | null;
+                title: string;
+                executionTestCaseId: string;
                 type: string;
                 severity: string | null;
-                executionTestCaseId: string;
             }[];
         } & {
             id: string;
-            createdAt: Date;
-            updatedAt: Date;
             responsible: string | null;
             status: string;
-            comments: string | null;
+            createdAt: Date;
+            updatedAt: Date;
             executionId: string;
             testCaseId: string;
+            comments: string | null;
         })[];
     } & {
         id: string;
-        createdAt: Date;
-        updatedAt: Date;
         suiteId: string | null;
         batchId: string | null;
         sprint: string;
@@ -141,51 +139,53 @@ export declare class ExecutionsService {
         testedFeature: string | null;
         responsible: string;
         status: string;
+        createdAt: Date;
+        updatedAt: Date;
     }>;
     updateTestCase(execTestCaseId: string, dto: UpdateTestCaseDto): Promise<{
         testCase: {
-            link: string | null;
             id: string;
-            jiraKey: string;
-            title: string;
+            suiteId: string;
             createdAt: Date;
             updatedAt: Date;
+            link: string | null;
+            jiraKey: string;
+            title: string;
             priority: string | null;
-            suiteId: string;
         };
         issues: {
             id: string;
-            jiraKey: string | null;
-            title: string;
-            createdAt: Date;
-            updatedAt: Date;
             responsible: string | null;
             status: string | null;
+            createdAt: Date;
+            updatedAt: Date;
+            jiraKey: string | null;
+            title: string;
+            executionTestCaseId: string;
             type: string;
             severity: string | null;
-            executionTestCaseId: string;
         }[];
     } & {
         id: string;
-        createdAt: Date;
-        updatedAt: Date;
         responsible: string | null;
         status: string;
-        comments: string | null;
+        createdAt: Date;
+        updatedAt: Date;
         executionId: string;
         testCaseId: string;
+        comments: string | null;
     }>;
     addIssue(execTestCaseId: string, dto: CreateIssueDto): Promise<{
         id: string;
-        jiraKey: string | null;
-        title: string;
-        createdAt: Date;
-        updatedAt: Date;
         responsible: string | null;
         status: string | null;
+        createdAt: Date;
+        updatedAt: Date;
+        jiraKey: string | null;
+        title: string;
+        executionTestCaseId: string;
         type: string;
         severity: string | null;
-        executionTestCaseId: string;
     }>;
     removeIssue(issueId: string): Promise<{
         success: boolean;
@@ -197,8 +197,6 @@ export declare class ExecutionsService {
     }>;
     updateStatus(id: string, status: string): Promise<{
         id: string;
-        createdAt: Date;
-        updatedAt: Date;
         suiteId: string | null;
         batchId: string | null;
         sprint: string;
@@ -208,53 +206,53 @@ export declare class ExecutionsService {
         testedFeature: string | null;
         responsible: string;
         status: string;
+        createdAt: Date;
+        updatedAt: Date;
     }>;
     createBatch(dto: CreateBatchExecutionDto): Promise<({
         executions: ({
             suite: {
                 id: string;
-                jiraKey: string;
-                title: string;
                 createdAt: Date;
                 updatedAt: Date;
+                jiraKey: string;
+                title: string;
             } | null;
             testCases: ({
                 testCase: {
-                    link: string | null;
                     id: string;
-                    jiraKey: string;
-                    title: string;
+                    suiteId: string;
                     createdAt: Date;
                     updatedAt: Date;
+                    link: string | null;
+                    jiraKey: string;
+                    title: string;
                     priority: string | null;
-                    suiteId: string;
                 };
                 issues: {
                     id: string;
-                    jiraKey: string | null;
-                    title: string;
-                    createdAt: Date;
-                    updatedAt: Date;
                     responsible: string | null;
                     status: string | null;
+                    createdAt: Date;
+                    updatedAt: Date;
+                    jiraKey: string | null;
+                    title: string;
+                    executionTestCaseId: string;
                     type: string;
                     severity: string | null;
-                    executionTestCaseId: string;
                 }[];
             } & {
                 id: string;
-                createdAt: Date;
-                updatedAt: Date;
                 responsible: string | null;
                 status: string;
-                comments: string | null;
+                createdAt: Date;
+                updatedAt: Date;
                 executionId: string;
                 testCaseId: string;
+                comments: string | null;
             })[];
         } & {
             id: string;
-            createdAt: Date;
-            updatedAt: Date;
             suiteId: string | null;
             batchId: string | null;
             sprint: string;
@@ -264,12 +262,11 @@ export declare class ExecutionsService {
             testedFeature: string | null;
             responsible: string;
             status: string;
+            createdAt: Date;
+            updatedAt: Date;
         })[];
     } & {
         id: string;
-        createdAt: Date;
-        updatedAt: Date;
-        name: string | null;
         sprint: string;
         version: string;
         startDate: Date;
@@ -277,54 +274,55 @@ export declare class ExecutionsService {
         testedFeature: string | null;
         responsible: string;
         status: string;
+        createdAt: Date;
+        updatedAt: Date;
+        name: string | null;
         suiteIds: import("@prisma/client/runtime/library").JsonValue;
     }) | null>;
     findBatch(id: string): Promise<{
         executions: ({
             suite: {
                 id: string;
-                jiraKey: string;
-                title: string;
                 createdAt: Date;
                 updatedAt: Date;
+                jiraKey: string;
+                title: string;
             } | null;
             testCases: ({
                 testCase: {
-                    link: string | null;
                     id: string;
-                    jiraKey: string;
-                    title: string;
+                    suiteId: string;
                     createdAt: Date;
                     updatedAt: Date;
+                    link: string | null;
+                    jiraKey: string;
+                    title: string;
                     priority: string | null;
-                    suiteId: string;
                 };
                 issues: {
                     id: string;
-                    jiraKey: string | null;
-                    title: string;
-                    createdAt: Date;
-                    updatedAt: Date;
                     responsible: string | null;
                     status: string | null;
+                    createdAt: Date;
+                    updatedAt: Date;
+                    jiraKey: string | null;
+                    title: string;
+                    executionTestCaseId: string;
                     type: string;
                     severity: string | null;
-                    executionTestCaseId: string;
                 }[];
             } & {
                 id: string;
-                createdAt: Date;
-                updatedAt: Date;
                 responsible: string | null;
                 status: string;
-                comments: string | null;
+                createdAt: Date;
+                updatedAt: Date;
                 executionId: string;
                 testCaseId: string;
+                comments: string | null;
             })[];
         } & {
             id: string;
-            createdAt: Date;
-            updatedAt: Date;
             suiteId: string | null;
             batchId: string | null;
             sprint: string;
@@ -334,12 +332,11 @@ export declare class ExecutionsService {
             testedFeature: string | null;
             responsible: string;
             status: string;
+            createdAt: Date;
+            updatedAt: Date;
         })[];
     } & {
         id: string;
-        createdAt: Date;
-        updatedAt: Date;
-        name: string | null;
         sprint: string;
         version: string;
         startDate: Date;
@@ -347,24 +344,23 @@ export declare class ExecutionsService {
         testedFeature: string | null;
         responsible: string;
         status: string;
+        createdAt: Date;
+        updatedAt: Date;
+        name: string | null;
         suiteIds: import("@prisma/client/runtime/library").JsonValue;
     }>;
-    findAllBatches(): Promise<({
+    findAllBatches(): Promise<{
+        suites: {
+            id: string;
+            jiraKey: string;
+            title: string;
+        }[];
         executions: ({
-            suite: {
-                id: string;
-                jiraKey: string;
-                title: string;
-                createdAt: Date;
-                updatedAt: Date;
-            } | null;
             _count: {
                 testCases: number;
             };
         } & {
             id: string;
-            createdAt: Date;
-            updatedAt: Date;
             suiteId: string | null;
             batchId: string | null;
             sprint: string;
@@ -374,12 +370,10 @@ export declare class ExecutionsService {
             testedFeature: string | null;
             responsible: string;
             status: string;
+            createdAt: Date;
+            updatedAt: Date;
         })[];
-    } & {
         id: string;
-        createdAt: Date;
-        updatedAt: Date;
-        name: string | null;
         sprint: string;
         version: string;
         startDate: Date;
@@ -387,8 +381,11 @@ export declare class ExecutionsService {
         testedFeature: string | null;
         responsible: string;
         status: string;
+        createdAt: Date;
+        updatedAt: Date;
+        name: string | null;
         suiteIds: import("@prisma/client/runtime/library").JsonValue;
-    })[]>;
+    }[]>;
     deleteBatch(id: string): Promise<{
         success: boolean;
         message: string;

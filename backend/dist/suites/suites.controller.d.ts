@@ -16,12 +16,12 @@ export declare class SuitesController {
     })[]>;
     findOne(id: string): Promise<{
         testCases: {
-            link: string | null;
             id: string;
             jiraKey: string;
             title: string;
             createdAt: Date;
             updatedAt: Date;
+            link: string | null;
             priority: string | null;
             suiteId: string;
         }[];
@@ -43,6 +43,10 @@ export declare class SuitesController {
             responsible: string;
             status: string;
         })[];
+        _count: {
+            testCases: number;
+            executions: number;
+        };
     } & {
         id: string;
         jiraKey: string;
@@ -52,12 +56,12 @@ export declare class SuitesController {
     }>;
     importSuite(jiraKey: string): Promise<{
         testCases: {
-            link: string | null;
             id: string;
             jiraKey: string;
             title: string;
             createdAt: Date;
             updatedAt: Date;
+            link: string | null;
             priority: string | null;
             suiteId: string;
         }[];
@@ -79,6 +83,10 @@ export declare class SuitesController {
             responsible: string;
             status: string;
         })[];
+        _count: {
+            testCases: number;
+            executions: number;
+        };
     } & {
         id: string;
         jiraKey: string;
