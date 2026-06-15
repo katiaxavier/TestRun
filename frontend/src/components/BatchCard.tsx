@@ -1,0 +1,67 @@
+import { Flask, ChartBar, DotsThreeVertical, Trash } from '@phosphor-icons/react';
+import { DropdownMenu } from './DropdownMenu';
+
+interface BatchCardProps {
+  batch: any;
+  onDelete: (b: any) => void;
+}
+
+export function BatchCard({ batch, onDelete }: BatchCardProps) {
+  const totalCases = batch.executions.reduce(
+    (s: number, e: any) => s + (e._count?.testCases ?? e.testCases?.length ?? 0),
+    0,
+  );
+
+  const suiteKeys: string[] = (batch.suites ?? [])
+    .map((s: any) => s.jiraKey)
+    .filter(Boolean);
+
+  const formatDate = (date: string | Date | undefined) => {
+    if (!date) return '';
+    return new Date(date).toLocaleDateString('pt-BR');
+  };
+
+  return (
+    <>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
+        <span className="tag" style={{ fontFamily: 'monospace', fontSize: '0.7rem', background: 'rgba(139, 92, 246, 0.15)', color: '#8b5cf6', flexShrink: 0 }}>
+          LOTE
+        </span>
+        {suiteKeys.map((key, i) => (
+          <span key={i} className="tag" style={{ fontFamily: 'monospace', fontSize: '0.7rem', flexShrink: 0 }}>
+            {key}
+          </span>
+        ))}
+        <div style={{ marginLeft: 'auto', flexShrink: 0 }} onClick={e => e.stopPropagation()}>
+          <DropdownMenu
+            trigger={<DotsThreeVertical size={18} style={{ color: 'var(--text-secondary)' }} />}
+            items={[{ label: 'Excluir', icon: <Trash size={14} />, danger: true, onClick: () => onDelete(batch) }]}
+          />
+        </div>
+      </div>
+
+      <div>
+        <h3 title={batch.name || undefined} style={{ fontSize: '0.95rem', fontWeight: 600, marginBottom: '0.25rem', lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+          {batch.name || 'Batch ' + batch.id.substring(0, 8)}
+        </h3>
+        <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+          {batch.sprint} • {batch.responsible}
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', gap: '1.25rem', marginTop: '1rem', paddingTop: '0.85rem', borderTop: '1px solid var(--border-subtle)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+          <Flask size={14} style={{ color: 'var(--accent)' }} />
+          <strong style={{ color: 'var(--text-primary)' }}>{totalCases}</strong> casos
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+          <ChartBar size={14} style={{ color: 'var(--status-inprogress)' }} />
+          <strong style={{ color: 'var(--text-primary)' }}>{batch.executions.length}</strong> execuções
+        </div>
+        <div style={{ marginLeft: 'auto', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+          Criado em {formatDate(batch.createdAt)}
+        </div>
+      </div>
+    </>
+  );
+}

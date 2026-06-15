@@ -1,14 +1,16 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, Trash, Flask, MagnifyingGlass,
-  WarningCircle, CloudArrowDown, ChartBar, DotsThreeVertical, Check,
+  WarningCircle, CloudArrowDown, ChartBar,
 } from '@phosphor-icons/react';
 import { suitesApi, executionsApi } from '../api/client';
 import BatchExecutionModal from '../components/BatchExecutionModal';
 import type { Suite } from '../api/client';
 import { Modal } from '../components/Modal';
+import { SuiteCard } from '../components/SuiteCard';
+import { BatchCard } from '../components/BatchCard';
 
 function ImportModal({ open, onClose, onSuccess }: { open: boolean; onClose: () => void; onSuccess: (s: Suite) => void }) {
   const [jiraKey, setJiraKey] = useState('');
@@ -128,78 +130,6 @@ function DeleteBatchModal({ open, batch, onClose, onConfirm }: { open: boolean; 
         </span>
       </p>
     </Modal>
-  );
-}
-
-// Custom Dropdown Menu Component
-function DropdownMenu({ trigger, items }: {
-  trigger: React.ReactNode;
-  items: Array<{ label: string; icon?: React.ReactNode; danger?: boolean; onClick: () => void }>;
-}) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
-  }, []);
-
-  return (
-    <div ref={ref} style={{ position: 'relative' }}>
-      <div onClick={e => { e.stopPropagation(); e.preventDefault(); setOpen(o => !o); }} style={{ cursor: 'pointer' }}>{trigger}</div>
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            style={{
-              position: 'absolute', top: '100%', right: 0, marginTop: 4,
-              background: 'var(--bg-surface)', border: '1px solid var(--border)',
-              borderRadius: 'var(--radius-sm)', minWidth: 140, zIndex: 100,
-              boxShadow: '0 4px 12px rgba(0,0,0,0.15)', padding: '0.25rem 0',
-            }}
-          >
-            {items.map((item, i) => (
-              <button
-                key={i}
-                onClick={(e) => { e.stopPropagation(); item.onClick(); setOpen(false); }}
-                style={{
-                  width: '100%', display: 'flex', alignItems: 'center', gap: '0.5rem',
-                  padding: '0.5rem 0.75rem', fontSize: '0.85rem',
-                  background: 'none', border: 'none', cursor: 'pointer',
-                  color: item.danger ? 'var(--status-failed)' : 'var(--text-primary)',
-                }}
-                onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-subtle)'}
-                onMouseLeave={e => e.currentTarget.style.background = 'none'}
-              >
-                {item.icon}
-                {item.label}
-              </button>
-            ))}
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
-
-// Custom Checkbox Component
-function CustomCheckbox({ checked, onChange }: { checked: boolean; onChange: (checked: boolean) => void }) {
-  return (
-    <label style={{
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      width: 18, height: 18, borderRadius: 'var(--radius-sm)',
-      border: `1px solid ${checked ? 'var(--accent)' : 'var(--border)'}`,
-      background: checked ? 'var(--accent)' : 'transparent',
-      cursor: 'pointer', transition: 'all 0.15s',
-    }}>
-      <input type="checkbox" checked={checked} onChange={e => onChange(e.target.checked)} style={{ display: 'none' }} />
-      {checked && <Check size={12} weight="bold" style={{ color: '#fff' }} />}
-    </label>
   );
 }
 
@@ -381,92 +311,3 @@ export default function DashboardPage() {
   );
 }
 
-function SuiteCard({ suite, selected, onSelect, onDelete }: { suite: Suite; selected?: boolean; onSelect?: (id: string, checked: boolean) => void; onDelete: (s: Suite) => void }) {
-  const formatDate = (date: string | Date | undefined) => {
-    if (!date) return '';
-    return new Date(date).toLocaleDateString('pt-BR');
-  };
-
-  return (
-    <>
-      {onSelect && (
-        <div style={{ position: 'absolute', right: 38, top: 12, zIndex: 10 }} onClick={e => e.stopPropagation()}>
-          <CustomCheckbox checked={!!selected} onChange={checked => onSelect(suite.id, checked)} />
-        </div>
-      )}
-      <span className="tag" style={{ position: 'absolute', left: 12, top: 12, fontFamily: 'monospace', fontSize: '0.7rem', background: 'var(--accent-subtle)', color: 'var(--accent)' }}>SUITE</span>
-      <div style={{ position: 'absolute', right: 12, top: 12, zIndex: 11, cursor: 'pointer', padding: '0.25rem', borderRadius: 'var(--radius-sm)' }} onClick={e => e.stopPropagation()}>
-        <DropdownMenu
-          trigger={<DotsThreeVertical size={18} style={{ color: 'var(--text-secondary)' }} />}
-          items={[{ label: 'Excluir', icon: <Trash size={14} />, danger: true, onClick: () => onDelete(suite) }]}
-        />
-      </div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.75rem', marginTop: 26 }}>
-        <div style={{ minWidth: 0, flex: 1 }}>
-          <span className="tag" style={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>{suite.jiraKey}</span>
-          <h3 style={{ fontSize: '0.95rem', fontWeight: 600, lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', marginTop: '0.4rem' }}>
-            {suite.title}
-          </h3>
-        </div>
-      </div>
-
-      <div style={{ display: 'flex', gap: '1.25rem', marginTop: '1rem', paddingTop: '0.85rem', borderTop: '1px solid var(--border-subtle)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-          <Flask size={14} style={{ color: 'var(--accent)' }} />
-          <strong style={{ color: 'var(--text-primary)' }}>{suite._count?.testCases ?? 0}</strong> casos
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-          <ChartBar size={14} style={{ color: 'var(--status-inprogress)' }} />
-          <strong style={{ color: 'var(--text-primary)' }}>{suite._count?.executions ?? 0}</strong> execuções
-        </div>
-        <div style={{ marginLeft: 'auto', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-          {formatDate(suite.updatedAt)}
-        </div>
-      </div>
-    </>
-  );
-}
-
-function BatchCard({ batch, onDelete }: { batch: any; onDelete: (b: any) => void }) {
-  const totalCases = batch.executions.reduce((s: number, e: any) => s + (e._count?.testCases ?? e.testCases?.length ?? 0), 0);
-  const formatDate = (date: string | Date | undefined) => {
-    if (!date) return '';
-    return new Date(date).toLocaleDateString('pt-BR');
-  };
-
-  return (
-    <>
-      <span className="tag" style={{ position: 'absolute', left: 12, top: 12, fontFamily: 'monospace', fontSize: '0.7rem', background: 'rgba(139, 92, 246, 0.15)', color: '#8b5cf6' }}>LOTE</span>
-      <div style={{ position: 'absolute', right: 12, top: 12, zIndex: 11, cursor: 'pointer', padding: '0.25rem', borderRadius: 'var(--radius-sm)' }} onClick={e => e.stopPropagation()}>
-        <DropdownMenu
-          trigger={<DotsThreeVertical size={18} style={{ color: 'var(--text-secondary)' }} />}
-          items={[{ label: 'Excluir', icon: <Trash size={14} />, danger: true, onClick: () => onDelete(batch) }]}
-        />
-      </div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.75rem', marginTop: 26 }}>
-        <div style={{ minWidth: 0, flex: 1 }}>
-          <h3 style={{ fontSize: '0.95rem', fontWeight: 600, marginBottom: '0.25rem', paddingRight: '2rem' }}>
-            {batch.name || 'Batch ' + batch.id.substring(0, 8)}
-          </h3>
-          <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-            {batch.sprint} • {batch.responsible}
-          </div>
-        </div>
-      </div>
-
-      <div style={{ display: 'flex', gap: '1.25rem', marginTop: '1rem', paddingTop: '0.85rem', borderTop: '1px solid var(--border-subtle)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-          <Flask size={14} style={{ color: 'var(--accent)' }} />
-          <strong style={{ color: 'var(--text-primary)' }}>{batch.executions.length}</strong> suites
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-          <ChartBar size={14} style={{ color: 'var(--status-inprogress)' }} />
-          <strong style={{ color: 'var(--text-primary)' }}>{totalCases}</strong> casos
-        </div>
-        <div style={{ marginLeft: 'auto', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-          {formatDate(batch.updatedAt)}
-        </div>
-      </div>
-    </>
-  );
-}

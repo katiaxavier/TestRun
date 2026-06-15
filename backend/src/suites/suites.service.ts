@@ -24,6 +24,9 @@ export class SuitesService {
     const suite = await this.prisma.suite.findUnique({
       where: { id },
       include: {
+        _count: {
+          select: { testCases: true, executions: true },
+        },
         testCases: {
           orderBy: { jiraKey: 'asc' },
         },

@@ -328,17 +328,27 @@ const suites = await this.prisma.suite.findMany({
   }
 
   async findAllBatches() {
-    return this.prisma.executionBatch.findMany({
+    const batches = await this.prisma.executionBatch.findMany({
       orderBy: { createdAt: 'desc' },
       include: {
         executions: {
           include: {
-            suite: true,
             _count: { select: { testCases: true } },
           },
         },
       },
     });
+
+    return Promise.all(
+      batches.map(async (batch) => {
+        const suiteIds = (batch.suiteIds as string[]) ?? [];
+        const suites = await this.prisma.suite.findMany({
+          where: { id: { in: suiteIds } },
+          select: { id: true, jiraKey: true, title: true },
+        });
+        return { ...batch, suites };
+      }),
+    );
   }
 
   async deleteBatch(id: string) {
