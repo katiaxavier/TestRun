@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Sidebar } from './components/Sidebar';
+import { TopBar } from './components/TopBar';
 import DashboardPage from './pages/DashboardPage';
 import ConfigPage from './pages/ConfigPage';
 import SuiteDetailPage from './pages/SuiteDetailPage';
@@ -13,6 +14,7 @@ export default function App() {
       <div className="app-layout">
         <Sidebar />
         <main className="main-content">
+          <TopBar />
           <Routes>
             <Route path="/" element={<DashboardPage />} />
             <Route path="/config" element={<ConfigPage />} />
