@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Play, WarningCircle } from '@phosphor-icons/react';
+import { Play, WarningCircle } from '@phosphor-icons/react';
 import { suitesApi, executionsApi } from '../api/client';
 import type { Suite, Execution } from '../api/client';
 import { Modal } from '../components/Modal';
 import { ExecutionList } from '../components/ExecutionList';
 import { TestCaseList } from '../components/TestCaseList';
+import { PageHeader } from '../components/PageHeader';
 
 function NewExecutionModal({ open, suiteId, onClose, onCreated }: {
   open: boolean; suiteId: string; onClose: () => void; onCreated: (e: Execution) => void;
@@ -119,26 +120,20 @@ export default function SuiteDetailPage() {
   return (
     <div className="page">
       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
-        <div className="page-header">
-          <div style={{ flex: 1 }}>
-            <button className="btn btn-ghost btn-sm" onClick={() => navigate('/')} style={{ marginBottom: '0.5rem', paddingLeft: 0 }}>
-              <ArrowLeft size={15} /> Suites de Teste
-            </button>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <span className="tag" style={{ fontFamily: 'monospace' }}>{suite.jiraKey}</span>
-              <h1 className="page-title" style={{ fontSize: '1.3rem' }}>{suite.title}</h1>
-            </div>
-            <p className="page-subtitle">{testCases.length} casos de teste · {executions.length} execuções</p>
-          </div>
-          <button className="btn btn-primary" onClick={() => setNewExecOpen(true)} disabled={testCases.length === 0}>
-            <Play size={16} /> Nova Execução
-          </button>
-        </div>
+        <PageHeader
+          backLabel="Suites de Teste"
+          onBack={() => navigate('/')}
+          eyebrow={suite.jiraKey}
+          title={suite.title}
+        />
 
-        <div style={{ marginBottom: '1.5rem' }}>
+        <div style={{ marginTop: '32px', marginBottom: '1.5rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
             <h2 style={{ fontSize: '1rem', fontWeight: 700 }}>Execuções</h2>
             <span className="badge">{executions.length}</span>
+            <button className="btn btn-primary btn-sm" style={{ marginLeft: 'auto' }} onClick={() => setNewExecOpen(true)} disabled={testCases.length === 0}>
+              <Play size={15} /> Nova Execução
+            </button>
           </div>
           <ExecutionList
             executions={executions}
