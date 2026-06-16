@@ -464,6 +464,16 @@ export default function ExecutionRunPage() {
               <span style={{ fontSize: '1.75rem', fontWeight: 800, letterSpacing: '-0.03em', color: 'var(--accent)' }}>{pct}%</span>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', fontFamily: 'monospace' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--text-muted)', display: 'inline-block', flexShrink: 0 }} />
+                  <span style={{ color: 'var(--text-secondary)' }}>Executado ({executed})</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <span style={{ color: 'var(--text-secondary)' }}>Total ({counts.total})</span>
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--text-muted)', display: 'inline-block', flexShrink: 0 }} />
+                </div>
+              </div>
               <div style={{ height: 16, background: 'var(--bg-overlay)', borderRadius: 99, overflow: 'hidden', display: 'flex' }}>
                 {counts.passed > 0 && <div style={{ width: `${(counts.passed / counts.total) * 100}%`, background: STATUS_COLORS.PASSED, transition: 'width 0.6s cubic-bezier(0.4,0,0.2,1)' }} title={`Passou: ${counts.passed}`} />}
                 {counts.failed > 0 && <div style={{ width: `${(counts.failed / counts.total) * 100}%`, background: STATUS_COLORS.FAILED, transition: 'width 0.6s cubic-bezier(0.4,0,0.2,1)' }} title={`Falhou: ${counts.failed}`} />}
@@ -489,22 +499,6 @@ export default function ExecutionRunPage() {
               </div>
             </div>
           </div>
-        </div>
-
-        {/* KPI Cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
-          {([
-            { label: 'Total', value: counts.total, color: 'var(--text-primary)' },
-            { label: 'Executado', value: executed, color: 'var(--text-primary)' },
-            { label: 'Passou', value: counts.passed, color: STATUS_COLORS.PASSED },
-            { label: 'Falhou', value: counts.failed, color: STATUS_COLORS.FAILED },
-            { label: 'Bloqueado', value: counts.blocked, color: STATUS_COLORS.BLOCKED },
-          ] as const).map(({ label, value, color }) => (
-            <div key={label} className="card" style={{ padding: '1rem' }}>
-              <span style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)' }}>{label}</span>
-              <div style={{ fontSize: '2rem', fontWeight: 800, letterSpacing: '-0.03em', color, marginTop: '0.25rem' }}>{value}</div>
-            </div>
-          ))}
         </div>
 
         <div className="card" style={{ padding: '1rem', marginBottom: '1.5rem' }}>
