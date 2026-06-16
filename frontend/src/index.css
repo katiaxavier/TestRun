@@ -176,6 +176,7 @@ input:focus, textarea:focus, select:focus {
   box-shadow: 0 0 0 3px var(--accent-subtle);
 }
 input::placeholder, textarea::placeholder { color: var(--text-muted); }
+input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1); cursor: pointer; }
 
 /* ─── Scrollbar ─── */
 ::-webkit-scrollbar { width: 6px; height: 6px; }

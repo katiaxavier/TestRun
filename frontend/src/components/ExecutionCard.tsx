@@ -102,7 +102,7 @@ export function ExecutionCard({ execution, title, onClick }: ExecutionCardProps)
           {/* Meta row */}
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', color: 'var(--text-muted)', fontSize: '0.8rem', fontWeight: 500 }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-              <CalendarBlank size={14} />
+              <CalendarBlank size={14} color="white" />
               {dateRange}
             </span>
             {execution.sprint && (
