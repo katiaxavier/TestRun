@@ -21,11 +21,11 @@ const STATUS_COLORS: Record<string, string> = {
   IN_PROGRESS: '#3b82f6', PENDING: '#6b7280',
 };
 const STATUS_FILTERS = [
-  { key: 'all', label: 'Todos', status: undefined },
+  { key: 'all', label: 'Todos os status', status: undefined },
   { key: 'PASSED', label: 'Passou', status: 'PASSED' },
   { key: 'FAILED', label: 'Falhou', status: 'FAILED' },
   { key: 'BLOCKED', label: 'Bloqueado', status: 'BLOCKED' },
-  { key: 'PENDING', label: 'Não Executado', status: 'PENDING' },
+  { key: 'PENDING', label: 'Pendente', status: 'PENDING' },
 ];
 
 type StatusFilterKey = 'all' | 'PASSED' | 'FAILED' | 'BLOCKED' | 'PENDING';
@@ -287,6 +287,7 @@ export default function ExecutionRunPage() {
   const [deleting, setDeleting] = useState(false);
   const [statusFilter, setStatusFilter] = useState<StatusFilterKey>('all');
   const [search, setSearch] = useState('');
+  const [priorityFilter, setPriorityFilter] = useState<string>('all');
   const [page, setPage] = useState(1);
 
   const fetchExecution = useCallback(async () => {
@@ -318,7 +319,7 @@ export default function ExecutionRunPage() {
   }, [id, navigate]);
 
   useEffect(() => { fetchExecution(); }, [fetchExecution]);
-  useEffect(() => { setPage(1); }, [statusFilter, search]);
+  useEffect(() => { setPage(1); }, [statusFilter, search, priorityFilter]);
 
   const handleDelete = async () => {
     if (!id) return;
@@ -376,9 +377,11 @@ export default function ExecutionRunPage() {
   };
   const executed = counts.passed + counts.failed + counts.blocked;
   const pct = counts.total > 0 ? Math.round((counts.passed / counts.total) * 100) : 0;
+  const availablePriorities = Array.from(new Set(tcs.map(tc => priorityLabel(tc.testCase.priority)).filter(p => p !== '—')));
   const query = normalize(search.trim());
   const filteredTcs = tcs
     .filter(tc => statusFilter === 'all' ? true : tc.status === statusFilter)
+    .filter(tc => priorityFilter === 'all' ? true : priorityLabel(tc.testCase.priority) === priorityFilter)
     .filter(tc => {
       if (!query) return true;
       return normalize(tc.testCase.jiraKey).includes(query) || normalize(tc.testCase.title).includes(query);
@@ -495,31 +498,35 @@ export default function ExecutionRunPage() {
           </div>
         </div>
 
-        <div className="card" style={{ padding: '1rem', marginBottom: '1.5rem' }}>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1rem' }}>
-            {STATUS_FILTERS.map(filter => (
-              <button
-                key={filter.key}
-                className={statusFilter === filter.key ? 'btn btn-primary' : 'btn btn-secondary'}
-                onClick={() => setStatusFilter(filter.key as StatusFilterKey)}
-              >
-                {filter.label} <span className="badge">{statusCounts[filter.key]}</span>
-              </button>
-            ))}
+        <div className="card" style={{ padding: 0, overflow: 'hidden', marginBottom: '1.5rem' }}>
+          <div style={{
+            padding: '1rem',
+            borderBottom: '1px solid var(--border-subtle)',
+            display: 'grid',
+            gridTemplateColumns: '1fr 210px 210px',
+            gap: '0.75rem',
+            alignItems: 'center',
+          }}>
+            <div style={{ position: 'relative' }}>
+              <MagnifyingGlass size={16} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
+              <input
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Buscar por ID ou título"
+                style={{ width: '100%', paddingLeft: '2.4rem' }}
+              />
+            </div>
+            <select value={statusFilter} onChange={e => setStatusFilter(e.target.value as StatusFilterKey)}>
+              {STATUS_FILTERS.map(f => (
+                <option key={f.key} value={f.key}>{f.label}</option>
+              ))}
+            </select>
+            <select value={priorityFilter} onChange={e => setPriorityFilter(e.target.value)}>
+              <option value="all">Todas as prioridades</option>
+              {availablePriorities.map(p => <option key={p} value={p}>{p}</option>)}
+            </select>
           </div>
-          <div style={{ position: 'relative' }}>
-            <MagnifyingGlass size={16} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
-            <input
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Buscar casos por ID ou título"
-              style={{ width: '100%', paddingLeft: '2.4rem' }}
-            />
-          </div>
-        </div>
-
-        <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-          <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <div style={{ padding: '0.75rem 1.25rem', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <h2 style={{ fontSize: '0.95rem', fontWeight: 700 }}>Casos de Teste</h2>
             <span className="badge">{filteredTcs.length}</span>
           </div>
