@@ -102,6 +102,13 @@ export default function SuiteDetailPage() {
 
   useEffect(() => { fetchSuite(); }, [fetchSuite]);
 
+  useEffect(() => {
+    const executions = suite?.executions ?? [];
+    if (!executions.some(e => e.status === 'IN_PROGRESS')) return;
+    const interval = setInterval(fetchSuite, 15_000);
+    return () => clearInterval(interval);
+  }, [suite?.executions, fetchSuite]);
+
   const handleDeleteTestCase = async (tcId: string) => {
     await suitesApi.deleteTestCase(tcId);
     setSuite(prev => prev ? { ...prev, testCases: prev.testCases!.filter(t => t.id !== tcId) } : prev);

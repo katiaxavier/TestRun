@@ -108,7 +108,7 @@ export class ExecutionsService {
         startDate: new Date(dto.startDate),
         endDate: new Date(dto.endDate),
         responsible: dto.responsible,
-        status: 'IN_PROGRESS',
+        status: 'PENDING',
       },
     });
 
@@ -125,6 +125,23 @@ export class ExecutionsService {
     }
 
     return this.findOne(execution.id);
+  }
+
+  private async recomputeExecutionStatus(executionId: string) {
+    const testCases = await this.prisma.executionTestCase.findMany({
+      where: { executionId },
+      select: { status: true },
+    });
+
+    const allPending = testCases.every((tc) => tc.status === 'PENDING');
+    const allDone = testCases.every((tc) => tc.status !== 'PENDING');
+
+    const status = allPending ? 'PENDING' : allDone ? 'COMPLETED' : 'IN_PROGRESS';
+
+    await this.prisma.execution.update({
+      where: { id: executionId },
+      data: { status },
+    });
   }
 
   async updateTestCase(execTestCaseId: string, dto: UpdateTestCaseDto) {
@@ -152,6 +169,8 @@ export class ExecutionsService {
         issues: true,
       },
     });
+
+    await this.recomputeExecutionStatus(etc.executionId);
 
     return updated;
   }

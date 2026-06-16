@@ -119,6 +119,13 @@ export default function BatchExecutionPage() {
 
   useEffect(() => { fetchBatch(); }, [fetchBatch]);
 
+  useEffect(() => {
+    const executions: Execution[] = batch?.executions ?? [];
+    if (!executions.some(e => e.status === 'IN_PROGRESS')) return;
+    const interval = setInterval(fetchBatch, 15_000);
+    return () => clearInterval(interval);
+  }, [batch?.executions, fetchBatch]);
+
   if (loading) return <div className="page"><div className="loading-page"><div className="spinner" /> Carregando...</div></div>;
   if (!batch) return null;
 
