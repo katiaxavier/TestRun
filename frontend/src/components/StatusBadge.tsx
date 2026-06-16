@@ -2,12 +2,12 @@
 type StatusKey = 'PASSED' | 'FAILED' | 'BLOCKED' | 'IN_PROGRESS' | 'PENDING' | string;
 
 const labels: Record<string, string> = {
-  PASSED: 'Passed',
-  FAILED: 'Failed',
-  BLOCKED: 'Blocked',
-  IN_PROGRESS: 'In Progress',
-  PENDING: 'Pending',
-  IN_PROGRESS_EXEC: 'In Progress',
+  PASSED: 'Passou',
+  FAILED: 'Falhou',
+  BLOCKED: 'Bloqueado',
+  IN_PROGRESS: 'Em Andamento',
+  PENDING: 'Pendente',
+  IN_PROGRESS_EXEC: 'Em Andamento',
   COMPLETED: 'Concluído',
 };
 

@@ -6,15 +6,16 @@ import {
   ArrowSquareOut, CheckCircle, MagnifyingGlass,
   CaretLeft, CaretRight,
 } from '@phosphor-icons/react';
-import {
-  PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend,
-} from 'recharts';
 import { executionsApi, reportsApi, suitesApi } from '../api/client';
 import type { Execution, ExecutionTestCase, Issue, Suite } from '../api/client';
 import { StatusBadge } from '../components/StatusBadge';
 import { Modal } from '../components/Modal';
 
 const STATUS_OPTIONS = ['PENDING', 'IN_PROGRESS', 'PASSED', 'FAILED', 'BLOCKED'];
+const STATUS_LABELS: Record<string, string> = {
+  PENDING: 'Pendente', IN_PROGRESS: 'Em Andamento',
+  PASSED: 'Passou', FAILED: 'Falhou', BLOCKED: 'Bloqueado',
+};
 const STATUS_COLORS: Record<string, string> = {
   PASSED: '#22c55e', FAILED: '#ef4444', BLOCKED: '#f59e0b',
   IN_PROGRESS: '#3b82f6', PENDING: '#6b7280',
@@ -162,7 +163,7 @@ function TestCaseDrawer({
                     border: `1px solid ${status === s ? STATUS_COLORS[s] : 'var(--border)'}`,
                   }}
                 >
-                  {s.replace('_', ' ')}
+                  {STATUS_LABELS[s] ?? s}
                 </button>
               ))}
             </div>
@@ -230,7 +231,7 @@ function TestCaseDrawer({
                       <div>
                         <label className="form-label">Status</label>
                         <select value={issueForm.status} onChange={e => setIssueForm(f => ({ ...f, status: e.target.value }))}>
-                          <option>Open</option><option>In Progress</option><option>Resolved</option>
+                          <option>Aberto</option><option>Em Andamento</option><option>Resolvido</option>
                         </select>
                       </div>
                     </div>
@@ -389,14 +390,6 @@ export default function ExecutionRunPage() {
   const pageTcs = filteredTcs.slice(pageStartIndex, pageStartIndex + pageSize);
   const isBatch = !!execution.batchId;
 
-  const chartData = [
-    { name: 'Passed', value: counts.passed, color: STATUS_COLORS.PASSED },
-    { name: 'Failed', value: counts.failed, color: STATUS_COLORS.FAILED },
-    { name: 'Blocked', value: counts.blocked, color: STATUS_COLORS.BLOCKED },
-    { name: 'In Progress', value: counts.inProgress, color: STATUS_COLORS.IN_PROGRESS },
-    { name: 'Pending', value: counts.pending, color: STATUS_COLORS.PENDING },
-  ].filter(d => d.value > 0);
-
   return (
     <div className="page">
       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
@@ -437,95 +430,81 @@ export default function ExecutionRunPage() {
           </div>
         </div>
 
-        <div className="card" style={{ padding: '1rem', marginBottom: '1.5rem' }}>
-          <p style={{ fontSize: '0.78rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>Resumo da Execução</p>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '0.75rem' }}>
-            <div style={{ padding: '0.85rem', background: 'var(--bg-overlay)', borderRadius: 'var(--radius-sm)' }}>
-              <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Sprint</p>
-              <strong>{execution.sprint || '—'}</strong>
+        {/* Dashboard: Metadata + Progress */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '1rem', marginBottom: '1rem' }}>
+          {/* Metadata Card */}
+          <div className="card" style={{ padding: '1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.875rem', paddingBottom: '0.75rem', borderBottom: '1px solid var(--border-subtle)' }}>
+              <span style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)' }}>Metadata</span>
             </div>
-            <div style={{ padding: '0.85rem', background: 'var(--bg-overlay)', borderRadius: 'var(--radius-sm)' }}>
-              <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Versão do Sistema</p>
-              <strong>{formatVersion(execution.version)}</strong>
-            </div>
-            <div style={{ padding: '0.85rem', background: 'var(--bg-overlay)', borderRadius: 'var(--radius-sm)' }}>
-              <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Período</p>
-              <strong>{formatPeriod(execution.startDate, execution.endDate)}</strong>
-            </div>
-            <div style={{ padding: '0.85rem', background: 'var(--bg-overlay)', borderRadius: 'var(--radius-sm)' }}>
-              <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Responsável</p>
-              <strong>{execution.responsible || '—'}</strong>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Sprint</span>
+                <code style={{ fontSize: '0.8rem' }}>{execution.sprint || '—'}</code>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Versão do Sistema</span>
+                <span style={{ fontSize: '0.8rem', fontFamily: 'monospace', color: 'var(--secondary)' }}>{formatVersion(execution.version)}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Período</span>
+                <span style={{ fontSize: '0.875rem' }}>{formatPeriod(execution.startDate, execution.endDate)}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Responsável</span>
+                <span style={{ fontSize: '0.875rem', color: 'var(--accent)' }}>{execution.responsible || '—'}</span>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 280px', gap: '1.5rem', marginBottom: '1.5rem', alignItems: 'start' }}>
-          <div>
-            <div className="stats-grid">
-              <div className="stat-card">
-                <p className="stat-label">Total</p>
-                <p className="stat-value">{counts.total}</p>
-              </div>
-              <div className="stat-card">
-                <p className="stat-label">Executado</p>
-                <p className="stat-value">{executed}</p>
-              </div>
-              <div className="stat-card">
-                <p className="stat-label">Passed</p>
-                <p className="stat-value passed">{counts.passed}</p>
-              </div>
-              <div className="stat-card">
-                <p className="stat-label">Failed</p>
-                <p className="stat-value failed">{counts.failed}</p>
-              </div>
-              <div className="stat-card">
-                <p className="stat-label">Blocked</p>
-                <p className="stat-value blocked">{counts.blocked}</p>
-              </div>
-              <div className="stat-card">
-                <p className="stat-label">Aprovação</p>
-                <p className="stat-value progress">{pct}%</p>
-              </div>
+          {/* Execution Progress Card */}
+          <div className="card" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <span style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)' }}>Progresso da Execução</span>
+              <span style={{ fontSize: '1.75rem', fontWeight: 800, letterSpacing: '-0.03em', color: 'var(--accent)' }}>{pct}%</span>
             </div>
-
-            <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius)', padding: '1rem 1.25rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>
-                <span>Progresso</span>
-                <span>{executed}/{counts.total} executados</span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              <div style={{ height: 16, background: 'var(--bg-overlay)', borderRadius: 99, overflow: 'hidden', display: 'flex' }}>
+                {counts.passed > 0 && <div style={{ width: `${(counts.passed / counts.total) * 100}%`, background: STATUS_COLORS.PASSED, transition: 'width 0.6s cubic-bezier(0.4,0,0.2,1)' }} title={`Passou: ${counts.passed}`} />}
+                {counts.failed > 0 && <div style={{ width: `${(counts.failed / counts.total) * 100}%`, background: STATUS_COLORS.FAILED, transition: 'width 0.6s cubic-bezier(0.4,0,0.2,1)' }} title={`Falhou: ${counts.failed}`} />}
+                {counts.blocked > 0 && <div style={{ width: `${(counts.blocked / counts.total) * 100}%`, background: STATUS_COLORS.BLOCKED, transition: 'width 0.6s cubic-bezier(0.4,0,0.2,1)' }} title={`Bloqueado: ${counts.blocked}`} />}
               </div>
-              <div style={{ height: 8, background: 'var(--bg-overlay)', borderRadius: 99, overflow: 'hidden' }}>
-                <div style={{ display: 'flex', height: '100%' }}>
-                  {counts.passed > 0 && <div style={{ width: `${(counts.passed / counts.total) * 100}%`, background: STATUS_COLORS.PASSED, transition: 'width 0.4s ease' }} />}
-                  {counts.failed > 0 && <div style={{ width: `${(counts.failed / counts.total) * 100}%`, background: STATUS_COLORS.FAILED, transition: 'width 0.4s ease' }} />}
-                  {counts.blocked > 0 && <div style={{ width: `${(counts.blocked / counts.total) * 100}%`, background: STATUS_COLORS.BLOCKED, transition: 'width 0.4s ease' }} />}
-                  {counts.inProgress > 0 && <div style={{ width: `${(counts.inProgress / counts.total) * 100}%`, background: STATUS_COLORS.IN_PROGRESS, transition: 'width 0.4s ease' }} />}
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', fontFamily: 'monospace' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: STATUS_COLORS.PASSED, display: 'inline-block', flexShrink: 0 }} />
+                  <span style={{ color: 'var(--text-secondary)' }}>Passou ({counts.passed})</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: STATUS_COLORS.FAILED, display: 'inline-block', flexShrink: 0 }} />
+                  <span style={{ color: 'var(--text-secondary)' }}>Falhou ({counts.failed})</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: STATUS_COLORS.BLOCKED, display: 'inline-block', flexShrink: 0 }} />
+                  <span style={{ color: 'var(--text-secondary)' }}>Bloqueado ({counts.blocked})</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--bg-overlay)', border: '1px solid var(--border)', display: 'inline-block', flexShrink: 0 }} />
+                  <span style={{ color: 'var(--text-secondary)' }}>Pendente ({counts.pending})</span>
                 </div>
               </div>
             </div>
           </div>
+        </div>
 
-          <div className="card" style={{ padding: '1rem' }}>
-            <p style={{ fontSize: '0.78rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Distribuição</p>
-            {chartData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={200}>
-                <PieChart>
-                  <Pie data={chartData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={3} dataKey="value">
-                    {chartData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
-                  </Pie>
-                  <Tooltip
-                    contentStyle={{ background: 'var(--bg-overlay)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 }}
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    formatter={((v: any, name: any) => [`${v} (${Math.round((v / counts.total) * 100)}%)`, String(name)]) as any}
-                  />
-                  <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: '0.75rem' }} />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <div style={{ height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                Sem dados
-              </div>
-            )}
-          </div>
+        {/* KPI Cards */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
+          {([
+            { label: 'Total', value: counts.total, color: 'var(--text-primary)' },
+            { label: 'Executado', value: executed, color: 'var(--text-primary)' },
+            { label: 'Passou', value: counts.passed, color: STATUS_COLORS.PASSED },
+            { label: 'Falhou', value: counts.failed, color: STATUS_COLORS.FAILED },
+            { label: 'Bloqueado', value: counts.blocked, color: STATUS_COLORS.BLOCKED },
+          ] as const).map(({ label, value, color }) => (
+            <div key={label} className="card" style={{ padding: '1rem' }}>
+              <span style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)' }}>{label}</span>
+              <div style={{ fontSize: '2rem', fontWeight: 800, letterSpacing: '-0.03em', color, marginTop: '0.25rem' }}>{value}</div>
+            </div>
+          ))}
         </div>
 
         <div className="card" style={{ padding: '1rem', marginBottom: '1.5rem' }}>
