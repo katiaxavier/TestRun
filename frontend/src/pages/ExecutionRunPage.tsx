@@ -628,19 +628,21 @@ export default function ExecutionRunPage() {
     <div className="page">
       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
         <div className="page-header" style={{ alignItems: 'flex-start' }}>
-          <div>
+          <div style={{ flex: '1 1 0', minWidth: 0 }}>
             <button className="btn btn-ghost btn-sm" onClick={() => navigate(execution?.batchId ? `/batch/${execution.batchId}` : `/suite/${execution.suiteId}`)} style={{ marginBottom: '0.5rem', paddingLeft: 0 }}>
               <ArrowLeft size={15} /> {execution?.batchId ? 'Voltar ao Lote' : execution.suite?.jiraKey}
             </button>
             {isBatch ? (
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
-                <span className="tag" style={{ fontFamily: 'var(--font-inter)' }}>LOTE</span>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <span style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)' }}>Lote</span>
+                  <StatusBadge status={execution.status} />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', minWidth: 0, overflow: 'hidden' }}>
                   {batchSuites.map((suite) => (
-                    <h1 key={suite.id} className="page-title" style={{ fontSize: '1.3rem', margin: 0 }}>{suite.title}</h1>
+                    <h1 key={suite.id} className="page-title" title={suite.title} style={{ fontSize: '1.3rem', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{suite.title}</h1>
                   ))}
                 </div>
-                <StatusBadge status={execution.status} />
               </div>
             ) : (
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
@@ -649,7 +651,7 @@ export default function ExecutionRunPage() {
               </div>
             )}
           </div>
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0, alignSelf: 'flex-start' }}>
             <button className="btn btn-secondary" onClick={() => handleExport('xlsx')} disabled={!!exporting}>
               {exporting === 'xlsx' ? <div className="spinner" style={{ width: 14, height: 14 }} /> : <FileXls size={16} />}
               Excel
