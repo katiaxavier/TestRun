@@ -6,7 +6,7 @@ import {
   ArrowSquareOut, CheckCircle, MagnifyingGlass,
   CaretLeft, CaretRight, Pencil,
 } from '@phosphor-icons/react';
-import { executionsApi, reportsApi, suitesApi } from '../api/client';
+import { executionsApi, reportsApi, suitesApi, configApi } from '../api/client';
 import type { Execution, ExecutionTestCase, Issue, Suite } from '../api/client';
 import { StatusBadge } from '../components/StatusBadge';
 import { Modal } from '../components/Modal';
@@ -139,8 +139,9 @@ function IssueForm({ form, onChange, onSubmit, onCancel, loading, submitLabel }:
   );
 }
 
-function IssueCard({ issue, onEdit, onDelete, confirmDelete, onConfirmDelete, onCancelDelete }: {
+function IssueCard({ issue, jiraUrl, onEdit, onDelete, confirmDelete, onConfirmDelete, onCancelDelete }: {
   issue: Issue;
+  jiraUrl: string;
   onEdit: () => void;
   onDelete: () => void;
   confirmDelete: boolean;
@@ -149,6 +150,7 @@ function IssueCard({ issue, onEdit, onDelete, confirmDelete, onConfirmDelete, on
 }) {
   const severityPt = SEVERITY_PT[issue.severity ?? ''] ?? issue.severity;
   const statusPt = ISSUE_STATUS_PT[issue.status ?? ''] ?? issue.status;
+  const jiraHref = issue.jiraKey && jiraUrl ? `${jiraUrl.replace(/\/$/, '')}/browse/${issue.jiraKey}` : null;
   return (
     <div style={{ padding: '0.65rem 0.85rem', background: 'var(--bg-elevated)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
@@ -159,7 +161,13 @@ function IssueCard({ issue, onEdit, onDelete, confirmDelete, onConfirmDelete, on
             </span>
             {severityPt && <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{severityPt}</span>}
             {statusPt && <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>· {statusPt}</span>}
-            {issue.jiraKey && <code style={{ fontSize: '0.7rem' }}>{issue.jiraKey}</code>}
+            {issue.jiraKey && (
+              jiraHref
+                ? <a href={jiraHref} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2rem', fontSize: '0.7rem', fontFamily: 'monospace', color: 'var(--accent)' }}>
+                    {issue.jiraKey} <ArrowSquareOut size={10} />
+                  </a>
+                : <code style={{ fontSize: '0.7rem' }}>{issue.jiraKey}</code>
+            )}
           </div>
           <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>{issue.title}</p>
         </div>
@@ -210,6 +218,11 @@ function TestCaseDrawer({
   const [editForm, setEditForm] = useState<IssueFormState>(EMPTY_ISSUE_FORM);
   const [updatingIssue, setUpdatingIssue] = useState(false);
   const [toasts, setToasts] = useState<{ id: number; message: string; type: 'success' | 'error' }[]>([]);
+  const [jiraUrl, setJiraUrl] = useState('');
+
+  useEffect(() => {
+    configApi.get().then(({ data }) => setJiraUrl(data.url ?? '')).catch(() => {});
+  }, []);
 
   useEffect(() => {
     setStatus(etc.status);
@@ -444,6 +457,7 @@ function TestCaseDrawer({
                     ) : (
                       <IssueCard
                         issue={issue}
+                        jiraUrl={jiraUrl}
                         onEdit={() => handleStartEdit(issue)}
                         onDelete={() => setDeleteConfirmId(issue.id)}
                         confirmDelete={deleteConfirmId === issue.id}
