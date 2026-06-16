@@ -21,7 +21,7 @@ const EXECUTION_STATUS_MAP: Record<string, { label: string; color: string; bg: s
     border: 'rgba(34, 197, 94, 0.25)',
   },
   PENDING: {
-    label: 'Não Iniciado',
+    label: 'Pendente',
     color: 'var(--text-muted)',
     bg: 'rgba(107, 114, 128, 0.10)',
     border: 'rgba(107, 114, 128, 0.2)',
