@@ -438,16 +438,16 @@ export default function ExecutionRunPage() {
           {/* Metadata Card */}
           <div className="card" style={{ padding: '1rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.875rem', paddingBottom: '0.75rem', borderBottom: '1px solid var(--border-subtle)' }}>
-              <span style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)' }}>Metadata</span>
+              <span style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)' }}>Detalhes da Execução</span>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Sprint</span>
-                <code style={{ fontSize: '0.8rem' }}>{execution.sprint || '—'}</code>
+                <span style={{ fontSize: '0.875rem', fontFamily: 'monospace' }}>{execution.sprint || '—'}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Versão do Sistema</span>
-                <span style={{ fontSize: '0.8rem', fontFamily: 'monospace', color: 'var(--secondary)' }}>{formatVersion(execution.version)}</span>
+                <span style={{ fontSize: '0.875rem', fontFamily: 'monospace' }}>{formatVersion(execution.version)}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Período</span>
@@ -455,7 +455,7 @@ export default function ExecutionRunPage() {
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Responsável</span>
-                <span style={{ fontSize: '0.875rem', color: 'var(--accent)' }}>{execution.responsible || '—'}</span>
+                <span style={{ fontSize: '0.875rem' }}>{execution.responsible || '—'}</span>
               </div>
             </div>
           </div>
