@@ -115,7 +115,7 @@ export default function SuiteDetailPage() {
   };
 
   const handleExecutionCreated = (exec: Execution) => {
-    navigate(`/executions/${exec.id}`);
+    navigate(`/execution/${exec.id}`);
   };
 
   if (loading) return <div className="page"><div className="loading-page"><div className="spinner" /> Carregando...</div></div>;
@@ -144,7 +144,7 @@ export default function SuiteDetailPage() {
           </div>
           <ExecutionList
             executions={executions}
-            onExecutionClick={exec => navigate(`/executions/${exec.id}`)}
+            onExecutionClick={exec => navigate(`/execution/${exec.id}`)}
           />
         </div>
 

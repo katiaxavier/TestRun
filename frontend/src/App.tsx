@@ -19,7 +19,7 @@ export default function App() {
             <Route path="/" element={<DashboardPage />} />
             <Route path="/config" element={<ConfigPage />} />
             <Route path="/suite/:id" element={<SuiteDetailPage />} />
-            <Route path="/executions/:id" element={<ExecutionRunPage />} />
+            <Route path="/execution/:id" element={<ExecutionRunPage />} />
             <Route path="/batch/:id" element={<BatchExecutionPage />} />
           </Routes>
         </main>

@@ -186,7 +186,7 @@ export default function BatchExecutionPage() {
           </div>
           <ExecutionList
             executions={executions}
-            onExecutionClick={exec => navigate(`/executions/${exec.id}`)}
+            onExecutionClick={exec => navigate(`/execution/${exec.id}`)}
           />
         </div>
 

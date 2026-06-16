@@ -10,7 +10,7 @@ type RouteConfig = {
 const routes: RouteConfig[] = [
   { match: p => p === '/config',                    title: 'Configurações',    Icon: Gear      },
   { match: p => p.startsWith('/batch/'),            title: 'Execução em Lote', Icon: ChartBar  },
-  { match: p => p.startsWith('/executions/'),       title: 'Execução',         Icon: Play      },
+  { match: p => p.startsWith('/execution/'),        title: 'Execução',         Icon: Play      },
   { match: p => p.startsWith('/suite/'),            title: 'Suites de Teste',  Icon: Flask     },
   { match: p => p === '/',                          title: 'Suites de Teste',  Icon: Flask     },
 ];
