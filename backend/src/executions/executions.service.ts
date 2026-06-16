@@ -295,6 +295,7 @@ export class ExecutionsService {
     }
 
     const suiteIds = (batch.suiteIds as string[]) ?? [];
+    const excluded = (batch.excludedTestCaseIds as string[]) ?? [];
     const suites = await this.prisma.suite.findMany({
       where: { id: { in: suiteIds } },
       include: { testCases: { orderBy: { jiraKey: 'asc' } } },
@@ -314,6 +315,7 @@ export class ExecutionsService {
 
     for (const suite of suites) {
       for (const tc of suite.testCases) {
+        if (excluded.includes(tc.id)) continue;
         await this.prisma.executionTestCase.create({
           data: {
             executionId: execution.id,
@@ -358,6 +360,7 @@ export class ExecutionsService {
   async removeTestCaseFromBatch(batchId: string, testCaseId: string) {
     const batch = await this.prisma.executionBatch.findUnique({
       where: { id: batchId },
+      include: { executions: { select: { id: true } } },
     });
 
     if (!batch) {
@@ -369,6 +372,17 @@ export class ExecutionsService {
       await this.prisma.executionBatch.update({
         where: { id: batchId },
         data: { excludedTestCaseIds: [...excluded, testCaseId] as any },
+      });
+    }
+
+    // Remove o caso de teste de todas as execuções do lote
+    const executionIds = batch.executions.map((e) => e.id);
+    if (executionIds.length > 0) {
+      await this.prisma.executionTestCase.deleteMany({
+        where: {
+          executionId: { in: executionIds },
+          testCaseId,
+        },
       });
     }
 

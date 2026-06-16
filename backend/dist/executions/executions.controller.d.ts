@@ -5,46 +5,48 @@ export declare class ExecutionsController {
     findOne(id: string): Promise<{
         suite: {
             id: string;
-            createdAt: Date;
-            updatedAt: Date;
             jiraKey: string;
             title: string;
+            createdAt: Date;
+            updatedAt: Date;
         } | null;
         testCases: ({
             testCase: {
-                id: string;
-                suiteId: string;
-                createdAt: Date;
-                updatedAt: Date;
                 link: string | null;
+                id: string;
                 jiraKey: string;
                 title: string;
+                createdAt: Date;
+                updatedAt: Date;
                 priority: string | null;
+                suiteId: string;
             };
             issues: {
                 id: string;
-                responsible: string | null;
-                status: string | null;
-                createdAt: Date;
-                updatedAt: Date;
                 jiraKey: string | null;
                 title: string;
-                executionTestCaseId: string;
+                createdAt: Date;
+                updatedAt: Date;
+                responsible: string | null;
+                status: string | null;
                 type: string;
                 severity: string | null;
+                executionTestCaseId: string;
             }[];
         } & {
             id: string;
-            responsible: string | null;
-            status: string;
             createdAt: Date;
             updatedAt: Date;
+            responsible: string | null;
+            status: string;
+            comments: string | null;
             executionId: string;
             testCaseId: string;
-            comments: string | null;
         })[];
     } & {
         id: string;
+        createdAt: Date;
+        updatedAt: Date;
         suiteId: string | null;
         batchId: string | null;
         sprint: string;
@@ -54,52 +56,52 @@ export declare class ExecutionsController {
         testedFeature: string | null;
         responsible: string;
         status: string;
-        createdAt: Date;
-        updatedAt: Date;
     }>;
     create(dto: CreateExecutionDto): Promise<{
         suite: {
             id: string;
-            createdAt: Date;
-            updatedAt: Date;
             jiraKey: string;
             title: string;
+            createdAt: Date;
+            updatedAt: Date;
         } | null;
         testCases: ({
             testCase: {
-                id: string;
-                suiteId: string;
-                createdAt: Date;
-                updatedAt: Date;
                 link: string | null;
+                id: string;
                 jiraKey: string;
                 title: string;
+                createdAt: Date;
+                updatedAt: Date;
                 priority: string | null;
+                suiteId: string;
             };
             issues: {
                 id: string;
-                responsible: string | null;
-                status: string | null;
-                createdAt: Date;
-                updatedAt: Date;
                 jiraKey: string | null;
                 title: string;
-                executionTestCaseId: string;
+                createdAt: Date;
+                updatedAt: Date;
+                responsible: string | null;
+                status: string | null;
                 type: string;
                 severity: string | null;
+                executionTestCaseId: string;
             }[];
         } & {
             id: string;
-            responsible: string | null;
-            status: string;
             createdAt: Date;
             updatedAt: Date;
+            responsible: string | null;
+            status: string;
+            comments: string | null;
             executionId: string;
             testCaseId: string;
-            comments: string | null;
         })[];
     } & {
         id: string;
+        createdAt: Date;
+        updatedAt: Date;
         suiteId: string | null;
         batchId: string | null;
         sprint: string;
@@ -109,8 +111,6 @@ export declare class ExecutionsController {
         testedFeature: string | null;
         responsible: string;
         status: string;
-        createdAt: Date;
-        updatedAt: Date;
     }>;
     delete(id: string): Promise<{
         success: boolean;
@@ -118,6 +118,8 @@ export declare class ExecutionsController {
     }>;
     updateStatus(id: string, status: string): Promise<{
         id: string;
+        createdAt: Date;
+        updatedAt: Date;
         suiteId: string | null;
         batchId: string | null;
         sprint: string;
@@ -127,53 +129,51 @@ export declare class ExecutionsController {
         testedFeature: string | null;
         responsible: string;
         status: string;
-        createdAt: Date;
-        updatedAt: Date;
     }>;
     updateTestCase(id: string, dto: UpdateTestCaseDto): Promise<{
         testCase: {
-            id: string;
-            suiteId: string;
-            createdAt: Date;
-            updatedAt: Date;
             link: string | null;
+            id: string;
             jiraKey: string;
             title: string;
+            createdAt: Date;
+            updatedAt: Date;
             priority: string | null;
+            suiteId: string;
         };
         issues: {
             id: string;
-            responsible: string | null;
-            status: string | null;
-            createdAt: Date;
-            updatedAt: Date;
             jiraKey: string | null;
             title: string;
-            executionTestCaseId: string;
+            createdAt: Date;
+            updatedAt: Date;
+            responsible: string | null;
+            status: string | null;
             type: string;
             severity: string | null;
+            executionTestCaseId: string;
         }[];
     } & {
         id: string;
-        responsible: string | null;
-        status: string;
         createdAt: Date;
         updatedAt: Date;
+        responsible: string | null;
+        status: string;
+        comments: string | null;
         executionId: string;
         testCaseId: string;
-        comments: string | null;
     }>;
     addIssue(id: string, dto: CreateIssueDto): Promise<{
         id: string;
-        responsible: string | null;
-        status: string | null;
-        createdAt: Date;
-        updatedAt: Date;
         jiraKey: string | null;
         title: string;
-        executionTestCaseId: string;
+        createdAt: Date;
+        updatedAt: Date;
+        responsible: string | null;
+        status: string | null;
         type: string;
         severity: string | null;
+        executionTestCaseId: string;
     }>;
     removeTestCase(executionId: string, etcId: string): Promise<{
         success: boolean;

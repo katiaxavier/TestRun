@@ -37,46 +37,48 @@ export declare class ExecutionsService {
     findOne(id: string): Promise<{
         suite: {
             id: string;
-            createdAt: Date;
-            updatedAt: Date;
             jiraKey: string;
             title: string;
+            createdAt: Date;
+            updatedAt: Date;
         } | null;
         testCases: ({
             testCase: {
-                id: string;
-                suiteId: string;
-                createdAt: Date;
-                updatedAt: Date;
                 link: string | null;
+                id: string;
                 jiraKey: string;
                 title: string;
+                createdAt: Date;
+                updatedAt: Date;
                 priority: string | null;
+                suiteId: string;
             };
             issues: {
                 id: string;
-                responsible: string | null;
-                status: string | null;
-                createdAt: Date;
-                updatedAt: Date;
                 jiraKey: string | null;
                 title: string;
-                executionTestCaseId: string;
+                createdAt: Date;
+                updatedAt: Date;
+                responsible: string | null;
+                status: string | null;
                 type: string;
                 severity: string | null;
+                executionTestCaseId: string;
             }[];
         } & {
             id: string;
-            responsible: string | null;
-            status: string;
             createdAt: Date;
             updatedAt: Date;
+            responsible: string | null;
+            status: string;
+            comments: string | null;
             executionId: string;
             testCaseId: string;
-            comments: string | null;
         })[];
     } & {
         id: string;
+        createdAt: Date;
+        updatedAt: Date;
         suiteId: string | null;
         batchId: string | null;
         sprint: string;
@@ -86,52 +88,52 @@ export declare class ExecutionsService {
         testedFeature: string | null;
         responsible: string;
         status: string;
-        createdAt: Date;
-        updatedAt: Date;
     }>;
     create(dto: CreateExecutionDto): Promise<{
         suite: {
             id: string;
-            createdAt: Date;
-            updatedAt: Date;
             jiraKey: string;
             title: string;
+            createdAt: Date;
+            updatedAt: Date;
         } | null;
         testCases: ({
             testCase: {
-                id: string;
-                suiteId: string;
-                createdAt: Date;
-                updatedAt: Date;
                 link: string | null;
+                id: string;
                 jiraKey: string;
                 title: string;
+                createdAt: Date;
+                updatedAt: Date;
                 priority: string | null;
+                suiteId: string;
             };
             issues: {
                 id: string;
-                responsible: string | null;
-                status: string | null;
-                createdAt: Date;
-                updatedAt: Date;
                 jiraKey: string | null;
                 title: string;
-                executionTestCaseId: string;
+                createdAt: Date;
+                updatedAt: Date;
+                responsible: string | null;
+                status: string | null;
                 type: string;
                 severity: string | null;
+                executionTestCaseId: string;
             }[];
         } & {
             id: string;
-            responsible: string | null;
-            status: string;
             createdAt: Date;
             updatedAt: Date;
+            responsible: string | null;
+            status: string;
+            comments: string | null;
             executionId: string;
             testCaseId: string;
-            comments: string | null;
         })[];
     } & {
         id: string;
+        createdAt: Date;
+        updatedAt: Date;
         suiteId: string | null;
         batchId: string | null;
         sprint: string;
@@ -141,53 +143,51 @@ export declare class ExecutionsService {
         testedFeature: string | null;
         responsible: string;
         status: string;
-        createdAt: Date;
-        updatedAt: Date;
     }>;
     updateTestCase(execTestCaseId: string, dto: UpdateTestCaseDto): Promise<{
         testCase: {
-            id: string;
-            suiteId: string;
-            createdAt: Date;
-            updatedAt: Date;
             link: string | null;
+            id: string;
             jiraKey: string;
             title: string;
+            createdAt: Date;
+            updatedAt: Date;
             priority: string | null;
+            suiteId: string;
         };
         issues: {
             id: string;
-            responsible: string | null;
-            status: string | null;
-            createdAt: Date;
-            updatedAt: Date;
             jiraKey: string | null;
             title: string;
-            executionTestCaseId: string;
+            createdAt: Date;
+            updatedAt: Date;
+            responsible: string | null;
+            status: string | null;
             type: string;
             severity: string | null;
+            executionTestCaseId: string;
         }[];
     } & {
         id: string;
-        responsible: string | null;
-        status: string;
         createdAt: Date;
         updatedAt: Date;
+        responsible: string | null;
+        status: string;
+        comments: string | null;
         executionId: string;
         testCaseId: string;
-        comments: string | null;
     }>;
     addIssue(execTestCaseId: string, dto: CreateIssueDto): Promise<{
         id: string;
-        responsible: string | null;
-        status: string | null;
-        createdAt: Date;
-        updatedAt: Date;
         jiraKey: string | null;
         title: string;
-        executionTestCaseId: string;
+        createdAt: Date;
+        updatedAt: Date;
+        responsible: string | null;
+        status: string | null;
         type: string;
         severity: string | null;
+        executionTestCaseId: string;
     }>;
     removeTestCaseFromExecution(executionId: string, etcId: string): Promise<{
         success: boolean;
@@ -202,6 +202,8 @@ export declare class ExecutionsService {
     }>;
     updateStatus(id: string, status: string): Promise<{
         id: string;
+        createdAt: Date;
+        updatedAt: Date;
         suiteId: string | null;
         batchId: string | null;
         sprint: string;
@@ -211,12 +213,12 @@ export declare class ExecutionsService {
         testedFeature: string | null;
         responsible: string;
         status: string;
-        createdAt: Date;
-        updatedAt: Date;
     }>;
     createBatch(dto: CreateBatchExecutionDto): Promise<{
         executions: {
             id: string;
+            createdAt: Date;
+            updatedAt: Date;
             suiteId: string | null;
             batchId: string | null;
             sprint: string;
@@ -226,16 +228,14 @@ export declare class ExecutionsService {
             testedFeature: string | null;
             responsible: string;
             status: string;
-            createdAt: Date;
-            updatedAt: Date;
         }[];
     } & {
         id: string;
-        testedFeature: string | null;
-        status: string;
         createdAt: Date;
         updatedAt: Date;
         name: string | null;
+        testedFeature: string | null;
+        status: string;
         suiteIds: import("@prisma/client/runtime/library").JsonValue;
         excludedTestCaseIds: import("@prisma/client/runtime/library").JsonValue;
     }>;
@@ -243,46 +243,48 @@ export declare class ExecutionsService {
         executions: ({
             suite: {
                 id: string;
-                createdAt: Date;
-                updatedAt: Date;
                 jiraKey: string;
                 title: string;
+                createdAt: Date;
+                updatedAt: Date;
             } | null;
             testCases: ({
                 testCase: {
-                    id: string;
-                    suiteId: string;
-                    createdAt: Date;
-                    updatedAt: Date;
                     link: string | null;
+                    id: string;
                     jiraKey: string;
                     title: string;
+                    createdAt: Date;
+                    updatedAt: Date;
                     priority: string | null;
+                    suiteId: string;
                 };
                 issues: {
                     id: string;
-                    responsible: string | null;
-                    status: string | null;
-                    createdAt: Date;
-                    updatedAt: Date;
                     jiraKey: string | null;
                     title: string;
-                    executionTestCaseId: string;
+                    createdAt: Date;
+                    updatedAt: Date;
+                    responsible: string | null;
+                    status: string | null;
                     type: string;
                     severity: string | null;
+                    executionTestCaseId: string;
                 }[];
             } & {
                 id: string;
-                responsible: string | null;
-                status: string;
                 createdAt: Date;
                 updatedAt: Date;
+                responsible: string | null;
+                status: string;
+                comments: string | null;
                 executionId: string;
                 testCaseId: string;
-                comments: string | null;
             })[];
         } & {
             id: string;
+            createdAt: Date;
+            updatedAt: Date;
             suiteId: string | null;
             batchId: string | null;
             sprint: string;
@@ -292,16 +294,14 @@ export declare class ExecutionsService {
             testedFeature: string | null;
             responsible: string;
             status: string;
-            createdAt: Date;
-            updatedAt: Date;
         })[];
     } & {
         id: string;
-        testedFeature: string | null;
-        status: string;
         createdAt: Date;
         updatedAt: Date;
         name: string | null;
+        testedFeature: string | null;
+        status: string;
         suiteIds: import("@prisma/client/runtime/library").JsonValue;
         excludedTestCaseIds: import("@prisma/client/runtime/library").JsonValue;
     }>;
@@ -309,46 +309,48 @@ export declare class ExecutionsService {
         executions: ({
             suite: {
                 id: string;
-                createdAt: Date;
-                updatedAt: Date;
                 jiraKey: string;
                 title: string;
+                createdAt: Date;
+                updatedAt: Date;
             } | null;
             testCases: ({
                 testCase: {
-                    id: string;
-                    suiteId: string;
-                    createdAt: Date;
-                    updatedAt: Date;
                     link: string | null;
+                    id: string;
                     jiraKey: string;
                     title: string;
+                    createdAt: Date;
+                    updatedAt: Date;
                     priority: string | null;
+                    suiteId: string;
                 };
                 issues: {
                     id: string;
-                    responsible: string | null;
-                    status: string | null;
-                    createdAt: Date;
-                    updatedAt: Date;
                     jiraKey: string | null;
                     title: string;
-                    executionTestCaseId: string;
+                    createdAt: Date;
+                    updatedAt: Date;
+                    responsible: string | null;
+                    status: string | null;
                     type: string;
                     severity: string | null;
+                    executionTestCaseId: string;
                 }[];
             } & {
                 id: string;
-                responsible: string | null;
-                status: string;
                 createdAt: Date;
                 updatedAt: Date;
+                responsible: string | null;
+                status: string;
+                comments: string | null;
                 executionId: string;
                 testCaseId: string;
-                comments: string | null;
             })[];
         } & {
             id: string;
+            createdAt: Date;
+            updatedAt: Date;
             suiteId: string | null;
             batchId: string | null;
             sprint: string;
@@ -358,16 +360,14 @@ export declare class ExecutionsService {
             testedFeature: string | null;
             responsible: string;
             status: string;
-            createdAt: Date;
-            updatedAt: Date;
         })[];
     } & {
         id: string;
-        testedFeature: string | null;
-        status: string;
         createdAt: Date;
         updatedAt: Date;
         name: string | null;
+        testedFeature: string | null;
+        status: string;
         suiteIds: import("@prisma/client/runtime/library").JsonValue;
         excludedTestCaseIds: import("@prisma/client/runtime/library").JsonValue;
     }>;
@@ -386,6 +386,8 @@ export declare class ExecutionsService {
             };
         } & {
             id: string;
+            createdAt: Date;
+            updatedAt: Date;
             suiteId: string | null;
             batchId: string | null;
             sprint: string;
@@ -395,15 +397,13 @@ export declare class ExecutionsService {
             testedFeature: string | null;
             responsible: string;
             status: string;
-            createdAt: Date;
-            updatedAt: Date;
         })[];
         id: string;
-        testedFeature: string | null;
-        status: string;
         createdAt: Date;
         updatedAt: Date;
         name: string | null;
+        testedFeature: string | null;
+        status: string;
         suiteIds: import("@prisma/client/runtime/library").JsonValue;
         excludedTestCaseIds: import("@prisma/client/runtime/library").JsonValue;
     }[]>;

@@ -134,6 +134,10 @@ export default function BatchExecutionPage() {
     setBatch((prev: any) => ({
       ...prev,
       excludedTestCaseIds: [...(prev.excludedTestCaseIds ?? []), tcId],
+      executions: prev.executions.map((ex: any) => ({
+        ...ex,
+        testCases: ex.testCases.filter((etc: any) => etc.testCaseId !== tcId),
+      })),
     }));
   };
 

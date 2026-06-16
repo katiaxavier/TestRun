@@ -232,6 +232,7 @@ let ExecutionsService = class ExecutionsService {
             throw new common_1.HttpException('Lote não encontrado.', common_1.HttpStatus.NOT_FOUND);
         }
         const suiteIds = batch.suiteIds ?? [];
+        const excluded = batch.excludedTestCaseIds ?? [];
         const suites = await this.prisma.suite.findMany({
             where: { id: { in: suiteIds } },
             include: { testCases: { orderBy: { jiraKey: 'asc' } } },
@@ -249,6 +250,8 @@ let ExecutionsService = class ExecutionsService {
         });
         for (const suite of suites) {
             for (const tc of suite.testCases) {
+                if (excluded.includes(tc.id))
+                    continue;
                 await this.prisma.executionTestCase.create({
                     data: {
                         executionId: execution.id,
@@ -287,6 +290,7 @@ let ExecutionsService = class ExecutionsService {
     async removeTestCaseFromBatch(batchId, testCaseId) {
         const batch = await this.prisma.executionBatch.findUnique({
             where: { id: batchId },
+            include: { executions: { select: { id: true } } },
         });
         if (!batch) {
             throw new common_1.HttpException('Lote não encontrado.', common_1.HttpStatus.NOT_FOUND);
@@ -296,6 +300,15 @@ let ExecutionsService = class ExecutionsService {
             await this.prisma.executionBatch.update({
                 where: { id: batchId },
                 data: { excludedTestCaseIds: [...excluded, testCaseId] },
+            });
+        }
+        const executionIds = batch.executions.map((e) => e.id);
+        if (executionIds.length > 0) {
+            await this.prisma.executionTestCase.deleteMany({
+                where: {
+                    executionId: { in: executionIds },
+                    testCaseId,
+                },
             });
         }
         return { success: true };

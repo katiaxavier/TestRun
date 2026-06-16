@@ -14,8 +14,6 @@ export declare class BatchController {
             };
         } & {
             id: string;
-            testedFeature: string | null;
-            status: string;
             createdAt: Date;
             updatedAt: Date;
             suiteId: string | null;
@@ -24,22 +22,22 @@ export declare class BatchController {
             version: string;
             startDate: Date;
             endDate: Date;
+            testedFeature: string | null;
             responsible: string;
+            status: string;
         })[];
         id: string;
-        name: string | null;
-        suiteIds: import("@prisma/client/runtime/library").JsonValue;
-        testedFeature: string | null;
-        status: string;
-        excludedTestCaseIds: import("@prisma/client/runtime/library").JsonValue;
         createdAt: Date;
         updatedAt: Date;
+        name: string | null;
+        testedFeature: string | null;
+        status: string;
+        suiteIds: import("@prisma/client/runtime/library").JsonValue;
+        excludedTestCaseIds: import("@prisma/client/runtime/library").JsonValue;
     }[]>;
     create(dto: CreateBatchExecutionDto): Promise<{
         executions: {
             id: string;
-            testedFeature: string | null;
-            status: string;
             createdAt: Date;
             updatedAt: Date;
             suiteId: string | null;
@@ -48,64 +46,64 @@ export declare class BatchController {
             version: string;
             startDate: Date;
             endDate: Date;
+            testedFeature: string | null;
             responsible: string;
+            status: string;
         }[];
     } & {
         id: string;
-        name: string | null;
-        suiteIds: import("@prisma/client/runtime/library").JsonValue;
-        testedFeature: string | null;
-        status: string;
-        excludedTestCaseIds: import("@prisma/client/runtime/library").JsonValue;
         createdAt: Date;
         updatedAt: Date;
+        name: string | null;
+        testedFeature: string | null;
+        status: string;
+        suiteIds: import("@prisma/client/runtime/library").JsonValue;
+        excludedTestCaseIds: import("@prisma/client/runtime/library").JsonValue;
     }>;
     findOne(id: string): Promise<{
         executions: ({
+            suite: {
+                id: string;
+                jiraKey: string;
+                title: string;
+                createdAt: Date;
+                updatedAt: Date;
+            } | null;
             testCases: ({
                 testCase: {
+                    link: string | null;
                     id: string;
-                    createdAt: Date;
-                    updatedAt: Date;
                     jiraKey: string;
                     title: string;
-                    suiteId: string;
-                    link: string | null;
+                    createdAt: Date;
+                    updatedAt: Date;
                     priority: string | null;
+                    suiteId: string;
                 };
                 issues: {
                     id: string;
-                    status: string | null;
-                    createdAt: Date;
-                    updatedAt: Date;
                     jiraKey: string | null;
                     title: string;
+                    createdAt: Date;
+                    updatedAt: Date;
                     responsible: string | null;
-                    executionTestCaseId: string;
+                    status: string | null;
                     type: string;
                     severity: string | null;
+                    executionTestCaseId: string;
                 }[];
             } & {
                 id: string;
-                status: string;
                 createdAt: Date;
                 updatedAt: Date;
                 responsible: string | null;
+                status: string;
+                comments: string | null;
                 executionId: string;
                 testCaseId: string;
-                comments: string | null;
             })[];
-            suite: {
-                id: string;
-                createdAt: Date;
-                updatedAt: Date;
-                jiraKey: string;
-                title: string;
-            } | null;
         } & {
             id: string;
-            testedFeature: string | null;
-            status: string;
             createdAt: Date;
             updatedAt: Date;
             suiteId: string | null;
@@ -114,67 +112,67 @@ export declare class BatchController {
             version: string;
             startDate: Date;
             endDate: Date;
+            testedFeature: string | null;
             responsible: string;
+            status: string;
         })[];
     } & {
         id: string;
-        name: string | null;
-        suiteIds: import("@prisma/client/runtime/library").JsonValue;
-        testedFeature: string | null;
-        status: string;
-        excludedTestCaseIds: import("@prisma/client/runtime/library").JsonValue;
         createdAt: Date;
         updatedAt: Date;
+        name: string | null;
+        testedFeature: string | null;
+        status: string;
+        suiteIds: import("@prisma/client/runtime/library").JsonValue;
+        excludedTestCaseIds: import("@prisma/client/runtime/library").JsonValue;
     }>;
     removeTestCase(id: string, tcId: string): Promise<{
         success: boolean;
     }>;
     createExecution(id: string, dto: CreateBatchExecutionItemDto): Promise<{
         executions: ({
+            suite: {
+                id: string;
+                jiraKey: string;
+                title: string;
+                createdAt: Date;
+                updatedAt: Date;
+            } | null;
             testCases: ({
                 testCase: {
+                    link: string | null;
                     id: string;
-                    createdAt: Date;
-                    updatedAt: Date;
                     jiraKey: string;
                     title: string;
-                    suiteId: string;
-                    link: string | null;
+                    createdAt: Date;
+                    updatedAt: Date;
                     priority: string | null;
+                    suiteId: string;
                 };
                 issues: {
                     id: string;
-                    status: string | null;
-                    createdAt: Date;
-                    updatedAt: Date;
                     jiraKey: string | null;
                     title: string;
+                    createdAt: Date;
+                    updatedAt: Date;
                     responsible: string | null;
-                    executionTestCaseId: string;
+                    status: string | null;
                     type: string;
                     severity: string | null;
+                    executionTestCaseId: string;
                 }[];
             } & {
                 id: string;
-                status: string;
                 createdAt: Date;
                 updatedAt: Date;
                 responsible: string | null;
+                status: string;
+                comments: string | null;
                 executionId: string;
                 testCaseId: string;
-                comments: string | null;
             })[];
-            suite: {
-                id: string;
-                createdAt: Date;
-                updatedAt: Date;
-                jiraKey: string;
-                title: string;
-            } | null;
         } & {
             id: string;
-            testedFeature: string | null;
-            status: string;
             createdAt: Date;
             updatedAt: Date;
             suiteId: string | null;
@@ -183,17 +181,19 @@ export declare class BatchController {
             version: string;
             startDate: Date;
             endDate: Date;
+            testedFeature: string | null;
             responsible: string;
+            status: string;
         })[];
     } & {
         id: string;
-        name: string | null;
-        suiteIds: import("@prisma/client/runtime/library").JsonValue;
-        testedFeature: string | null;
-        status: string;
-        excludedTestCaseIds: import("@prisma/client/runtime/library").JsonValue;
         createdAt: Date;
         updatedAt: Date;
+        name: string | null;
+        testedFeature: string | null;
+        status: string;
+        suiteIds: import("@prisma/client/runtime/library").JsonValue;
+        excludedTestCaseIds: import("@prisma/client/runtime/library").JsonValue;
     }>;
     delete(id: string): Promise<{
         success: boolean;
