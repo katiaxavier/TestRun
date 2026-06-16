@@ -15,7 +15,7 @@ const EXECUTION_STATUS_MAP: Record<string, { label: string; color: string; bg: s
     border: 'rgba(0, 102, 255, 0.25)',
   },
   COMPLETED: {
-    label: 'Finalizado',
+    label: 'Concluído',
     color: 'var(--status-passed)',
     bg: 'var(--status-passed-bg)',
     border: 'rgba(34, 197, 94, 0.25)',

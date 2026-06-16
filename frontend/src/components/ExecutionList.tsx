@@ -11,7 +11,7 @@ interface ExecutionListProps {
 const STATUS_OPTIONS = [
   { value: '', label: 'Todos os status' },
   { value: 'IN_PROGRESS', label: 'Em Andamento' },
-  { value: 'COMPLETED', label: 'Finalizado' },
+  { value: 'COMPLETED', label: 'Concluído' },
   { value: 'PENDING', label: 'Não Iniciado' },
 ];
 

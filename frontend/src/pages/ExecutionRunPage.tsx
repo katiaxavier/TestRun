@@ -565,7 +565,11 @@ export default function ExecutionRunPage() {
   const handleUpdated = (updated: ExecutionTestCase) => {
     setExecution(prev => {
       if (!prev) return prev;
-      return { ...prev, testCases: prev.testCases.map(tc => tc.id === updated.id ? updated : tc) };
+      const testCases = prev.testCases.map(tc => tc.id === updated.id ? updated : tc);
+      const allPending = testCases.every(tc => tc.status === 'PENDING');
+      const allDone = testCases.every(tc => tc.status !== 'PENDING');
+      const status = allPending ? 'PENDING' : allDone ? 'COMPLETED' : 'IN_PROGRESS';
+      return { ...prev, testCases, status };
     });
     setSelectedEtc(updated);
   };

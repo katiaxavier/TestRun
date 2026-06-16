@@ -378,6 +378,7 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1); curso
 .status-blocked  { background: var(--status-blocked-bg);   color: var(--status-blocked);   }
 .status-in_progress { background: var(--status-inprogress-bg); color: var(--status-inprogress); }
 .status-pending  { background: var(--status-pending-bg);   color: var(--status-pending);   }
+.status-completed { background: var(--status-passed-bg);    color: var(--status-passed);    }
 
 /* ─── Modal ─── */
 .modal-overlay {
