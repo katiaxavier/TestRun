@@ -313,16 +313,16 @@ function TestCaseDrawer({
     try {
       const { data } = await executionsApi.updateIssue(executionId, etc.id, issueId, {
         type: editForm.type,
-        jiraKey: editForm.jiraKey || undefined,
+        jiraKey: editForm.jiraKey || null,
         title: editForm.title,
         severity: SEVERITY_EN[editForm.severity] ?? editForm.severity,
         status: ISSUE_STATUS_EN[editForm.status] ?? editForm.status,
       });
       setIssues(prev => prev.map(i => i.id === issueId ? data : i));
       setEditingIssueId(null);
-      addToast('Issue atualizada');
+      addToast(editForm.type === 'BUG' ? 'Bug atualizado' : 'Melhoria atualizada');
     } catch {
-      addToast('Erro ao atualizar issue', 'error');
+      addToast('Erro ao atualizar', 'error');
     }
     setUpdatingIssue(false);
   };

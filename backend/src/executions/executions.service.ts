@@ -40,7 +40,7 @@ export class CreateIssueDto {
 
 export class UpdateIssueDto {
   type?: string;
-  jiraKey?: string;
+  jiraKey?: string | null;
   title?: string;
   severity?: string;
   status?: string;
