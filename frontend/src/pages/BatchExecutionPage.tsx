@@ -145,19 +145,22 @@ export default function BatchExecutionPage() {
     <div className="page">
       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
         <PageHeader
-          backLabel="Lotes"
+          backLabel="Suites de Teste"
           onBack={() => navigate('/')}
           eyebrow="LOTE"
           title={batchTitle}
         />
 
         {suites.length > 0 && (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '1.5rem', marginBottom: '2rem' }}>
+          <div style={{ marginTop: '1.5rem', marginBottom: '2rem' }}>
+            <p style={{ fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', opacity: 0.5, marginBottom: '0.5rem' }}>Suites</p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
             {suites.map(s => (
-              <span key={s.id} className="tag" style={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>
+              <span key={s.id} style={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>
                 {s.jiraKey} — {s.title}
               </span>
             ))}
+          </div>
           </div>
         )}
 
