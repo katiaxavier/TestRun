@@ -33,8 +33,8 @@ export class SuitesService {
         executions: {
           orderBy: { createdAt: 'desc' },
           include: {
-            _count: {
-              select: { testCases: true },
+            testCases: {
+              select: { status: true },
             },
           },
         },
