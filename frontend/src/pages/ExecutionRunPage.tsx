@@ -557,7 +557,7 @@ export default function ExecutionRunPage() {
     try {
       await executionsApi.delete(id);
       setDeleteConfirm(false);
-      navigate(execution?.batchId ? `/batch/${execution.batchId}` : `/suites/${execution?.suiteId}`);
+      navigate(execution?.batchId ? `/batch/${execution.batchId}` : `/suite/${execution?.suiteId}`);
     } catch {}
     setDeleting(false);
   };
@@ -629,7 +629,7 @@ export default function ExecutionRunPage() {
       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
         <div className="page-header" style={{ alignItems: 'flex-start' }}>
           <div>
-            <button className="btn btn-ghost btn-sm" onClick={() => navigate(execution?.batchId ? `/batch/${execution.batchId}` : `/suites/${execution.suiteId}`)} style={{ marginBottom: '0.5rem', paddingLeft: 0 }}>
+            <button className="btn btn-ghost btn-sm" onClick={() => navigate(execution?.batchId ? `/batch/${execution.batchId}` : `/suite/${execution.suiteId}`)} style={{ marginBottom: '0.5rem', paddingLeft: 0 }}>
               <ArrowLeft size={15} /> {execution?.batchId ? 'Voltar ao Lote' : execution.suite?.jiraKey}
             </button>
             {isBatch ? (

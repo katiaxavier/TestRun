@@ -129,7 +129,7 @@ export function TestCaseList({ testCases, onDelete, suiteMap }: TestCaseListProp
                     <td style={{ width: 110 }}>
                       {suite ? (
                         <Link
-                          to={`/suites/${suite.id}`}
+                          to={`/suite/${suite.id}`}
                           onClick={e => e.stopPropagation()}
                           style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--accent)', fontSize: '0.85rem', fontFamily: 'monospace' }}
                         >
