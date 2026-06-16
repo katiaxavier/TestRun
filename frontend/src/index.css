@@ -433,8 +433,7 @@ tbody tr:last-child td { border-bottom: none; }
 /* ─── Drawer ─── */
 .drawer-overlay {
   position: fixed; inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(2px);
+  background: rgba(0, 0, 0, 0.25);
   z-index: 400;
 }
 .drawer {
@@ -448,17 +447,17 @@ tbody tr:last-child td { border-bottom: none; }
   display: flex;
   flex-direction: column;
   box-shadow: var(--shadow-lg);
-  overflow-y: auto;
+  overflow: hidden;
 }
 .drawer-header {
-  padding: 1.5rem;
+  padding: 1.25rem 1.5rem;
   border-bottom: 1px solid var(--border-subtle);
   display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem;
-  position: sticky; top: 0;
   background: var(--bg-surface);
-  z-index: 1;
+  flex-shrink: 0;
 }
-.drawer-body { padding: 1.5rem; flex: 1; display: flex; flex-direction: column; gap: 1.5rem; }
+.drawer-body { padding: 1.5rem; flex: 1; display: flex; flex-direction: column; gap: 1.5rem; overflow-y: auto; }
+.drawer-footer { padding: 1rem 1.5rem; border-top: 1px solid var(--border-subtle); background: var(--bg-surface); flex-shrink: 0; }
 .drawer-section-title { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); margin-bottom: 0.75rem; }
 
 /* ─── Stat Cards ─── */

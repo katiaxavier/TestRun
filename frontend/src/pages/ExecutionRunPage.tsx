@@ -1,17 +1,17 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft, X, Plus, Trash, FileXls, FilePdf,
   ArrowSquareOut, CheckCircle, MagnifyingGlass,
-  CaretLeft, CaretRight,
+  CaretLeft, CaretRight, Pencil,
 } from '@phosphor-icons/react';
 import { executionsApi, reportsApi, suitesApi } from '../api/client';
 import type { Execution, ExecutionTestCase, Issue, Suite } from '../api/client';
 import { StatusBadge } from '../components/StatusBadge';
 import { Modal } from '../components/Modal';
 
-const STATUS_OPTIONS = ['PENDING', 'IN_PROGRESS', 'PASSED', 'FAILED', 'BLOCKED'];
+const STATUS_OPTIONS = ['PENDING', 'PASSED', 'FAILED', 'BLOCKED'];
 const STATUS_LABELS: Record<string, string> = {
   PENDING: 'Pendente', IN_PROGRESS: 'Em Andamento',
   PASSED: 'Passou', FAILED: 'Falhou', BLOCKED: 'Bloqueado',
@@ -78,30 +78,187 @@ function priorityLabel(priority?: string | null): string {
   return labels[normalized] ?? priority;
 }
 
+// ── Issue helpers ────────────────────────────────────────────────────────────
+const SEVERITY_PT: Record<string, string> = { Low: 'Baixa', Medium: 'Média', High: 'Alta', Critical: 'Crítica' };
+const SEVERITY_EN: Record<string, string> = { Baixa: 'Low', Média: 'Medium', Alta: 'High', Crítica: 'Critical' };
+const ISSUE_STATUS_PT: Record<string, string> = { Open: 'Aberto', 'In Progress': 'Em Andamento', Resolved: 'Resolvido' };
+const ISSUE_STATUS_EN: Record<string, string> = { Aberto: 'Open', 'Em Andamento': 'In Progress', Resolvido: 'Resolved' };
+
+type IssueFormState = { type: string; jiraKey: string; title: string; severity: string; status: string };
+const EMPTY_ISSUE_FORM: IssueFormState = { type: 'BUG', jiraKey: '', title: '', severity: 'Média', status: 'Aberto' };
+
+function IssueForm({ form, onChange, onSubmit, onCancel, loading, submitLabel }: {
+  form: IssueFormState;
+  onChange: (f: IssueFormState) => void;
+  onSubmit: () => void;
+  onCancel: () => void;
+  loading: boolean;
+  submitLabel: string;
+}) {
+  return (
+    <div className="card" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+        <div>
+          <label className="form-label">Tipo</label>
+          <select value={form.type} onChange={e => onChange({ ...form, type: e.target.value })}>
+            <option value="BUG">Bug</option>
+            <option value="IMPROVEMENT">Melhoria</option>
+          </select>
+        </div>
+        <div>
+          <label className="form-label">Severidade</label>
+          <select value={form.severity} onChange={e => onChange({ ...form, severity: e.target.value })}>
+            <option>Baixa</option><option>Média</option><option>Alta</option><option>Crítica</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <label className="form-label">Título *</label>
+        <input placeholder="Descreva o bug ou melhoria" value={form.title} onChange={e => onChange({ ...form, title: e.target.value })} />
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+        <div>
+          <label className="form-label">Key Jira (opcional)</label>
+          <input placeholder="PROJ-999" value={form.jiraKey} onChange={e => onChange({ ...form, jiraKey: e.target.value.toUpperCase() })} />
+        </div>
+        <div>
+          <label className="form-label">Status</label>
+          <select value={form.status} onChange={e => onChange({ ...form, status: e.target.value })}>
+            <option>Aberto</option><option>Em Andamento</option><option>Resolvido</option>
+          </select>
+        </div>
+      </div>
+      <div style={{ display: 'flex', gap: '0.5rem' }}>
+        <button className="btn btn-primary btn-sm" onClick={onSubmit} disabled={loading || !form.title.trim()} style={{ justifyContent: 'center', flex: 1 }}>
+          {loading ? <div className="spinner" style={{ width: 13, height: 13 }} /> : <CheckCircle size={14} />}
+          {submitLabel}
+        </button>
+        <button className="btn btn-secondary btn-sm" onClick={onCancel} disabled={loading}>Cancelar</button>
+      </div>
+    </div>
+  );
+}
+
+function IssueCard({ issue, onEdit, onDelete, confirmDelete, onConfirmDelete, onCancelDelete }: {
+  issue: Issue;
+  onEdit: () => void;
+  onDelete: () => void;
+  confirmDelete: boolean;
+  onConfirmDelete: () => void;
+  onCancelDelete: () => void;
+}) {
+  const severityPt = SEVERITY_PT[issue.severity ?? ''] ?? issue.severity;
+  const statusPt = ISSUE_STATUS_PT[issue.status ?? ''] ?? issue.status;
+  return (
+    <div style={{ padding: '0.65rem 0.85rem', background: 'var(--bg-elevated)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', flexWrap: 'wrap', marginBottom: '0.25rem' }}>
+            <span style={{ fontSize: '0.7rem', fontWeight: 700, padding: '0.1rem 0.4rem', borderRadius: 4, background: issue.type === 'BUG' ? 'rgba(239,68,68,0.15)' : 'rgba(59,130,246,0.15)', color: issue.type === 'BUG' ? 'var(--status-failed)' : 'var(--status-inprogress)' }}>
+              {issue.type === 'BUG' ? 'Bug' : 'Melhoria'}
+            </span>
+            {severityPt && <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{severityPt}</span>}
+            {statusPt && <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>· {statusPt}</span>}
+            {issue.jiraKey && <code style={{ fontSize: '0.7rem' }}>{issue.jiraKey}</code>}
+          </div>
+          <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>{issue.title}</p>
+        </div>
+        <div style={{ display: 'flex', gap: '0.1rem', flexShrink: 0 }}>
+          <button className="btn btn-ghost btn-icon btn-sm" onClick={onEdit} title="Editar" style={{ color: 'var(--text-muted)' }}><Pencil size={13} /></button>
+          <button className="btn btn-ghost btn-icon btn-sm" onClick={onDelete} title="Remover" style={{ color: 'var(--text-muted)' }}><Trash size={13} /></button>
+        </div>
+      </div>
+      <AnimatePresence>
+        {confirmDelete && (
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} style={{ overflow: 'hidden' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', paddingTop: '0.6rem', marginTop: '0.6rem', borderTop: '1px solid var(--border-subtle)' }}>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', flex: 1 }}>{issue.type === 'BUG' ? 'Remover este bug?' : 'Remover esta melhoria?'}</span>
+              <button className="btn btn-danger btn-sm" onClick={onConfirmDelete}>Remover</button>
+              <button className="btn btn-ghost btn-sm" onClick={onCancelDelete}>Cancelar</button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 // ── Drawer ──────────────────────────────────────────────────────────────────
 function TestCaseDrawer({
-  executionId, etc, onClose, onUpdated,
+  executionId, etc, allTestCases, currentIndex, onClose, onUpdated, onNavigate,
 }: {
   executionId: string;
   etc: ExecutionTestCase;
+  allTestCases: ExecutionTestCase[];
+  currentIndex: number;
   onClose: () => void;
   onUpdated: (updated: ExecutionTestCase) => void;
+  onNavigate: (etc: ExecutionTestCase) => void;
 }) {
   const [status, setStatus] = useState(etc.status);
-  const [responsible, setResponsible] = useState(etc.responsible ?? '');
   const [comments, setComments] = useState(etc.comments ?? '');
+  const initialComments = useRef(etc.comments ?? '');
+  const [savingStatus, setSavingStatus] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [issueForm, setIssueForm] = useState({ type: 'BUG', jiraKey: '', title: '', severity: 'Medium', status: 'Open', responsible: '' });
-  const [addingIssue, setAddingIssue] = useState(false);
-  const [showIssueForm, setShowIssueForm] = useState(false);
+  const [savedFeedback, setSavedFeedback] = useState(false);
   const [issues, setIssues] = useState<Issue[]>(etc.issues);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [showIssueForm, setShowIssueForm] = useState(false);
+  const [issueForm, setIssueForm] = useState<IssueFormState>(EMPTY_ISSUE_FORM);
+  const [addingIssue, setAddingIssue] = useState(false);
+  const [editingIssueId, setEditingIssueId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState<IssueFormState>(EMPTY_ISSUE_FORM);
+  const [updatingIssue, setUpdatingIssue] = useState(false);
+  const [toasts, setToasts] = useState<{ id: number; message: string; type: 'success' | 'error' }[]>([]);
+
+  useEffect(() => {
+    setStatus(etc.status);
+    setComments(etc.comments ?? '');
+    initialComments.current = etc.comments ?? '';
+    setIssues(etc.issues);
+    setShowIssueForm(false);
+    setEditingIssueId(null);
+    setDeleteConfirmId(null);
+    setSavedFeedback(false);
+  }, [etc.id]);
+
+  const isDirty = comments !== initialComments.current;
+  const priority = priorityLabel(etc.testCase.priority);
+
+  const addToast = (message: string, type: 'success' | 'error' = 'success') => {
+    const id = Date.now();
+    setToasts(prev => [...prev, { id, message, type }]);
+    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 2500);
+  };
+
+  const handleStatusChange = async (newStatus: string) => {
+    if (newStatus === status || savingStatus) return;
+    const prev = status;
+    setStatus(newStatus);
+    setSavingStatus(true);
+    try {
+      const { data } = await executionsApi.updateTestCase(executionId, etc.id, { status: newStatus });
+      onUpdated(data);
+      addToast('Status atualizado');
+    } catch {
+      setStatus(prev);
+      addToast('Erro ao atualizar status', 'error');
+    }
+    setSavingStatus(false);
+  };
 
   const handleSave = async () => {
+    if (!isDirty) return;
     setSaving(true);
     try {
-      const { data } = await executionsApi.updateTestCase(executionId, etc.id, { status, responsible, comments });
+      const { data } = await executionsApi.updateTestCase(executionId, etc.id, { comments });
       onUpdated(data);
-    } catch {}
+      initialComments.current = comments;
+      setSavedFeedback(true);
+      setTimeout(() => setSavedFeedback(false), 2000);
+    } catch {
+      addToast('Erro ao salvar', 'error');
+    }
     setSaving(false);
   };
 
@@ -109,17 +266,65 @@ function TestCaseDrawer({
     if (!issueForm.title.trim()) return;
     setAddingIssue(true);
     try {
-      const { data } = await executionsApi.addIssue(executionId, etc.id, issueForm);
+      const { data } = await executionsApi.addIssue(executionId, etc.id, {
+        type: issueForm.type,
+        jiraKey: issueForm.jiraKey || undefined,
+        title: issueForm.title,
+        severity: SEVERITY_EN[issueForm.severity] ?? issueForm.severity,
+        status: ISSUE_STATUS_EN[issueForm.status] ?? issueForm.status,
+      });
       setIssues(prev => [...prev, data]);
-      setIssueForm({ type: 'BUG', jiraKey: '', title: '', severity: 'Medium', status: 'Open', responsible: '' });
+      setIssueForm(EMPTY_ISSUE_FORM);
       setShowIssueForm(false);
-    } catch {}
+      addToast(issueForm.type === 'BUG' ? 'Bug adicionado' : 'Melhoria adicionada');
+    } catch {
+      addToast('Erro ao adicionar issue', 'error');
+    }
     setAddingIssue(false);
   };
 
+  const handleStartEdit = (issue: Issue) => {
+    setEditingIssueId(issue.id);
+    setShowIssueForm(false);
+    setEditForm({
+      type: issue.type,
+      jiraKey: issue.jiraKey ?? '',
+      title: issue.title,
+      severity: SEVERITY_PT[issue.severity ?? ''] ?? issue.severity ?? 'Média',
+      status: ISSUE_STATUS_PT[issue.status ?? ''] ?? issue.status ?? 'Aberto',
+    });
+  };
+
+  const handleUpdateIssue = async (issueId: string) => {
+    setUpdatingIssue(true);
+    try {
+      const { data } = await executionsApi.updateIssue(executionId, etc.id, issueId, {
+        type: editForm.type,
+        jiraKey: editForm.jiraKey || undefined,
+        title: editForm.title,
+        severity: SEVERITY_EN[editForm.severity] ?? editForm.severity,
+        status: ISSUE_STATUS_EN[editForm.status] ?? editForm.status,
+      });
+      setIssues(prev => prev.map(i => i.id === issueId ? data : i));
+      setEditingIssueId(null);
+      addToast('Issue atualizada');
+    } catch {
+      addToast('Erro ao atualizar issue', 'error');
+    }
+    setUpdatingIssue(false);
+  };
+
   const handleRemoveIssue = async (issueId: string) => {
-    await executionsApi.removeIssue(executionId, etc.id, issueId);
-    setIssues(prev => prev.filter(i => i.id !== issueId));
+    const issueType = issues.find(i => i.id === issueId)?.type;
+    const label = issueType === 'BUG' ? 'Bug removido' : 'Melhoria removida';
+    try {
+      await executionsApi.removeIssue(executionId, etc.id, issueId);
+      setIssues(prev => prev.filter(i => i.id !== issueId));
+      setDeleteConfirmId(null);
+      addToast(label);
+    } catch {
+      addToast('Erro ao remover', 'error');
+    }
   };
 
   return (
@@ -130,37 +335,59 @@ function TestCaseDrawer({
         initial={{ x: 440 }} animate={{ x: 0 }} exit={{ x: 440 }}
         transition={{ type: 'spring', stiffness: 340, damping: 32 }}
       >
+        {/* Header */}
         <div className="drawer-header">
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.3rem' }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem' }}>
               {etc.testCase.link ? (
                 <a href={etc.testCase.link} target="_blank" rel="noreferrer"
                   style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', color: 'var(--accent)', fontSize: '0.8rem', fontFamily: 'monospace' }}>
                   {etc.testCase.jiraKey} <ArrowSquareOut size={11} />
                 </a>
               ) : <code style={{ fontSize: '0.8rem' }}>{etc.testCase.jiraKey}</code>}
+              {priority !== '—' && (
+                <span className="tag" style={{ background: `${PRIORITY_COLORS[priority]}20`, color: PRIORITY_COLORS[priority], fontSize: '0.68rem', padding: '0.15rem 0.5rem' }}>
+                  {priority}
+                </span>
+              )}
             </div>
             <p style={{ fontSize: '0.9rem', fontWeight: 600, lineHeight: 1.4, color: 'var(--text-primary)' }}>
               {etc.testCase.title}
             </p>
           </div>
-          <button className="btn btn-ghost btn-icon" onClick={onClose}><X size={18} /></button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.2rem', flexShrink: 0 }}>
+            <button className="btn btn-ghost btn-icon btn-sm" onClick={() => onNavigate(allTestCases[currentIndex - 1])} disabled={currentIndex <= 0} title="Caso anterior">
+              <CaretLeft size={15} />
+            </button>
+            <button className="btn btn-ghost btn-icon btn-sm" onClick={() => onNavigate(allTestCases[currentIndex + 1])} disabled={currentIndex >= allTestCases.length - 1} title="Próximo caso">
+              <CaretRight size={15} />
+            </button>
+            <div style={{ width: 1, height: 18, background: 'var(--border)', margin: '0 0.2rem' }} />
+            <button className="btn btn-ghost btn-icon" onClick={onClose}><X size={18} /></button>
+          </div>
         </div>
 
+        {/* Body */}
         <div className="drawer-body">
+          {/* Status */}
           <div>
-            <p className="drawer-section-title">Status</p>
+            <p className="drawer-section-title" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              Status
+              {savingStatus && <div className="spinner" style={{ width: 10, height: 10 }} />}
+            </p>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
               {STATUS_OPTIONS.map(s => (
                 <button
                   key={s}
-                  onClick={() => setStatus(s)}
+                  onClick={() => handleStatusChange(s)}
+                  disabled={savingStatus}
                   style={{
                     padding: '0.4rem 0.9rem', borderRadius: 99, fontSize: '0.8rem', fontWeight: 600,
                     cursor: 'pointer', transition: 'all 0.15s',
                     background: status === s ? STATUS_COLORS[s] : 'var(--bg-elevated)',
                     color: status === s ? '#fff' : 'var(--text-secondary)',
                     border: `1px solid ${status === s ? STATUS_COLORS[s] : 'var(--border)'}`,
+                    opacity: savingStatus ? 0.65 : 1,
                   }}
                 >
                   {STATUS_LABELS[s] ?? s}
@@ -169,11 +396,7 @@ function TestCaseDrawer({
             </div>
           </div>
 
-          <div>
-            <p className="drawer-section-title">Responsável</p>
-            <input placeholder="Nome do responsável" value={responsible} onChange={e => setResponsible(e.target.value)} />
-          </div>
-
+          {/* Comments */}
           <div>
             <p className="drawer-section-title">Comentários</p>
             <textarea
@@ -185,16 +408,16 @@ function TestCaseDrawer({
             />
           </div>
 
-          <button className="btn btn-primary" onClick={handleSave} disabled={saving} style={{ justifyContent: 'center' }}>
-            {saving ? <><div className="spinner" style={{ width: 14, height: 14 }} /> Salvando...</> : <><CheckCircle size={16} /> Salvar alterações</>}
-          </button>
+          <div className="divider" style={{ margin: 0 }} />
 
-          <div className="divider" />
-
+          {/* Bugs & Melhorias */}
           <div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-              <p className="drawer-section-title" style={{ marginBottom: 0 }}>Bugs & Melhorias</p>
-              <button className="btn btn-ghost btn-sm" onClick={() => setShowIssueForm(s => !s)} style={{ fontSize: '0.75rem' }}>
+              <p className="drawer-section-title" style={{ marginBottom: 0, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                Bugs & Melhorias
+                {issues.length > 0 && <span className="badge">{issues.length}</span>}
+              </p>
+              <button className="btn btn-ghost btn-sm" onClick={() => { setShowIssueForm(s => !s); setEditingIssueId(null); }} style={{ fontSize: '0.75rem' }}>
                 <Plus size={13} /> Adicionar
               </button>
             </div>
@@ -203,43 +426,7 @@ function TestCaseDrawer({
               {showIssueForm && (
                 <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
                   style={{ overflow: 'hidden', marginBottom: '0.75rem' }}>
-                  <div className="card" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-                      <div>
-                        <label className="form-label">Tipo</label>
-                        <select value={issueForm.type} onChange={e => setIssueForm(f => ({ ...f, type: e.target.value }))}>
-                          <option value="BUG">Bug</option>
-                          <option value="IMPROVEMENT">Melhoria</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="form-label">Severidade</label>
-                        <select value={issueForm.severity} onChange={e => setIssueForm(f => ({ ...f, severity: e.target.value }))}>
-                          <option>Low</option><option>Medium</option><option>High</option><option>Critical</option>
-                        </select>
-                      </div>
-                    </div>
-                    <div>
-                      <label className="form-label">Título *</label>
-                      <input placeholder="Descreva o bug ou melhoria" value={issueForm.title} onChange={e => setIssueForm(f => ({ ...f, title: e.target.value }))} />
-                    </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-                      <div>
-                        <label className="form-label">Key Jira (opcional)</label>
-                        <input placeholder="PROJ-999" value={issueForm.jiraKey} onChange={e => setIssueForm(f => ({ ...f, jiraKey: e.target.value.toUpperCase() }))} />
-                      </div>
-                      <div>
-                        <label className="form-label">Status</label>
-                        <select value={issueForm.status} onChange={e => setIssueForm(f => ({ ...f, status: e.target.value }))}>
-                          <option>Aberto</option><option>Em Andamento</option><option>Resolvido</option>
-                        </select>
-                      </div>
-                    </div>
-                    <button className="btn btn-primary btn-sm" onClick={handleAddIssue} disabled={addingIssue || !issueForm.title.trim()} style={{ justifyContent: 'center' }}>
-                      {addingIssue ? <div className="spinner" style={{ width: 13, height: 13 }} /> : <Plus size={14} />}
-                      Adicionar Issue
-                    </button>
-                  </div>
+                  <IssueForm form={issueForm} onChange={setIssueForm} onSubmit={handleAddIssue} onCancel={() => setShowIssueForm(false)} loading={addingIssue} submitLabel="Adicionar Issue" />
                 </motion.div>
               )}
             </AnimatePresence>
@@ -249,25 +436,54 @@ function TestCaseDrawer({
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                 {issues.map(issue => (
-                  <div key={issue.id} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', padding: '0.65rem 0.85rem', background: 'var(--bg-elevated)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', flexWrap: 'wrap', marginBottom: '0.2rem' }}>
-                        <span style={{ fontSize: '0.7rem', fontWeight: 700, padding: '0.1rem 0.4rem', borderRadius: 4, background: issue.type === 'BUG' ? 'rgba(239,68,68,0.15)' : 'rgba(59,130,246,0.15)', color: issue.type === 'BUG' ? 'var(--status-failed)' : 'var(--status-inprogress)' }}>
-                          {issue.type === 'BUG' ? 'Bug' : 'Melhoria'}
-                        </span>
-                        {issue.severity && <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{issue.severity}</span>}
-                        {issue.jiraKey && <code style={{ fontSize: '0.7rem' }}>{issue.jiraKey}</code>}
-                      </div>
-                      <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>{issue.title}</p>
-                    </div>
-                    <button className="btn btn-ghost btn-icon btn-sm" onClick={() => handleRemoveIssue(issue.id)} style={{ color: 'var(--text-muted)', flexShrink: 0 }}>
-                      <Trash size={13} />
-                    </button>
+                  <div key={issue.id}>
+                    {editingIssueId === issue.id ? (
+                      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                        <IssueForm form={editForm} onChange={setEditForm} onSubmit={() => handleUpdateIssue(issue.id)} onCancel={() => setEditingIssueId(null)} loading={updatingIssue} submitLabel="Salvar alterações" />
+                      </motion.div>
+                    ) : (
+                      <IssueCard
+                        issue={issue}
+                        onEdit={() => handleStartEdit(issue)}
+                        onDelete={() => setDeleteConfirmId(issue.id)}
+                        confirmDelete={deleteConfirmId === issue.id}
+                        onConfirmDelete={() => handleRemoveIssue(issue.id)}
+                        onCancelDelete={() => setDeleteConfirmId(null)}
+                      />
+                    )}
                   </div>
                 ))}
               </div>
             )}
           </div>
+        </div>
+
+        {/* Footer */}
+        <div className="drawer-footer">
+          <button
+            className="btn btn-primary"
+            onClick={handleSave}
+            disabled={saving || !isDirty}
+            style={{ justifyContent: 'center', width: '100%' }}
+          >
+            {saving
+              ? <><div className="spinner" style={{ width: 14, height: 14 }} /> Salvando...</>
+              : savedFeedback
+              ? <><CheckCircle size={16} weight="fill" /> Salvo</>
+              : <><CheckCircle size={16} /> Salvar comentários</>}
+          </button>
+        </div>
+
+        {/* Toasts */}
+        <div className="toast-area">
+          <AnimatePresence>
+            {toasts.map(t => (
+              <motion.div key={t.id} className={`toast toast-${t.type}`}
+                initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }}>
+                {t.message}
+              </motion.div>
+            ))}
+          </AnimatePresence>
         </div>
       </motion.div>
     </>
@@ -607,11 +823,13 @@ export default function ExecutionRunPage() {
       <AnimatePresence>
         {selectedEtc && (
           <TestCaseDrawer
-            key={selectedEtc.id}
             executionId={execution.id}
             etc={selectedEtc}
+            allTestCases={filteredTcs}
+            currentIndex={filteredTcs.findIndex(tc => tc.id === selectedEtc.id)}
             onClose={() => setSelectedEtc(null)}
             onUpdated={handleUpdated}
+            onNavigate={tc => setSelectedEtc(tc)}
           />
         )}
       </AnimatePresence>

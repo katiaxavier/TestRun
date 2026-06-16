@@ -124,6 +124,8 @@ export const executionsApi = {
     api.delete(`/batch/${batchId}/test-cases/${testCaseId}`),
   removeIssue: (executionId: string, etcId: string, issueId: string) =>
     api.delete(`/executions/${executionId}/test-cases/${etcId}/issues/${issueId}`),
+  updateIssue: (executionId: string, etcId: string, issueId: string, data: { type?: string; jiraKey?: string; title?: string; severity?: string; status?: string }) =>
+    api.patch<Issue>(`/executions/${executionId}/test-cases/${etcId}/issues/${issueId}`, data),
 };
 
 export const reportsApi = {

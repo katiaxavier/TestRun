@@ -13,6 +13,7 @@ import {
   CreateExecutionDto,
   UpdateTestCaseDto,
   CreateIssueDto,
+  UpdateIssueDto,
 } from './executions.service';
 
 @Controller('executions')
@@ -58,6 +59,11 @@ export class ExecutionsController {
     @Param('etcId') etcId: string,
   ) {
     return this.executionsService.removeTestCaseFromExecution(executionId, etcId);
+  }
+
+  @Patch(':executionId/test-cases/:etcId/issues/:id')
+  async updateIssue(@Param('id') id: string, @Body() dto: UpdateIssueDto) {
+    return this.executionsService.updateIssue(id, dto);
   }
 
   @Delete(':executionId/test-cases/:etcId/issues/:id')

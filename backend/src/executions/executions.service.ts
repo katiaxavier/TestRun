@@ -38,6 +38,14 @@ export class CreateIssueDto {
   responsible?: string;
 }
 
+export class UpdateIssueDto {
+  type?: string;
+  jiraKey?: string;
+  title?: string;
+  severity?: string;
+  status?: string;
+}
+
 @Injectable()
 export class ExecutionsService {
   constructor(private readonly prisma: PrismaService) {}
@@ -206,6 +214,14 @@ export class ExecutionsService {
     });
 
     return { success: true, message: 'Issue removida com sucesso!' };
+  }
+
+  async updateIssue(issueId: string, dto: UpdateIssueDto) {
+    const issue = await this.prisma.issue.findUnique({ where: { id: issueId } });
+    if (!issue) {
+      throw new HttpException('Issue não encontrada.', HttpStatus.NOT_FOUND);
+    }
+    return this.prisma.issue.update({ where: { id: issueId }, data: dto });
   }
 
   async delete(id: string) {
