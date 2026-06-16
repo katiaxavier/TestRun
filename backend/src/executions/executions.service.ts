@@ -344,7 +344,7 @@ export class ExecutionsService {
         startDate: new Date(dto.startDate),
         endDate: new Date(dto.endDate),
         responsible: dto.responsible,
-        status: 'IN_PROGRESS',
+        status: 'PENDING',
       },
     });
 
