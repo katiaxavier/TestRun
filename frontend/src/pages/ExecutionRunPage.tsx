@@ -606,7 +606,8 @@ export default function ExecutionRunPage() {
     PENDING: counts.pending,
   };
   const executed = counts.passed + counts.failed + counts.blocked;
-  const pct = counts.total > 0 ? Math.round((counts.passed / counts.total) * 100) : 0;
+  const pct = counts.total > 0 ? Math.round((executed / counts.total) * 100) : 0;
+  const pctColor = pct === 100 ? 'var(--status-passed)' : pct > 50 ? 'var(--secondary)' : 'var(--accent)';
   const availablePriorities = Array.from(new Set(tcs.map(tc => priorityLabel(tc.testCase.priority)).filter(p => p !== '—')));
   const query = normalize(search.trim());
   const filteredTcs = tcs
@@ -694,7 +695,7 @@ export default function ExecutionRunPage() {
           <div className="card" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
               <span style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)' }}>Progresso da Execução</span>
-              <span style={{ fontSize: '1.75rem', fontWeight: 800, letterSpacing: '-0.03em', color: 'var(--accent)' }}>{pct}%</span>
+              <span style={{ fontSize: '1.75rem', fontWeight: 800, letterSpacing: '-0.03em', color: pctColor }}>{pct}%</span>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', fontFamily: 'monospace' }}>
