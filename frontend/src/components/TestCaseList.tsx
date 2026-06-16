@@ -1,10 +1,12 @@
 import { useState, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { ArrowSquareOut, Flask, MagnifyingGlass, Trash } from '@phosphor-icons/react';
-import type { TestCase } from '../api/client';
+import type { Suite, TestCase } from '../api/client';
 
 interface TestCaseListProps {
   testCases: TestCase[];
   onDelete?: (id: string) => Promise<void>;
+  suiteMap?: Record<string, Suite>;
 }
 
 type PriorityFilter = 'all' | 'Gravíssima' | 'Crítica' | 'Alta' | 'Média' | 'Normal' | 'Trivial';
@@ -35,7 +37,7 @@ function priorityLabel(priority?: string | null): string {
   return map[n] ?? priority;
 }
 
-export function TestCaseList({ testCases, onDelete }: TestCaseListProps) {
+export function TestCaseList({ testCases, onDelete, suiteMap }: TestCaseListProps) {
   const [search, setSearch] = useState('');
   const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>('all');
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -104,6 +106,7 @@ export function TestCaseList({ testCases, onDelete }: TestCaseListProps) {
         <table>
           <thead>
             <tr>
+              {suiteMap && <th style={{ width: 120 }}>Suite</th>}
               <th style={{ width: 120 }}>Key</th>
               <th>Título</th>
               <th style={{ width: 120 }}>Prioridade</th>
@@ -113,14 +116,30 @@ export function TestCaseList({ testCases, onDelete }: TestCaseListProps) {
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={onDelete ? 4 : 3} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+                <td colSpan={(onDelete ? 4 : 3) + (suiteMap ? 1 : 0)} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
                   Nenhum caso encontrado.
                 </td>
               </tr>
             ) : filtered.map(tc => {
               const priority = priorityLabel(tc.priority);
+              const suite = suiteMap?.[tc.suiteId];
               return (
                 <tr key={tc.id}>
+                  {suiteMap && (
+                    <td style={{ width: 110 }}>
+                      {suite ? (
+                        <Link
+                          to={`/suites/${suite.id}`}
+                          onClick={e => e.stopPropagation()}
+                          style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--accent)', fontSize: '0.85rem', fontFamily: 'monospace' }}
+                        >
+                          {suite.jiraKey}
+                        </Link>
+                      ) : (
+                        <code>—</code>
+                      )}
+                    </td>
+                  )}
                   <td style={{ width: 110 }}>
                     {tc.link ? (
                       <a

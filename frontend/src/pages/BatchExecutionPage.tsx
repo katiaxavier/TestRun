@@ -1,193 +1,198 @@
-import { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { executionsApi, reportsApi, suitesApi } from '../api/client';
-import { ArrowLeft, MicrosoftExcelLogo, FilePdf, Funnel } from '@phosphor-icons/react';
-import type { Suite } from '../api/client';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { Play, WarningCircle } from '@phosphor-icons/react';
+import { executionsApi, suitesApi } from '../api/client';
+import type { Suite, Execution } from '../api/client';
+import { Modal } from '../components/Modal';
+import { PageHeader } from '../components/PageHeader';
+import { ExecutionList } from '../components/ExecutionList';
+import { TestCaseList } from '../components/TestCaseList';
 
-interface BatchReport {
-  batch: {
-    id: string;
-    name?: string;
-    sprint: string;
-    version: string;
-    startDate: string;
-    endDate: string;
-    testedFeature: string;
-    responsible: string;
-    status: string;
+function NewBatchExecutionModal({ open, batchId, onClose, onCreated }: {
+  open: boolean;
+  batchId: string;
+  onClose: () => void;
+  onCreated: () => void;
+}) {
+  const today = new Date().toISOString().split('T')[0];
+  const [form, setForm] = useState({ sprint: '', version: '', startDate: today, endDate: '', responsible: '' });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const { sprint, startDate, endDate, responsible } = form;
+    if (!sprint || !startDate || !endDate || !responsible) {
+      setError('Preencha todos os campos obrigatórios.'); return;
+    }
+    setLoading(true); setError('');
+    try {
+      await executionsApi.createBatchExecution(batchId, {
+        ...form,
+        version: form.version || undefined,
+      });
+      onCreated();
+      onClose();
+    } catch (err: any) {
+      const msg = err?.response?.data?.message ?? 'Erro ao criar execução.';
+      setError(Array.isArray(msg) ? msg.join(' ') : msg);
+    } finally { setLoading(false); }
   };
-  summary: {
-    totalTests: number;
-    passed: number;
-    failed: number;
-    blocked: number;
-    inProgress: number;
-    pending: number;
-  };
-  executions: any[];
+
+  const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement>) =>
+    setForm(f => ({ ...f, [k]: e.target.value }));
+
+  return (
+    <Modal open={open} onClose={onClose} title="Novo Ciclo de Execução" maxWidth={580}
+      footer={
+        <>
+          <button className="btn btn-secondary" onClick={onClose}>Cancelar</button>
+          <button className="btn btn-primary" onClick={handleSubmit as any} disabled={loading}>
+            {loading ? <div className="spinner" style={{ width: 14, height: 14 }} /> : <Play size={16} />}
+            Iniciar Execução
+          </button>
+        </>
+      }
+    >
+      <form onSubmit={handleSubmit}>
+        <div className="form-row">
+          <div className="form-group">
+            <label className="form-label">Sprint *</label>
+            <input placeholder="Ex: Sprint 42" value={form.sprint} onChange={set('sprint')} />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Versão do sistema</label>
+            <input placeholder="Ex: 2.5.1" value={form.version} onChange={set('version')} />
+          </div>
+        </div>
+        <div className="form-group">
+          <label className="form-label">Responsável pela execução *</label>
+          <input placeholder="Nome do QA responsável" value={form.responsible} onChange={set('responsible')} />
+        </div>
+        <div className="form-row">
+          <div className="form-group">
+            <label className="form-label">Data de início *</label>
+            <input type="date" value={form.startDate} onChange={set('startDate')} />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Data de fim *</label>
+            <input type="date" value={form.endDate} onChange={set('endDate')} />
+          </div>
+        </div>
+        {error && (
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', padding: '0.75rem', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 'var(--radius-sm)', fontSize: '0.83rem', color: 'var(--status-failed)' }}>
+            <WarningCircle size={16} style={{ flexShrink: 0, marginTop: 2 }} /> {error}
+          </div>
+        )}
+      </form>
+    </Modal>
+  );
 }
 
 export default function BatchExecutionPage() {
-   const { id } = useParams();
-   const [batch, setBatch] = useState<any>(null);
-   const [report, setReport] = useState<BatchReport | null>(null);
-   const [suites, setSuites] = useState<Suite[]>([]);
-   const [loading, setLoading] = useState(true);
-   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const [batch, setBatch] = useState<any>(null);
+  const [suites, setSuites] = useState<Suite[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [newExecOpen, setNewExecOpen] = useState(false);
 
-   useEffect(() => {
-     if (!id) return;
-     (async () => {
-       setLoading(true);
-       try {
-         const [{ data: batchData }, { data: reportData }] = await Promise.all([
-           executionsApi.getBatch(id),
-           reportsApi.getBatchReport(id),
-         ]);
-         setBatch(batchData);
-         setReport(reportData);
-         const suiteIds: string[] = batchData.suiteIds ?? [];
-         if (suiteIds.length > 0) {
-           const suitesData = await Promise.all(
-             suiteIds.map(async (suiteId) => {
-               try {
-                 const { data } = await suitesApi.get(suiteId);
-                 return data;
-               } catch {
-                 return null;
-               }
-             })
-           );
-           setSuites(suitesData.filter((s): s is Suite => !!s));
-         }
-       } catch (err) {}
-       setLoading(false);
-     })();
-   }, [id]);
-
-  const handleExportXlsx = async () => {
+  const fetchBatch = useCallback(async () => {
     if (!id) return;
-    const { data } = await reportsApi.downloadBatchXlsx(id);
-    const url = window.URL.createObjectURL(data);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `relatorio_batch_${id}.xlsx`;
-    a.click();
-    window.URL.revokeObjectURL(url);
-  };
+    try {
+      const { data: batchData } = await executionsApi.getBatch(id);
+      setBatch(batchData);
+      const suiteIds: string[] = batchData.suiteIds ?? [];
+      if (suiteIds.length > 0) {
+        const results = await Promise.all(
+          suiteIds.map(sid => suitesApi.get(sid).then(r => r.data).catch(() => null))
+        );
+        setSuites(results.filter((s): s is Suite => !!s));
+      }
+    } catch {
+      navigate('/');
+    } finally {
+      setLoading(false);
+    }
+  }, [id, navigate]);
 
-  const handleExportPdf = async () => {
+  useEffect(() => { fetchBatch(); }, [fetchBatch]);
+
+  if (loading) return <div className="page"><div className="loading-page"><div className="spinner" /> Carregando...</div></div>;
+  if (!batch) return null;
+
+  const executions: Execution[] = batch.executions ?? [];
+  const excluded: string[] = batch.excludedTestCaseIds ?? [];
+  const allTestCases = suites.flatMap(s => s.testCases ?? []).filter(tc => !excluded.includes(tc.id));
+  const suiteMap = Object.fromEntries(suites.map(s => [s.id, s]));
+  const batchTitle = batch.name || `Lote de ${suites.length} ${suites.length === 1 ? 'suite' : 'suites'}`;
+
+  const handleRemoveTestCase = async (tcId: string) => {
     if (!id) return;
-    const { data } = await reportsApi.downloadBatchPdf(id);
-    const url = window.URL.createObjectURL(data);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `relatorio_batch_${id}.pdf`;
-    a.click();
-    window.URL.revokeObjectURL(url);
+    await executionsApi.removeTestCaseFromBatch(id, tcId);
+    setBatch((prev: any) => ({
+      ...prev,
+      excludedTestCaseIds: [...(prev.excludedTestCaseIds ?? []), tcId],
+    }));
   };
-
-  if (loading) return <div className="page"><div className="loading-page"><div className="spinner" /> Carregando batch...</div></div>;
-  if (!batch || !report) return <div className="page">Batch não encontrado.</div>;
-
-  const { summary } = report;
-  const filteredExecutions = statusFilter === 'all'
-    ? report.executions
-    : report.executions.map(ex => ({
-        ...ex,
-        testCases: ex.testCases.filter((tc: any) => tc.status === statusFilter),
-      })).filter((ex: any) => ex.testCases.length > 0);
 
   return (
     <div className="page">
-      <div className="page-header">
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-            <span className="tag" style={{ fontFamily: 'var(--font-inter)' }}>LOTE</span>
-            {batch.name ? (
-              <h1 className="page-title">{batch.name}</h1>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                {suites.map((suite) => (
-                  <h1 key={suite.id} className="page-title" style={{ margin: 0 }}>{suite.title}</h1>
-                ))}
-              </div>
-            )}
+      <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+        <PageHeader
+          backLabel="Lotes"
+          onBack={() => navigate('/')}
+          eyebrow="LOTE"
+          title={batchTitle}
+        />
+
+        {suites.length > 0 && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '1.5rem', marginBottom: '2rem' }}>
+            {suites.map(s => (
+              <span key={s.id} className="tag" style={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>
+                {s.jiraKey} — {s.title}
+              </span>
+            ))}
           </div>
-          <p className="page-subtitle">{suites.length} {suites.length === 1 ? 'suite' : 'suites'}</p>
-        </div>
-        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-          <div style={{ position: 'relative' }}>
-            <Funnel size={15} style={{ position: 'absolute', left: '0.5rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
-            <select
-              value={statusFilter}
-              onChange={e => setStatusFilter(e.target.value)}
-              style={{ paddingLeft: '2rem', width: 160 }}
+        )}
+
+        <div style={{ marginBottom: '1.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
+            <h2 style={{ fontSize: '1rem', fontWeight: 700 }}>Execuções</h2>
+            <span className="badge">{executions.length}</span>
+            <button
+              className="btn btn-primary btn-sm"
+              style={{ marginLeft: 'auto' }}
+              onClick={() => setNewExecOpen(true)}
+              disabled={allTestCases.length === 0}
             >
-              <option value="all">Todos os status</option>
-              <option value="PENDING">Pendente</option>
-              <option value="IN_PROGRESS">Em Execução</option>
-              <option value="PASSED">Passou</option>
-              <option value="FAILED">Falhou</option>
-              <option value="BLOCKED">Bloqueado</option>
-            </select>
+              <Play size={15} /> Nova Execução
+            </button>
           </div>
-          <button className="btn btn-outline" onClick={handleExportXlsx}>
-            <MicrosoftExcelLogo size={16} /> Exportar XLSX
-          </button>
-          <button className="btn btn-primary" onClick={handleExportPdf}>
-            <FilePdf size={16} /> Exportar PDF
-          </button>
-          <Link to="/" className="btn btn-outline"><ArrowLeft size={14} /> Voltar</Link>
-        </div>
-      </div>
-
-      <div style={{ padding: '1rem' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
-          <div className="card" style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Total de Testes</div>
-            <div style={{ fontSize: '2rem', fontWeight: 700 }}>{summary.totalTests}</div>
-          </div>
-          <div className="card" style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Passou</div>
-            <div style={{ fontSize: '2rem', fontWeight: 700, color: 'var(--status-passed)' }}>{summary.passed}</div>
-          </div>
-          <div className="card" style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Falhou</div>
-            <div style={{ fontSize: '2rem', fontWeight: 700, color: 'var(--status-failed)' }}>{summary.failed}</div>
-          </div>
-          <div className="card" style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Bloqueado</div>
-            <div style={{ fontSize: '2rem', fontWeight: 700, color: 'var(--status-blocked)' }}>{summary.blocked}</div>
-          </div>
-          <div className="card" style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Pendente</div>
-            <div style={{ fontSize: '2rem', fontWeight: 700, color: 'var(--status-pending)' }}>{summary.pending}</div>
-          </div>
+          <ExecutionList
+            executions={executions}
+            onExecutionClick={exec => navigate(`/executions/${exec.id}`)}
+          />
         </div>
 
-        <div style={{ marginBottom: '1rem' }}>
-          <strong>{batch.executions.length}</strong> execuções — <strong>{summary.totalTests}</strong> casos no total
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
+            <h2 style={{ fontSize: '1rem', fontWeight: 700 }}>Casos de Teste</h2>
+            <span className="badge">{allTestCases.length}</span>
+          </div>
+          <TestCaseList testCases={allTestCases} suiteMap={suiteMap} onDelete={handleRemoveTestCase} />
         </div>
+      </motion.div>
 
-        <div style={{ display: 'grid', gap: '0.6rem' }}>
-          {filteredExecutions.map((ex: any) => (
-            <div key={ex.id} className="card">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                    {ex.suite ? `${ex.suite.jiraKey} — ${ex.suite.title}` : 'Execução do Lote'}
-                  </div>
-                  <div style={{ fontSize: '0.95rem', fontWeight: 600 }}>{ex.testCases.length} casos</div>
-                </div>
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  <Link to={`/executions/${ex.id}`} className="btn btn-primary">Abrir execução</Link>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+      {id && (
+        <NewBatchExecutionModal
+          open={newExecOpen}
+          batchId={id}
+          onClose={() => setNewExecOpen(false)}
+          onCreated={fetchBatch}
+        />
+      )}
     </div>
   );
 }

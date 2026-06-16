@@ -103,6 +103,13 @@ export const executionsApi = {
   createBatch: (suiteIds: string[], data: {
     name?: string;
   }) => api.post('/batch', { suiteIds, ...data }),
+  createBatchExecution: (batchId: string, data: {
+    sprint: string;
+    version?: string;
+    startDate: string;
+    endDate: string;
+    responsible: string;
+  }) => api.post(`/batch/${batchId}/executions`, data),
   updateStatus: (id: string, status: string) => api.patch(`/executions/${id}/status`, { status }),
   updateTestCase: (
     executionId: string,
@@ -111,6 +118,10 @@ export const executionsApi = {
   ) => api.patch(`/executions/${executionId}/test-cases/${etcId}`, data),
   addIssue: (executionId: string, etcId: string, data: { type: string; jiraKey?: string; title: string; severity?: string; status?: string; responsible?: string }) =>
     api.post(`/executions/${executionId}/test-cases/${etcId}/issues`, data),
+  removeTestCase: (executionId: string, etcId: string) =>
+    api.delete(`/executions/${executionId}/test-cases/${etcId}`),
+  removeTestCaseFromBatch: (batchId: string, testCaseId: string) =>
+    api.delete(`/batch/${batchId}/test-cases/${testCaseId}`),
   removeIssue: (executionId: string, etcId: string, issueId: string) =>
     api.delete(`/executions/${executionId}/test-cases/${etcId}/issues/${issueId}`),
 };

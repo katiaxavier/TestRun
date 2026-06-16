@@ -38,6 +38,9 @@ let ExecutionsController = class ExecutionsController {
     async addIssue(id, dto) {
         return this.executionsService.addIssue(id, dto);
     }
+    async removeTestCase(executionId, etcId) {
+        return this.executionsService.removeTestCaseFromExecution(executionId, etcId);
+    }
     async removeIssue(id) {
         return this.executionsService.removeIssue(id);
     }
@@ -88,6 +91,14 @@ __decorate([
     __metadata("design:paramtypes", [String, executions_service_1.CreateIssueDto]),
     __metadata("design:returntype", Promise)
 ], ExecutionsController.prototype, "addIssue", null);
+__decorate([
+    (0, common_1.Delete)(':executionId/test-cases/:etcId'),
+    __param(0, (0, common_1.Param)('executionId')),
+    __param(1, (0, common_1.Param)('etcId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String]),
+    __metadata("design:returntype", Promise)
+], ExecutionsController.prototype, "removeTestCase", null);
 __decorate([
     (0, common_1.Delete)(':executionId/test-cases/:etcId/issues/:id'),
     __param(0, (0, common_1.Param)('id')),

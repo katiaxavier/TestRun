@@ -38,12 +38,12 @@ export declare class ReportsController {
             status: string;
             testCases: ({
                 testCase: {
-                    link: string | null;
                     id: string;
                     jiraKey: string;
                     title: string;
                     createdAt: Date;
                     updatedAt: Date;
+                    link: string | null;
                     priority: string | null;
                     suiteId: string;
                 };

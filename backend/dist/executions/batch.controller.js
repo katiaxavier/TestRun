@@ -29,6 +29,12 @@ let BatchController = class BatchController {
     async findOne(id) {
         return this.executionsService.findBatch(id);
     }
+    async removeTestCase(id, tcId) {
+        return this.executionsService.removeTestCaseFromBatch(id, tcId);
+    }
+    async createExecution(id, dto) {
+        return this.executionsService.createBatchExecution(id, dto);
+    }
     async delete(id) {
         return this.executionsService.deleteBatch(id);
     }
@@ -54,6 +60,22 @@ __decorate([
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", Promise)
 ], BatchController.prototype, "findOne", null);
+__decorate([
+    (0, common_1.Delete)(':id/test-cases/:tcId'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Param)('tcId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String]),
+    __metadata("design:returntype", Promise)
+], BatchController.prototype, "removeTestCase", null);
+__decorate([
+    (0, common_1.Post)(':id/executions'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, executions_service_1.CreateBatchExecutionItemDto]),
+    __metadata("design:returntype", Promise)
+], BatchController.prototype, "createExecution", null);
 __decorate([
     (0, common_1.Delete)(':id'),
     __param(0, (0, common_1.Param)('id')),

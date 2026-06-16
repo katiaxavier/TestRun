@@ -15,6 +15,14 @@ export class CreateBatchExecutionDto {
   name?: string;
 }
 
+export class CreateBatchExecutionItemDto {
+  sprint!: string;
+  version?: string;
+  startDate!: string;
+  endDate!: string;
+  responsible!: string;
+}
+
 export class UpdateTestCaseDto {
   status?: string;
   responsible?: string;
@@ -167,6 +175,23 @@ export class ExecutionsService {
     return issue;
   }
 
+  async removeTestCaseFromExecution(executionId: string, etcId: string) {
+    const etc = await this.prisma.executionTestCase.findUnique({
+      where: { id: etcId },
+    });
+
+    if (!etc || etc.executionId !== executionId) {
+      throw new HttpException(
+        'Item de execução não encontrado.',
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    await this.prisma.executionTestCase.delete({ where: { id: etcId } });
+
+    return { success: true };
+  }
+
   async removeIssue(issueId: string) {
     const issue = await this.prisma.issue.findUnique({
       where: { id: issueId },
@@ -224,7 +249,6 @@ export class ExecutionsService {
   }
 
   async createBatch(dto: CreateBatchExecutionDto) {
-    // 1. Validar suites
     if (!dto.suiteIds || dto.suiteIds.length === 0) {
       throw new HttpException(
         'Selecione ao menos uma suite para criar o lote.',
@@ -233,9 +257,9 @@ export class ExecutionsService {
     }
 
     const suites = await this.prisma.suite.findMany({
-       where: { id: { in: dto.suiteIds } },
-       include: { testCases: { orderBy: { jiraKey: 'asc' } } },
-     });
+      where: { id: { in: dto.suiteIds } },
+      include: { testCases: true },
+    });
 
     if (suites.length !== dto.suiteIds.length) {
       throw new HttpException(
@@ -251,31 +275,43 @@ export class ExecutionsService {
       );
     }
 
-    const now = new Date();
-
-    // 2. Criar batch
-    const batch = await this.prisma.executionBatch.create({
+    return this.prisma.executionBatch.create({
       data: {
         name: dto.name || null,
         suiteIds: dto.suiteIds as any,
-        status: 'IN_PROGRESS',
+        status: 'PENDING',
       },
+      include: { executions: true },
+    });
+  }
+
+  async createBatchExecution(batchId: string, dto: CreateBatchExecutionItemDto) {
+    const batch = await this.prisma.executionBatch.findUnique({
+      where: { id: batchId },
     });
 
-    // 3. Criar UMA execução para o lote (sem suiteId, apenas batchId)
+    if (!batch) {
+      throw new HttpException('Lote não encontrado.', HttpStatus.NOT_FOUND);
+    }
+
+    const suiteIds = (batch.suiteIds as string[]) ?? [];
+    const suites = await this.prisma.suite.findMany({
+      where: { id: { in: suiteIds } },
+      include: { testCases: { orderBy: { jiraKey: 'asc' } } },
+    });
+
     const execution = await this.prisma.execution.create({
       data: {
         batchId: batch.id,
-        sprint: '',
-        version: '',
-        startDate: now,
-        endDate: now,
-        responsible: '',
+        sprint: dto.sprint,
+        version: dto.version || '',
+        startDate: new Date(dto.startDate),
+        endDate: new Date(dto.endDate),
+        responsible: dto.responsible,
         status: 'IN_PROGRESS',
       },
     });
 
-    // 4. Vincular casos de teste de TODAS as suites do lote
     for (const suite of suites) {
       for (const tc of suite.testCases) {
         await this.prisma.executionTestCase.create({
@@ -283,25 +319,18 @@ export class ExecutionsService {
             executionId: execution.id,
             testCaseId: tc.id,
             status: 'PENDING',
-            responsible: '',
+            responsible: dto.responsible,
           },
         });
       }
     }
 
-    return this.prisma.executionBatch.findUnique({
-      where: { id: batch.id },
-      include: {
-        executions: {
-          include: {
-            suite: true,
-            testCases: {
-              include: { testCase: true, issues: true },
-            },
-          },
-        },
-      },
+    await this.prisma.executionBatch.update({
+      where: { id: batchId },
+      data: { status: 'IN_PROGRESS' },
     });
+
+    return this.findBatch(batchId);
   }
 
   async findBatch(id: string) {
@@ -324,6 +353,26 @@ export class ExecutionsService {
     }
 
     return batch;
+  }
+
+  async removeTestCaseFromBatch(batchId: string, testCaseId: string) {
+    const batch = await this.prisma.executionBatch.findUnique({
+      where: { id: batchId },
+    });
+
+    if (!batch) {
+      throw new HttpException('Lote não encontrado.', HttpStatus.NOT_FOUND);
+    }
+
+    const excluded = (batch.excludedTestCaseIds as string[]) ?? [];
+    if (!excluded.includes(testCaseId)) {
+      await this.prisma.executionBatch.update({
+        where: { id: batchId },
+        data: { excludedTestCaseIds: [...excluded, testCaseId] as any },
+      });
+    }
+
+    return { success: true };
   }
 
   async findAllBatches() {

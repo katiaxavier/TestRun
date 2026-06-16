@@ -9,7 +9,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ExecutionsService = exports.CreateIssueDto = exports.UpdateTestCaseDto = exports.CreateBatchExecutionDto = exports.CreateExecutionDto = void 0;
+exports.ExecutionsService = exports.CreateIssueDto = exports.UpdateTestCaseDto = exports.CreateBatchExecutionItemDto = exports.CreateBatchExecutionDto = exports.CreateExecutionDto = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../prisma/prisma.service");
 class CreateExecutionDto {
@@ -26,6 +26,14 @@ class CreateBatchExecutionDto {
     name;
 }
 exports.CreateBatchExecutionDto = CreateBatchExecutionDto;
+class CreateBatchExecutionItemDto {
+    sprint;
+    version;
+    startDate;
+    endDate;
+    responsible;
+}
+exports.CreateBatchExecutionItemDto = CreateBatchExecutionItemDto;
 class UpdateTestCaseDto {
     status;
     responsible;
@@ -144,6 +152,16 @@ let ExecutionsService = class ExecutionsService {
         });
         return issue;
     }
+    async removeTestCaseFromExecution(executionId, etcId) {
+        const etc = await this.prisma.executionTestCase.findUnique({
+            where: { id: etcId },
+        });
+        if (!etc || etc.executionId !== executionId) {
+            throw new common_1.HttpException('Item de execução não encontrado.', common_1.HttpStatus.NOT_FOUND);
+        }
+        await this.prisma.executionTestCase.delete({ where: { id: etcId } });
+        return { success: true };
+    }
     async removeIssue(issueId) {
         const issue = await this.prisma.issue.findUnique({
             where: { id: issueId },
@@ -189,7 +207,7 @@ let ExecutionsService = class ExecutionsService {
         }
         const suites = await this.prisma.suite.findMany({
             where: { id: { in: dto.suiteIds } },
-            include: { testCases: { orderBy: { jiraKey: 'asc' } } },
+            include: { testCases: true },
         });
         if (suites.length !== dto.suiteIds.length) {
             throw new common_1.HttpException('Uma ou mais suites não foram encontradas.', common_1.HttpStatus.NOT_FOUND);
@@ -197,22 +215,35 @@ let ExecutionsService = class ExecutionsService {
         if (suites.some((s) => s.testCases.length === 0)) {
             throw new common_1.HttpException('Todas as suites devem possuir casos de teste importados.', common_1.HttpStatus.BAD_REQUEST);
         }
-        const now = new Date();
-        const batch = await this.prisma.executionBatch.create({
+        return this.prisma.executionBatch.create({
             data: {
                 name: dto.name || null,
                 suiteIds: dto.suiteIds,
-                status: 'IN_PROGRESS',
+                status: 'PENDING',
             },
+            include: { executions: true },
+        });
+    }
+    async createBatchExecution(batchId, dto) {
+        const batch = await this.prisma.executionBatch.findUnique({
+            where: { id: batchId },
+        });
+        if (!batch) {
+            throw new common_1.HttpException('Lote não encontrado.', common_1.HttpStatus.NOT_FOUND);
+        }
+        const suiteIds = batch.suiteIds ?? [];
+        const suites = await this.prisma.suite.findMany({
+            where: { id: { in: suiteIds } },
+            include: { testCases: { orderBy: { jiraKey: 'asc' } } },
         });
         const execution = await this.prisma.execution.create({
             data: {
                 batchId: batch.id,
-                sprint: '',
-                version: '',
-                startDate: now,
-                endDate: now,
-                responsible: '',
+                sprint: dto.sprint,
+                version: dto.version || '',
+                startDate: new Date(dto.startDate),
+                endDate: new Date(dto.endDate),
+                responsible: dto.responsible,
                 status: 'IN_PROGRESS',
             },
         });
@@ -223,24 +254,16 @@ let ExecutionsService = class ExecutionsService {
                         executionId: execution.id,
                         testCaseId: tc.id,
                         status: 'PENDING',
-                        responsible: '',
+                        responsible: dto.responsible,
                     },
                 });
             }
         }
-        return this.prisma.executionBatch.findUnique({
-            where: { id: batch.id },
-            include: {
-                executions: {
-                    include: {
-                        suite: true,
-                        testCases: {
-                            include: { testCase: true, issues: true },
-                        },
-                    },
-                },
-            },
+        await this.prisma.executionBatch.update({
+            where: { id: batchId },
+            data: { status: 'IN_PROGRESS' },
         });
+        return this.findBatch(batchId);
     }
     async findBatch(id) {
         const batch = await this.prisma.executionBatch.findUnique({
@@ -260,6 +283,22 @@ let ExecutionsService = class ExecutionsService {
             throw new common_1.HttpException('Batch não encontrado.', common_1.HttpStatus.NOT_FOUND);
         }
         return batch;
+    }
+    async removeTestCaseFromBatch(batchId, testCaseId) {
+        const batch = await this.prisma.executionBatch.findUnique({
+            where: { id: batchId },
+        });
+        if (!batch) {
+            throw new common_1.HttpException('Lote não encontrado.', common_1.HttpStatus.NOT_FOUND);
+        }
+        const excluded = batch.excludedTestCaseIds ?? [];
+        if (!excluded.includes(testCaseId)) {
+            await this.prisma.executionBatch.update({
+                where: { id: batchId },
+                data: { excludedTestCaseIds: [...excluded, testCaseId] },
+            });
+        }
+        return { success: true };
     }
     async findAllBatches() {
         const batches = await this.prisma.executionBatch.findMany({

@@ -52,6 +52,14 @@ export class ExecutionsController {
     return this.executionsService.addIssue(id, dto);
   }
 
+  @Delete(':executionId/test-cases/:etcId')
+  async removeTestCase(
+    @Param('executionId') executionId: string,
+    @Param('etcId') etcId: string,
+  ) {
+    return this.executionsService.removeTestCaseFromExecution(executionId, etcId);
+  }
+
   @Delete(':executionId/test-cases/:etcId/issues/:id')
   async removeIssue(@Param('id') id: string) {
     return this.executionsService.removeIssue(id);
