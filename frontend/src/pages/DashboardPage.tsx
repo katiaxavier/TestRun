@@ -276,7 +276,7 @@ export default function DashboardPage() {
                     background: selectedSuites.includes(item.data.id) ? 'var(--accent-subtle)' : undefined,
                     borderColor: selectedSuites.includes(item.data.id) ? 'var(--accent)' : undefined,
                   }}
-                  onClick={() => navigate(item.type === 'batch' ? `/executions/batch/${item.data.id}` : `/suites/${item.data.id}`)}
+                  onClick={() => navigate(item.type === 'batch' ? `/batch/${item.data.id}` : `/suites/${item.data.id}`)}
                 >
                   {item.type === 'suite' ? (
                     <SuiteCard suite={item.data} selected={selectedSuites.includes(item.data.id)} onSelect={(id, checked) => {
@@ -304,7 +304,7 @@ export default function DashboardPage() {
           setSelectedSuites([]);
           setBatchModalOpen(false);
           fetchBatches();
-          navigate(`/executions/batch/${batch.id}`);
+          navigate(`/batch/${batch.id}`);
         }}
       />
     </div>

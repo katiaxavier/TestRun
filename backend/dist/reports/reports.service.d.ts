@@ -8,12 +8,7 @@ export declare class ReportsService {
         batch: {
             id: string;
             name: string | null;
-            sprint: string;
-            version: string;
-            startDate: Date;
-            endDate: Date;
             testedFeature: string | null;
-            responsible: string;
             status: string;
             suiteIds: import("@prisma/client/runtime/library").JsonValue;
         };
@@ -43,12 +38,12 @@ export declare class ReportsService {
             status: string;
             testCases: ({
                 testCase: {
+                    link: string | null;
                     id: string;
                     jiraKey: string;
                     title: string;
                     createdAt: Date;
                     updatedAt: Date;
-                    link: string | null;
                     priority: string | null;
                     suiteId: string;
                 };
@@ -60,9 +55,9 @@ export declare class ReportsService {
                     updatedAt: Date;
                     responsible: string | null;
                     status: string | null;
-                    executionTestCaseId: string;
                     type: string;
                     severity: string | null;
+                    executionTestCaseId: string;
                 }[];
             } & {
                 id: string;
@@ -70,9 +65,9 @@ export declare class ReportsService {
                 updatedAt: Date;
                 responsible: string | null;
                 status: string;
+                comments: string | null;
                 executionId: string;
                 testCaseId: string;
-                comments: string | null;
             })[];
         }[];
     }>;

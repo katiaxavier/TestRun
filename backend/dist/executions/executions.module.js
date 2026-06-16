@@ -10,13 +10,14 @@ exports.ExecutionsModule = void 0;
 const common_1 = require("@nestjs/common");
 const executions_service_1 = require("./executions.service");
 const executions_controller_1 = require("./executions.controller");
+const batch_controller_1 = require("./batch.controller");
 let ExecutionsModule = class ExecutionsModule {
 };
 exports.ExecutionsModule = ExecutionsModule;
 exports.ExecutionsModule = ExecutionsModule = __decorate([
     (0, common_1.Module)({
         providers: [executions_service_1.ExecutionsService],
-        controllers: [executions_controller_1.ExecutionsController],
+        controllers: [executions_controller_1.ExecutionsController, batch_controller_1.BatchController],
         exports: [executions_service_1.ExecutionsService],
     })
 ], ExecutionsModule);

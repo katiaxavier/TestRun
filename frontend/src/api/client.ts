@@ -89,9 +89,9 @@ export const suitesApi = {
 export const executionsApi = {
   get: (id: string) => api.get<Execution>(`/executions/${id}`),
   delete: (id: string) => api.delete(`/executions/${id}`),
-  getBatch: (id: string) => api.get<any>(`/executions/batch/${id}`),
-  getAllBatches: () => api.get<any[]>(`/executions/batches`),
-  deleteBatch: (id: string) => api.delete(`/executions/batch/${id}`),
+  getBatch: (id: string) => api.get<any>(`/batch/${id}`),
+  getAllBatches: () => api.get<any[]>(`/batch`),
+  deleteBatch: (id: string) => api.delete(`/batch/${id}`),
   create: (data: {
     suiteId: string;
     sprint: string;
@@ -102,12 +102,7 @@ export const executionsApi = {
   }) => api.post<Execution>('/executions', data),
   createBatch: (suiteIds: string[], data: {
     name?: string;
-    sprint: string;
-    version?: string;
-    startDate: string;
-    endDate: string;
-    responsible: string;
-  }) => api.post('/executions/batch', { suiteIds, ...data }),
+  }) => api.post('/batch', { suiteIds, ...data }),
   updateStatus: (id: string, status: string) => api.patch(`/executions/${id}/status`, { status }),
   updateTestCase: (
     executionId: string,

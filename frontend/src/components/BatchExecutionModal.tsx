@@ -8,11 +8,6 @@ export function BatchExecutionModal({
   open, onClose, suites, onCreated,
 }: { open: boolean; onClose: () => void; suites: Suite[]; onCreated: (batch: any) => void }) {
   const [name, setName] = useState('');
-  const [sprint, setSprint] = useState('');
-  const [version, setVersion] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
-  const [responsible, setResponsible] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -25,14 +20,9 @@ export function BatchExecutionModal({
     try {
       const { data } = await executionsApi.createBatch(suites.map(s => s.id), {
         name: name || undefined,
-        sprint,
-        version: version || undefined,
-        startDate,
-        endDate,
-        responsible,
       });
       onCreated(data);
-      setName(''); setSprint(''); setVersion(''); setStartDate(''); setEndDate(''); setResponsible('');
+      setName('');
       onClose();
     } catch (err: any) {
       const msg = err?.response?.data?.message ?? err.message ?? 'Erro ao criar lote.';
@@ -96,33 +86,6 @@ export function BatchExecutionModal({
         <div style={{ marginBottom: '0.75rem' }}>
           <label className="form-label">Nome do lote</label>
           <input value={name} onChange={e => setName(e.target.value)} placeholder="Ex: Regressão Sprint 25" />
-        </div>
-
-        <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '0.75rem' }}>
-          <div style={{ flex: 1 }}>
-            <label className="form-label">Sprint</label>
-            <input value={sprint} onChange={e => setSprint(e.target.value)} />
-          </div>
-          <div style={{ width: 160 }}>
-            <label className="form-label">Versão do sistema</label>
-            <input value={version} onChange={e => setVersion(e.target.value)} />
-          </div>
-        </div>
-
-        <div style={{ marginBottom: '0.75rem' }}>
-          <label className="form-label">Responsável</label>
-          <input value={responsible} onChange={e => setResponsible(e.target.value)} />
-        </div>
-
-        <div style={{ display: 'flex', gap: '0.75rem' }}>
-          <div style={{ flex: 1 }}>
-            <label className="form-label">Início</label>
-            <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} />
-          </div>
-          <div style={{ flex: 1 }}>
-            <label className="form-label">Fim</label>
-            <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} />
-          </div>
         </div>
       </div>
     </Modal>

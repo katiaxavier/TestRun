@@ -24,11 +24,6 @@ exports.CreateExecutionDto = CreateExecutionDto;
 class CreateBatchExecutionDto {
     suiteIds;
     name;
-    sprint;
-    version;
-    startDate;
-    endDate;
-    responsible;
 }
 exports.CreateBatchExecutionDto = CreateBatchExecutionDto;
 class UpdateTestCaseDto {
@@ -189,6 +184,9 @@ let ExecutionsService = class ExecutionsService {
         });
     }
     async createBatch(dto) {
+        if (!dto.suiteIds || dto.suiteIds.length === 0) {
+            throw new common_1.HttpException('Selecione ao menos uma suite para criar o lote.', common_1.HttpStatus.BAD_REQUEST);
+        }
         const suites = await this.prisma.suite.findMany({
             where: { id: { in: dto.suiteIds } },
             include: { testCases: { orderBy: { jiraKey: 'asc' } } },
@@ -199,26 +197,22 @@ let ExecutionsService = class ExecutionsService {
         if (suites.some((s) => s.testCases.length === 0)) {
             throw new common_1.HttpException('Todas as suites devem possuir casos de teste importados.', common_1.HttpStatus.BAD_REQUEST);
         }
+        const now = new Date();
         const batch = await this.prisma.executionBatch.create({
             data: {
                 name: dto.name || null,
                 suiteIds: dto.suiteIds,
-                sprint: dto.sprint,
-                version: dto.version || '',
-                startDate: new Date(dto.startDate),
-                endDate: new Date(dto.endDate),
-                responsible: dto.responsible,
                 status: 'IN_PROGRESS',
             },
         });
         const execution = await this.prisma.execution.create({
             data: {
                 batchId: batch.id,
-                sprint: dto.sprint,
-                version: dto.version || '',
-                startDate: new Date(dto.startDate),
-                endDate: new Date(dto.endDate),
-                responsible: dto.responsible,
+                sprint: '',
+                version: '',
+                startDate: now,
+                endDate: now,
+                responsible: '',
                 status: 'IN_PROGRESS',
             },
         });
@@ -229,7 +223,7 @@ let ExecutionsService = class ExecutionsService {
                         executionId: execution.id,
                         testCaseId: tc.id,
                         status: 'PENDING',
-                        responsible: dto.responsible,
+                        responsible: '',
                     },
                 });
             }

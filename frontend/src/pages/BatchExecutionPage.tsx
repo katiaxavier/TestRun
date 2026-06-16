@@ -114,7 +114,7 @@ export default function BatchExecutionPage() {
               </div>
             )}
           </div>
-          <p className="page-subtitle">{batch.sprint} — {batch.version} — {batch.responsible}</p>
+          <p className="page-subtitle">{suites.length} {suites.length === 1 ? 'suite' : 'suites'}</p>
         </div>
         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
           <div style={{ position: 'relative' }}>

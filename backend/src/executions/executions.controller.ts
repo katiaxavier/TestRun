@@ -13,17 +13,11 @@ import {
   CreateExecutionDto,
   UpdateTestCaseDto,
   CreateIssueDto,
-  CreateBatchExecutionDto,
 } from './executions.service';
 
 @Controller('executions')
 export class ExecutionsController {
   constructor(private readonly executionsService: ExecutionsService) {}
-
-  @Get('batches')
-  async findAllBatches() {
-    return this.executionsService.findAllBatches();
-  }
 
   @Get(':id')
   async findOne(@Param('id') id: string) {
@@ -33,21 +27,6 @@ export class ExecutionsController {
   @Post()
   async create(@Body() dto: CreateExecutionDto) {
     return this.executionsService.create(dto);
-  }
-
-  @Post('batch')
-  async createBatch(@Body() dto: CreateBatchExecutionDto) {
-    return this.executionsService.createBatch(dto);
-  }
-
-  @Get('batch/:id')
-  async findBatch(@Param('id') id: string) {
-    return this.executionsService.findBatch(id);
-  }
-
-  @Delete('batch/:id')
-  async deleteBatch(@Param('id') id: string) {
-    return this.executionsService.deleteBatch(id);
   }
 
   @Delete(':id')

@@ -20,23 +20,11 @@ let ExecutionsController = class ExecutionsController {
     constructor(executionsService) {
         this.executionsService = executionsService;
     }
-    async findAllBatches() {
-        return this.executionsService.findAllBatches();
-    }
     async findOne(id) {
         return this.executionsService.findOne(id);
     }
     async create(dto) {
         return this.executionsService.create(dto);
-    }
-    async createBatch(dto) {
-        return this.executionsService.createBatch(dto);
-    }
-    async findBatch(id) {
-        return this.executionsService.findBatch(id);
-    }
-    async deleteBatch(id) {
-        return this.executionsService.deleteBatch(id);
     }
     async delete(id) {
         return this.executionsService.delete(id);
@@ -56,12 +44,6 @@ let ExecutionsController = class ExecutionsController {
 };
 exports.ExecutionsController = ExecutionsController;
 __decorate([
-    (0, common_1.Get)('batches'),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", []),
-    __metadata("design:returntype", Promise)
-], ExecutionsController.prototype, "findAllBatches", null);
-__decorate([
     (0, common_1.Get)(':id'),
     __param(0, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
@@ -75,27 +57,6 @@ __decorate([
     __metadata("design:paramtypes", [executions_service_1.CreateExecutionDto]),
     __metadata("design:returntype", Promise)
 ], ExecutionsController.prototype, "create", null);
-__decorate([
-    (0, common_1.Post)('batch'),
-    __param(0, (0, common_1.Body)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [executions_service_1.CreateBatchExecutionDto]),
-    __metadata("design:returntype", Promise)
-], ExecutionsController.prototype, "createBatch", null);
-__decorate([
-    (0, common_1.Get)('batch/:id'),
-    __param(0, (0, common_1.Param)('id')),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
-    __metadata("design:returntype", Promise)
-], ExecutionsController.prototype, "findBatch", null);
-__decorate([
-    (0, common_1.Delete)('batch/:id'),
-    __param(0, (0, common_1.Param)('id')),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
-    __metadata("design:returntype", Promise)
-], ExecutionsController.prototype, "deleteBatch", null);
 __decorate([
     (0, common_1.Delete)(':id'),
     __param(0, (0, common_1.Param)('id')),

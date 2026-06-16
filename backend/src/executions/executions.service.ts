@@ -13,11 +13,6 @@ export class CreateExecutionDto {
 export class CreateBatchExecutionDto {
   suiteIds!: string[];
   name?: string;
-  sprint!: string;
-  version?: string;
-  startDate!: string;
-  endDate!: string;
-  responsible!: string;
 }
 
 export class UpdateTestCaseDto {
@@ -230,7 +225,14 @@ export class ExecutionsService {
 
   async createBatch(dto: CreateBatchExecutionDto) {
     // 1. Validar suites
-const suites = await this.prisma.suite.findMany({
+    if (!dto.suiteIds || dto.suiteIds.length === 0) {
+      throw new HttpException(
+        'Selecione ao menos uma suite para criar o lote.',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    const suites = await this.prisma.suite.findMany({
        where: { id: { in: dto.suiteIds } },
        include: { testCases: { orderBy: { jiraKey: 'asc' } } },
      });
@@ -249,16 +251,13 @@ const suites = await this.prisma.suite.findMany({
       );
     }
 
+    const now = new Date();
+
     // 2. Criar batch
     const batch = await this.prisma.executionBatch.create({
       data: {
         name: dto.name || null,
         suiteIds: dto.suiteIds as any,
-        sprint: dto.sprint,
-        version: dto.version || '',
-        startDate: new Date(dto.startDate),
-        endDate: new Date(dto.endDate),
-        responsible: dto.responsible,
         status: 'IN_PROGRESS',
       },
     });
@@ -267,11 +266,11 @@ const suites = await this.prisma.suite.findMany({
     const execution = await this.prisma.execution.create({
       data: {
         batchId: batch.id,
-        sprint: dto.sprint,
-        version: dto.version || '',
-        startDate: new Date(dto.startDate),
-        endDate: new Date(dto.endDate),
-        responsible: dto.responsible,
+        sprint: '',
+        version: '',
+        startDate: now,
+        endDate: now,
+        responsible: '',
         status: 'IN_PROGRESS',
       },
     });
@@ -284,7 +283,7 @@ const suites = await this.prisma.suite.findMany({
             executionId: execution.id,
             testCaseId: tc.id,
             status: 'PENDING',
-            responsible: dto.responsible,
+            responsible: '',
           },
         });
       }

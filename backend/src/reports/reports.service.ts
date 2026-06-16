@@ -354,12 +354,7 @@ export class ReportsService {
       batch: {
         id: batch.id,
         name: batch.name,
-        sprint: batch.sprint,
-        version: batch.version,
-        startDate: batch.startDate,
-        endDate: batch.endDate,
         testedFeature: batch.testedFeature,
-        responsible: batch.responsible,
         status: batch.status,
         suiteIds: batch.suiteIds,
       },
@@ -415,18 +410,6 @@ export class ReportsService {
 
     let rowIdx = 2;
 
-    ws.getCell(`A${rowIdx}`).value = 'Sprint';
-    ws.getCell(`A${rowIdx}`).font = boldLabelFont;
-    ws.getCell(`C${rowIdx}`).value = batch.sprint;
-    ws.getCell(`C${rowIdx}`).font = normalFont;
-    rowIdx++;
-
-    ws.getCell(`A${rowIdx}`).value = 'Versão do sistema';
-    ws.getCell(`A${rowIdx}`).font = boldLabelFont;
-    ws.getCell(`C${rowIdx}`).value = batch.version;
-    ws.getCell(`C${rowIdx}`).font = normalFont;
-    rowIdx++;
-
     ws.getCell(`A${rowIdx}`).value = 'Total de Testes';
     ws.getCell(`A${rowIdx}`).font = boldLabelFont;
     ws.getCell(`C${rowIdx}`).value = summary.totalTests;
@@ -443,27 +426,9 @@ export class ReportsService {
     ws.getCell(`G${rowIdx}`).font = normalFont;
     rowIdx++;
 
-    ws.getCell(`A${rowIdx}`).value = 'Data de início';
-    ws.getCell(`A${rowIdx}`).font = boldLabelFont;
-    ws.getCell(`C${rowIdx}`).value = this.formatDate(batch.startDate);
-    ws.getCell(`C${rowIdx}`).font = normalFont;
-    rowIdx++;
-
-    ws.getCell(`A${rowIdx}`).value = 'Data de fim';
-    ws.getCell(`A${rowIdx}`).font = boldLabelFont;
-    ws.getCell(`C${rowIdx}`).value = this.formatDate(batch.endDate);
-    ws.getCell(`C${rowIdx}`).font = normalFont;
-    rowIdx++;
-
     ws.getCell(`A${rowIdx}`).value = 'Funcionalidade';
     ws.getCell(`A${rowIdx}`).font = boldLabelFont;
     ws.getCell(`C${rowIdx}`).value = batch.testedFeature;
-    ws.getCell(`C${rowIdx}`).font = normalFont;
-    rowIdx++;
-
-    ws.getCell(`A${rowIdx}`).value = 'Responsável';
-    ws.getCell(`A${rowIdx}`).font = boldLabelFont;
-    ws.getCell(`C${rowIdx}`).value = batch.responsible;
     ws.getCell(`C${rowIdx}`).font = normalFont;
     rowIdx++;
 
@@ -617,18 +582,8 @@ export class ReportsService {
               stack: [
                 {
                   text: [
-                    { text: 'Sprint: ', bold: true },
-                    `${batch.sprint}\n`,
-                    { text: 'Versão do sistema: ', bold: true },
-                    `${batch.version}\n`,
-                    { text: 'Data de início: ', bold: true },
-                    `${this.formatDate(batch.startDate)}\n`,
-                    { text: 'Data de fim: ', bold: true },
-                    `${this.formatDate(batch.endDate)}\n`,
                     { text: 'Funcionalidade: ', bold: true },
-                    `${batch.testedFeature}\n`,
-                    { text: 'Responsável: ', bold: true },
-                    `${batch.responsible}\n`,
+                    `${batch.testedFeature ?? '-'}\n`,
                   ],
                   lineHeight: 1.4,
                   fontSize: 10,

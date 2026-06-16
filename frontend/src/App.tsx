@@ -20,7 +20,7 @@ export default function App() {
             <Route path="/config" element={<ConfigPage />} />
             <Route path="/suites/:id" element={<SuiteDetailPage />} />
             <Route path="/executions/:id" element={<ExecutionRunPage />} />
-            <Route path="/executions/batch/:id" element={<BatchExecutionPage />} />
+            <Route path="/batch/:id" element={<BatchExecutionPage />} />
           </Routes>
         </main>
       </div>
