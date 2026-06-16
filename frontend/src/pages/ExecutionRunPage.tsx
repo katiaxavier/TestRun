@@ -465,14 +465,8 @@ export default function ExecutionRunPage() {
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', fontFamily: 'monospace' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--text-muted)', display: 'inline-block', flexShrink: 0 }} />
-                  <span style={{ color: 'var(--text-secondary)' }}>Executado ({executed})</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <span style={{ color: 'var(--text-secondary)' }}>Total ({counts.total})</span>
-                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--text-muted)', display: 'inline-block', flexShrink: 0 }} />
-                </div>
+                <span style={{ color: 'var(--text-secondary)' }}>Executado ({executed})</span>
+                <span style={{ color: 'var(--text-secondary)' }}>Total ({counts.total})</span>
               </div>
               <div style={{ height: 16, background: 'var(--bg-overlay)', borderRadius: 99, overflow: 'hidden', display: 'flex' }}>
                 {counts.passed > 0 && <div style={{ width: `${(counts.passed / counts.total) * 100}%`, background: STATUS_COLORS.PASSED, transition: 'width 0.6s cubic-bezier(0.4,0,0.2,1)' }} title={`Passou: ${counts.passed}`} />}
