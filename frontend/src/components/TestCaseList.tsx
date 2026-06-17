@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowSquareOut, CaretLeft, CaretRight, Flask, MagnifyingGlass, Trash } from '@phosphor-icons/react';
 import type { Suite, TestCase } from '../api/client';
+import { ConfirmModal } from './ConfirmModal';
 
 interface TestCaseListProps {
   testCases: TestCase[];
@@ -43,6 +44,7 @@ export function TestCaseList({ testCases, onDelete, suiteMap }: TestCaseListProp
   const [search, setSearch] = useState('');
   const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>('all');
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<number | 'all'>(10);
 
@@ -67,10 +69,11 @@ export function TestCaseList({ testCases, onDelete, suiteMap }: TestCaseListProp
   const pageStartIndex = pageSize === 'all' ? 0 : (currentPage - 1) * pageSize;
   const displayed = pageSize === 'all' ? filtered : filtered.slice(pageStartIndex, pageStartIndex + pageSize);
 
-  const handleDelete = async (id: string) => {
-    if (!onDelete || !confirm('Excluir este caso de teste localmente?')) return;
-    setDeletingId(id);
-    try { await onDelete(id); } finally { setDeletingId(null); }
+  const handleDelete = async () => {
+    if (!onDelete || !confirmDeleteId) return;
+    setDeletingId(confirmDeleteId);
+    setConfirmDeleteId(null);
+    try { await onDelete(confirmDeleteId); } finally { setDeletingId(null); }
   };
 
   if (testCases.length === 0) {
@@ -184,7 +187,7 @@ export function TestCaseList({ testCases, onDelete, suiteMap }: TestCaseListProp
                     <td>
                       <button
                         className="btn btn-ghost btn-icon btn-sm"
-                        onClick={() => handleDelete(tc.id)}
+                        onClick={() => setConfirmDeleteId(tc.id)}
                         disabled={deletingId === tc.id}
                         style={{ color: 'var(--text-muted)' }}
                       >
@@ -215,6 +218,21 @@ export function TestCaseList({ testCases, onDelete, suiteMap }: TestCaseListProp
           </div>
         </div>
       )}
+      <ConfirmModal
+        open={!!confirmDeleteId}
+        title="Excluir Caso de Teste"
+        confirmLabel="Excluir"
+        onClose={() => setConfirmDeleteId(null)}
+        onConfirm={handleDelete}
+      >
+        <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+          Tem certeza que deseja excluir este caso de teste localmente?
+          <br /><br />
+          <span style={{ color: 'var(--status-failed)', fontSize: '0.85rem' }}>
+            Esta operação não pode ser desfeita.
+          </span>
+        </p>
+      </ConfirmModal>
     </div>
   );
 }

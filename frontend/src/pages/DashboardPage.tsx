@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Plus, Trash, Flask, MagnifyingGlass,
+  Plus, Flask, MagnifyingGlass,
   WarningCircle, CloudArrowDown, ChartBar,
   GridFourIcon, FlaskIcon, CopyIcon,
 } from '@phosphor-icons/react';
@@ -10,6 +10,7 @@ import { suitesApi, executionsApi } from '../api/client';
 import BatchExecutionModal from '../components/BatchExecutionModal';
 import type { Suite } from '../api/client';
 import { Modal } from '../components/Modal';
+import { ConfirmModal } from '../components/ConfirmModal';
 import { SuiteCard } from '../components/SuiteCard';
 import { BatchCard } from '../components/BatchCard';
 import { Tooltip } from '../components/Tooltip';
@@ -75,74 +76,6 @@ function ImportModal({ open, onClose, onSuccess }: { open: boolean; onClose: () 
   );
 }
 
-function DeleteConfirmModal({ open, suite, error, onClose, onConfirm }: { open: boolean; suite: Suite | null; error: string | null; onClose: () => void; onConfirm: () => void }) {
-  const [loading, setLoading] = useState(false);
-  const handleConfirm = async () => {
-    setLoading(true);
-    await onConfirm();
-    setLoading(false);
-  };
-  return (
-    <Modal open={open} onClose={onClose} title="Excluir Suíte"
-      footer={
-        <>
-          <button className="btn btn-secondary" onClick={onClose}>Cancelar</button>
-          {!error && (
-            <button className="btn btn-danger" onClick={handleConfirm} disabled={loading}>
-              {loading ? <div className="spinner" style={{ width: 14, height: 14 }} /> : <Trash size={16} />}
-              Excluir
-            </button>
-          )}
-        </>
-      }
-    >
-      {error ? (
-        <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', color: 'var(--status-failed)', fontSize: '0.875rem', lineHeight: 1.6 }}>
-          <WarningCircle size={16} style={{ flexShrink: 0, marginTop: 2 }} />
-          <span>{error}</span>
-        </div>
-      ) : (
-        <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-          Tem certeza que deseja excluir a suíte <strong style={{ color: 'var(--text-primary)' }}>{suite?.jiraKey} — {suite?.title}</strong>?
-          <br /><br />
-          <span style={{ color: 'var(--status-failed)', fontSize: '0.85rem' }}>
-            Esta ação excluirá também todos os casos de teste e execuções vinculadas. Esta operação não pode ser desfeita.
-          </span>
-        </p>
-      )}
-    </Modal>
-  );
-}
-
-function DeleteBatchModal({ open, batch, onClose, onConfirm }: { open: boolean; batch: any | null; onClose: () => void; onConfirm: () => void }) {
-  const [loading, setLoading] = useState(false);
-  const handleConfirm = async () => {
-    setLoading(true);
-    await onConfirm();
-    setLoading(false);
-  };
-  return (
-    <Modal open={open} onClose={onClose} title="Excluir Suíte em Lote"
-      footer={
-        <>
-          <button className="btn btn-secondary" onClick={onClose}>Cancelar</button>
-          <button className="btn btn-danger" onClick={handleConfirm} disabled={loading}>
-            {loading ? <div className="spinner" style={{ width: 14, height: 14 }} /> : <Trash size={16} />}
-            Excluir
-          </button>
-        </>
-      }
-    >
-      <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-        Tem certeza que deseja excluir a suíte em lote <strong style={{ color: 'var(--text-primary)' }}>{batch?.name || batch?.id}</strong>?
-        <br /><br />
-        <span style={{ color: 'var(--status-failed)', fontSize: '0.85rem' }}>
-          Esta ação excluirá também todas as execuções vinculadas. Esta operação não pode ser desfeita.
-        </span>
-      </p>
-    </Modal>
-  );
-}
 
 export default function DashboardPage() {
   const navigate = useNavigate();
@@ -314,8 +247,39 @@ export default function DashboardPage() {
       </motion.div>
 
       <ImportModal open={importOpen} onClose={() => setImportOpen(false)} onSuccess={handleImportSuccess} />
-      <DeleteConfirmModal open={!!deleteTargetSuite} suite={deleteTargetSuite} error={deleteSuiteError} onClose={() => { setDeleteTargetSuite(null); setDeleteSuiteError(null); }} onConfirm={handleDeleteSuite} />
-      <DeleteBatchModal open={!!deleteTargetBatch} batch={deleteTargetBatch} onClose={() => setDeleteTargetBatch(null)} onConfirm={handleDeleteBatch} />
+      <ConfirmModal
+        open={!!deleteTargetSuite}
+        title="Excluir Suíte"
+        confirmLabel="Excluir"
+        error={deleteSuiteError}
+        onClose={() => { setDeleteTargetSuite(null); setDeleteSuiteError(null); }}
+        onConfirm={handleDeleteSuite}
+      >
+        <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+          Tem certeza que deseja excluir a suíte{' '}
+          <strong style={{ color: 'var(--text-primary)' }}>{deleteTargetSuite?.jiraKey} — {deleteTargetSuite?.title}</strong>?
+          <br /><br />
+          <span style={{ color: 'var(--status-failed)', fontSize: '0.85rem' }}>
+            Esta ação excluirá também todos os casos de teste e execuções vinculadas. Esta operação não pode ser desfeita.
+          </span>
+        </p>
+      </ConfirmModal>
+      <ConfirmModal
+        open={!!deleteTargetBatch}
+        title="Excluir Suíte em Lote"
+        confirmLabel="Excluir"
+        onClose={() => setDeleteTargetBatch(null)}
+        onConfirm={handleDeleteBatch}
+      >
+        <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+          Tem certeza que deseja excluir a suíte em lote{' '}
+          <strong style={{ color: 'var(--text-primary)' }}>{deleteTargetBatch?.name || deleteTargetBatch?.id}</strong>?
+          <br /><br />
+          <span style={{ color: 'var(--status-failed)', fontSize: '0.85rem' }}>
+            Esta ação excluirá também todas as execuções vinculadas. Esta operação não pode ser desfeita.
+          </span>
+        </p>
+      </ConfirmModal>
       <BatchExecutionModal
         open={batchModalOpen}
         onClose={() => setBatchModalOpen(false)}
