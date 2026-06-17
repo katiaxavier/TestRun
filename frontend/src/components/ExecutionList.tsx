@@ -15,28 +15,22 @@ const STATUS_OPTIONS = [
   { value: 'PENDING', label: 'Pendente' },
 ];
 
-function normalize(value: string) {
-  return value.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
-}
 
 export function ExecutionList({ executions, onExecutionClick }: ExecutionListProps) {
   const [status, setStatus] = useState('');
-  const [responsible, setResponsible] = useState('');
   const [periodStart, setPeriodStart] = useState('');
   const [periodEnd, setPeriodEnd] = useState('');
 
   const filtered = useMemo(() => {
-    const r = normalize(responsible.trim());
     return executions.filter(exec => {
       if (status && exec.status.toUpperCase() !== status) return false;
-      if (r && !normalize(exec.responsible ?? '').includes(r)) return false;
       if (periodStart && exec.startDate < periodStart) return false;
       if (periodEnd && exec.endDate > periodEnd) return false;
       return true;
     });
-  }, [executions, status, responsible, periodStart, periodEnd]);
+  }, [executions, status, periodStart, periodEnd]);
 
-  const hasFilters = status || responsible || periodStart || periodEnd;
+  const hasFilters = status || periodStart || periodEnd;
 
   return (
     <div>
@@ -62,14 +56,6 @@ export function ExecutionList({ executions, onExecutionClick }: ExecutionListPro
           ))}
         </select>
 
-        {/* Responsible */}
-        <input
-          value={responsible}
-          onChange={e => setResponsible(e.target.value)}
-          placeholder="Responsável"
-          style={{ flex: '0 1 160px', minWidth: 120 }}
-        />
-
         {/* Period */}
         <input
           type="date"
@@ -89,7 +75,7 @@ export function ExecutionList({ executions, onExecutionClick }: ExecutionListPro
         {hasFilters && (
           <button
             className="btn btn-ghost btn-sm"
-            onClick={() => { setStatus(''); setResponsible(''); setPeriodStart(''); setPeriodEnd(''); }}
+            onClick={() => { setStatus(''); setPeriodStart(''); setPeriodEnd(''); }}
             style={{ whiteSpace: 'nowrap' }}
           >
             Limpar filtros
