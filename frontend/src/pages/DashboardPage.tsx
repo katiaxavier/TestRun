@@ -195,7 +195,7 @@ export default function DashboardPage() {
 
   const filteredBatches = batches.filter(b =>
     (b.name?.toLowerCase() || '').includes(search.toLowerCase()) ||
-    b.sprint.toLowerCase().includes(search.toLowerCase())
+    (b.sprint?.toLowerCase() || '').includes(search.toLowerCase())
   );
 
   const combinedItems = [
