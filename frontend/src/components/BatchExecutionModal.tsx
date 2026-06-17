@@ -35,7 +35,7 @@ export function BatchExecutionModal({
     <Modal
       open={open}
       onClose={onClose}
-      title="Criar Lote de Suites"
+      title="Criar Lote de Suítes"
       footer={
         <>
           <button className="btn btn-secondary" onClick={onClose} disabled={loading}>Cancelar</button>
@@ -49,11 +49,11 @@ export function BatchExecutionModal({
       <div style={{ padding: '1rem', borderBottom: '1px solid var(--border-subtle)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
           <ChartBar size={16} />
-          <span style={{ fontWeight: 600 }}>Suites Selecionadas</span>
+          <span style={{ fontWeight: 600 }}>Suítes Selecionadas</span>
         </div>
         <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
           <div style={{ padding: '0.4rem 0.8rem', background: 'rgba(59, 130, 246, 0.15)', borderRadius: 'var(--radius-sm)', fontSize: '0.85rem' }}>
-            <strong>{suites.length}</strong> Suites
+            <strong>{suites.length}</strong> Suítes
           </div>
           <div style={{ padding: '0.4rem 0.8rem', background: 'rgba(59, 130, 246, 0.15)', borderRadius: 'var(--radius-sm)', fontSize: '0.85rem' }}>
             <strong>{totalTests}</strong> Casos

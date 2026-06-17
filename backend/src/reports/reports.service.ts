@@ -435,7 +435,7 @@ export class ReportsService {
     ws.getRow(rowIdx).values = [
       '',
       '',
-      'Suite',
+      'Suíte',
       'Key',
       'Título do teste',
       'Status',

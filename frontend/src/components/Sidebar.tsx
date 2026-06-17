@@ -2,7 +2,7 @@ import { NavLink } from 'react-router-dom';
 import { Flask, Gear } from '@phosphor-icons/react';
 
 const links = [
-  { to: '/', label: 'Suites de Teste', icon: Flask, end: true },
+  { to: '/', label: 'Suítes de Teste', icon: Flask, end: true },
   { to: '/config', label: 'Jira Sync', icon: Gear },
 ];
 

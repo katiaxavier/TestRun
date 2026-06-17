@@ -112,7 +112,7 @@ function DeleteBatchModal({ open, batch, onClose, onConfirm }: { open: boolean; 
     setLoading(false);
   };
   return (
-    <Modal open={open} onClose={onClose} title="Excluir Suite em Lote"
+    <Modal open={open} onClose={onClose} title="Excluir Suíte em Lote"
       footer={
         <>
           <button className="btn btn-secondary" onClick={onClose}>Cancelar</button>
@@ -124,7 +124,7 @@ function DeleteBatchModal({ open, batch, onClose, onConfirm }: { open: boolean; 
       }
     >
       <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-        Tem certeza que deseja excluir a suite em lote <strong style={{ color: 'var(--text-primary)' }}>{batch?.name || batch?.id}</strong>?
+        Tem certeza que deseja excluir a suíte em lote <strong style={{ color: 'var(--text-primary)' }}>{batch?.name || batch?.id}</strong>?
         <br /><br />
         <span style={{ color: 'var(--status-failed)', fontSize: '0.85rem' }}>
           Esta ação excluirá também todas as execuções vinculadas. Esta operação não pode ser desfeita.
@@ -214,24 +214,24 @@ export default function DashboardPage() {
       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
         <div className="page-header">
           <div>
-            <h1 className="page-title">Suites de Teste</h1>
-            <p className="page-subtitle">Gerencie suas suítes de teste e lotes de suites</p>
+            <h1 className="page-title">Suítes de Teste</h1>
+            <p className="page-subtitle">Gerencie suas suítes de teste e lotes de suítes</p>
           </div>
           <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
             <div style={{ position: 'relative' }}>
               <MagnifyingGlass size={15} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
               <input
-                placeholder="Buscar suite..."
+                placeholder="Buscar suíte..."
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 style={{ width: 220, paddingLeft: '2.25rem', height: 48 }}
               />
             </div>
-            <button className={`btn-create-batch ${selectedSuites.length >= 2 ? 'active' : ''}`} onClick={() => setBatchModalOpen(true)} disabled={selectedSuites.length < 2} title={selectedSuites.length < 2 ? 'Selecione 2 ou mais suites para criar um lote' : ''}>
-              <ChartBar size={16} /> Criar Lote de Suites
+            <button className={`btn-create-batch ${selectedSuites.length >= 2 ? 'active' : ''}`} onClick={() => setBatchModalOpen(true)} disabled={selectedSuites.length < 2} title={selectedSuites.length < 2 ? 'Selecione 2 ou mais suítes para criar um lote' : ''}>
+              <ChartBar size={16} /> Criar Lote de Suítes
             </button>
             <button className="btn btn-primary" style={{ height: 48 }} onClick={() => setImportOpen(true)}>
-              <Plus size={16} /> Importar Suite do Jira
+              <Plus size={16} /> Importar Suíte do Jira
             </button>
           </div>
         </div>
@@ -241,7 +241,7 @@ export default function DashboardPage() {
             <GridFourIcon size={16} /> Todas <span className="filter-count">{filterCounts.all.total}</span>
           </button>
           <button className={`filter-item ${filter === 'suites' ? 'active' : ''}`} onClick={() => setFilter('suites')}>
-            <FlaskIcon size={16} /> Suites <span className="filter-count">{filterCounts.suites.suites}</span>
+            <FlaskIcon size={16} /> Suítes <span className="filter-count">{filterCounts.suites.suites}</span>
           </button>
           <button className={`filter-item ${filter === 'batches' ? 'active' : ''}`} onClick={() => setFilter('batches')}>
             <CopyIcon size={16} /> Lotes <span className="filter-count">{filterCounts.batches.batches}</span>
@@ -254,11 +254,11 @@ export default function DashboardPage() {
         ) : combinedItems.length === 0 ? (
           <div className="empty-state" style={{ marginTop: '3rem' }}>
             <Flask size={56} />
-            <h3>{search ? 'Nenhum item encontrado' : 'Nenhuma suite ou lote importado'}</h3>
-            <p>{search ? 'Tente outro termo de busca.' : 'Clique em "Importar Suite do Jira" para começar. Informe o ID da suíte de testes no Jira.'}</p>
+            <h3>{search ? 'Nenhum item encontrado' : 'Nenhuma suíte ou lote importado'}</h3>
+            <p>{search ? 'Tente outro termo de busca.' : 'Clique em "Importar Suíte do Jira" para começar. Informe o ID da suíte de testes no Jira.'}</p>
             {!search && (
               <button className="btn btn-primary" onClick={() => setImportOpen(true)} style={{ marginTop: '0.5rem' }}>
-                <Plus size={16} /> Importar Suite do Jira
+                <Plus size={16} /> Importar Suíte do Jira
               </button>
             )}
           </div>

@@ -634,7 +634,7 @@ export default function ExecutionRunPage() {
         <div className="page-header" style={{ alignItems: 'flex-start' }}>
           <div style={{ flex: '1 1 0', minWidth: 0 }}>
             <button className="btn btn-ghost btn-sm" onClick={() => navigate(execution?.batchId ? `/batch/${execution.batchId}` : `/suite/${execution.suiteId}`)} style={{ marginBottom: '0.5rem', paddingLeft: 0, fontSize: '1rem' }}>
-              <ArrowLeft size={15} /> {execution?.batchId ? 'Voltar ao Lote' : 'Voltar à Suite'}
+              <ArrowLeft size={15} /> {execution?.batchId ? 'Voltar ao Lote' : 'Voltar à Suíte'}
             </button>
             {isBatch ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>

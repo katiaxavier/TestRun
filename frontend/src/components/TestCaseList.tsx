@@ -106,7 +106,7 @@ export function TestCaseList({ testCases, onDelete, suiteMap }: TestCaseListProp
         <table>
           <thead>
             <tr>
-              {suiteMap && <th style={{ width: 120 }}>Suite</th>}
+              {suiteMap && <th style={{ width: 120 }}>Suíte</th>}
               <th style={{ width: 120 }}>Key</th>
               <th>Título</th>
               <th style={{ width: 120 }}>Prioridade</th>

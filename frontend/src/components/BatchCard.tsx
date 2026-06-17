@@ -50,7 +50,7 @@ export function BatchCard({ batch, onDelete }: BatchCardProps) {
           {batch.name || 'Batch ' + batch.id.substring(0, 8)}
         </h3>
         <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-          {suiteKeys.length} {suiteKeys.length === 1 ? 'suite' : 'suites'}
+          {suiteKeys.length} {suiteKeys.length === 1 ? 'suíte' : 'suítes'}
         </div>
       </div>
 
