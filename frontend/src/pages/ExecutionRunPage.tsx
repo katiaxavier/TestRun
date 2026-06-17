@@ -871,7 +871,13 @@ export default function ExecutionRunPage() {
             currentIndex={filteredTcs.findIndex(tc => tc.id === selectedEtc.id)}
             onClose={() => setSelectedEtc(null)}
             onUpdated={handleUpdated}
-            onNavigate={tc => setSelectedEtc(tc)}
+            onNavigate={tc => {
+              setSelectedEtc(tc);
+              if (pageSize !== 'all') {
+                const idx = filteredTcs.findIndex(t => t.id === tc.id);
+                setPage(Math.floor(idx / (pageSize as number)) + 1);
+              }
+            }}
           />
         )}
       </AnimatePresence>
