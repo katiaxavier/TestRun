@@ -75,7 +75,7 @@ function ImportModal({ open, onClose, onSuccess }: { open: boolean; onClose: () 
   );
 }
 
-function DeleteConfirmModal({ open, suite, onClose, onConfirm }: { open: boolean; suite: Suite | null; onClose: () => void; onConfirm: () => void }) {
+function DeleteConfirmModal({ open, suite, error, onClose, onConfirm }: { open: boolean; suite: Suite | null; error: string | null; onClose: () => void; onConfirm: () => void }) {
   const [loading, setLoading] = useState(false);
   const handleConfirm = async () => {
     setLoading(true);
@@ -87,20 +87,29 @@ function DeleteConfirmModal({ open, suite, onClose, onConfirm }: { open: boolean
       footer={
         <>
           <button className="btn btn-secondary" onClick={onClose}>Cancelar</button>
-          <button className="btn btn-danger" onClick={handleConfirm} disabled={loading}>
-            {loading ? <div className="spinner" style={{ width: 14, height: 14 }} /> : <Trash size={16} />}
-            Excluir
-          </button>
+          {!error && (
+            <button className="btn btn-danger" onClick={handleConfirm} disabled={loading}>
+              {loading ? <div className="spinner" style={{ width: 14, height: 14 }} /> : <Trash size={16} />}
+              Excluir
+            </button>
+          )}
         </>
       }
     >
-      <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-        Tem certeza que deseja excluir a suíte <strong style={{ color: 'var(--text-primary)' }}>{suite?.jiraKey} — {suite?.title}</strong>?
-        <br /><br />
-        <span style={{ color: 'var(--status-failed)', fontSize: '0.85rem' }}>
-          Esta ação excluirá também todos os casos de teste e execuções vinculadas. Esta operação não pode ser desfeita.
-        </span>
-      </p>
+      {error ? (
+        <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', color: 'var(--status-failed)', fontSize: '0.875rem', lineHeight: 1.6 }}>
+          <WarningCircle size={16} style={{ flexShrink: 0, marginTop: 2 }} />
+          <span>{error}</span>
+        </div>
+      ) : (
+        <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+          Tem certeza que deseja excluir a suíte <strong style={{ color: 'var(--text-primary)' }}>{suite?.jiraKey} — {suite?.title}</strong>?
+          <br /><br />
+          <span style={{ color: 'var(--status-failed)', fontSize: '0.85rem' }}>
+            Esta ação excluirá também todos os casos de teste e execuções vinculadas. Esta operação não pode ser desfeita.
+          </span>
+        </p>
+      )}
     </Modal>
   );
 }
@@ -143,6 +152,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [importOpen, setImportOpen] = useState(false);
   const [deleteTargetSuite, setDeleteTargetSuite] = useState<Suite | null>(null);
+  const [deleteSuiteError, setDeleteSuiteError] = useState<string | null>(null);
   const [deleteTargetBatch, setDeleteTargetBatch] = useState<any | null>(null);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<'all' | 'suites' | 'batches'>('all');
@@ -177,9 +187,15 @@ export default function DashboardPage() {
 
   const handleDeleteSuite = async () => {
     if (!deleteTargetSuite) return;
-    await suitesApi.delete(deleteTargetSuite.id);
-    setSuites(prev => prev.filter(s => s.id !== deleteTargetSuite.id));
-    setDeleteTargetSuite(null);
+    try {
+      await suitesApi.delete(deleteTargetSuite.id);
+      setSuites(prev => prev.filter(s => s.id !== deleteTargetSuite.id));
+      setDeleteTargetSuite(null);
+      setDeleteSuiteError(null);
+    } catch (err: any) {
+      const message = err?.response?.data?.message ?? 'Erro ao excluir a suíte.';
+      setDeleteSuiteError(message);
+    }
   };
 
   const handleDeleteBatch = async () => {
@@ -298,7 +314,7 @@ export default function DashboardPage() {
       </motion.div>
 
       <ImportModal open={importOpen} onClose={() => setImportOpen(false)} onSuccess={handleImportSuccess} />
-      <DeleteConfirmModal open={!!deleteTargetSuite} suite={deleteTargetSuite} onClose={() => setDeleteTargetSuite(null)} onConfirm={handleDeleteSuite} />
+      <DeleteConfirmModal open={!!deleteTargetSuite} suite={deleteTargetSuite} error={deleteSuiteError} onClose={() => { setDeleteTargetSuite(null); setDeleteSuiteError(null); }} onConfirm={handleDeleteSuite} />
       <DeleteBatchModal open={!!deleteTargetBatch} batch={deleteTargetBatch} onClose={() => setDeleteTargetBatch(null)} onConfirm={handleDeleteBatch} />
       <BatchExecutionModal
         open={batchModalOpen}

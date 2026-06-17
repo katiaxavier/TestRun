@@ -96,6 +96,25 @@ export class SuitesService {
 
   async deleteSuite(id: string) {
     await this.findOne(id); // Valida existência
+
+    const batches = await this.prisma.executionBatch.findMany({
+      select: { id: true, name: true, suiteIds: true },
+    });
+
+    const affectedBatches = batches.filter((b) =>
+      (b.suiteIds as string[]).includes(id),
+    );
+
+    if (affectedBatches.length > 0) {
+      const names = affectedBatches
+        .map((b) => b.name || b.id)
+        .join(', ');
+      throw new HttpException(
+        `Esta suíte faz parte de ${affectedBatches.length === 1 ? 'um lote' : 'lotes'}: ${names}. Remova a suíte do lote ou exclua o lote antes de excluir a suíte.`,
+        HttpStatus.CONFLICT,
+      );
+    }
+
     await this.prisma.suite.delete({
       where: { id },
     });
