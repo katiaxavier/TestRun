@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -15,6 +15,7 @@ interface TooltipProps {
 interface Pos { x: number; y: number }
 
 const GAP = 6;
+const VIEWPORT_MARGIN = 8;
 
 function computePos(rect: DOMRect, placement: TooltipPlacement): Pos {
   switch (placement) {
@@ -39,16 +40,20 @@ const motionInitial: Record<TooltipPlacement, object> = {
   right:  { opacity: 0, x: -4 },
 };
 
-
 export function Tooltip({ content, placement = 'top', delay = 400, display = 'inline-flex', children }: TooltipProps) {
   const [visible, setVisible] = useState(false);
   const [pos, setPos] = useState<Pos>({ x: 0, y: 0 });
+  const [xAdjust, setXAdjust] = useState(0);
+  const [ready, setReady] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const wrapperRef = useRef<HTMLSpanElement>(null);
+  const balloonRef = useRef<HTMLDivElement>(null);
 
   const updatePos = useCallback(() => {
     if (wrapperRef.current) {
       setPos(computePos(wrapperRef.current.getBoundingClientRect(), placement));
+      setXAdjust(0);
+      setReady(false);
     }
   }, [placement]);
 
@@ -63,6 +68,19 @@ export function Tooltip({ content, placement = 'top', delay = 400, display = 'in
   };
 
   useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
+
+  // After the balloon renders (hidden), measure it and clamp to viewport before showing.
+  useLayoutEffect(() => {
+    if (!visible) { setReady(false); return; }
+    if (!balloonRef.current) return;
+    const r = balloonRef.current.getBoundingClientRect();
+    const vw = window.innerWidth;
+    let dx = 0;
+    if (r.right > vw - VIEWPORT_MARGIN) dx = vw - VIEWPORT_MARGIN - r.right;
+    else if (r.left < VIEWPORT_MARGIN) dx = VIEWPORT_MARGIN - r.left;
+    setXAdjust(dx);
+    setReady(true);
+  }, [visible, pos]);
 
   if (!content) return children;
 
@@ -80,6 +98,7 @@ export function Tooltip({ content, placement = 'top', delay = 400, display = 'in
         <AnimatePresence>
           {visible && (
             <motion.div
+              ref={balloonRef}
               role="tooltip"
               initial={motionInitial[placement]}
               animate={{ opacity: 1, x: 0, y: 0 }}
@@ -88,10 +107,12 @@ export function Tooltip({ content, placement = 'top', delay = 400, display = 'in
               style={{
                 position: 'fixed',
                 top: pos.y,
-                left: pos.x,
+                left: pos.x + xAdjust,
                 transform: transformMap[placement],
                 zIndex: 9999,
                 pointerEvents: 'none',
+                // Hide until measured to prevent position flash
+                visibility: ready ? 'visible' : 'hidden',
               }}
             >
               <span
