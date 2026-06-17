@@ -110,7 +110,7 @@ export class SuitesService {
         .map((b) => b.name || b.id)
         .join(', ');
       throw new HttpException(
-        `Esta suíte faz parte de ${affectedBatches.length === 1 ? 'um lote' : 'lotes'}: ${names}. Remova a suíte do lote ou exclua o lote antes de excluir a suíte.`,
+        `Esta suíte faz parte de ${affectedBatches.length === 1 ? 'um lote' : 'lotes'}: ${names}. Exclua o lote antes de excluir a suíte.`,
         HttpStatus.CONFLICT,
       );
     }
