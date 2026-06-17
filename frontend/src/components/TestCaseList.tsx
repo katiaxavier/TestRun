@@ -225,13 +225,27 @@ export function TestCaseList({ testCases, onDelete, suiteMap }: TestCaseListProp
         onClose={() => setConfirmDeleteId(null)}
         onConfirm={handleDelete}
       >
-        <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-          Tem certeza que deseja excluir este caso de teste localmente?
-          <br /><br />
-          <span style={{ color: 'var(--status-failed)', fontSize: '0.85rem' }}>
-            Esta operação não pode ser desfeita.
-          </span>
-        </p>
+        {suiteMap ? (
+          <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+            Tem certeza que deseja excluir este caso de teste do lote?
+            <br /><br />
+            O caso de teste continuará disponível na suíte principal e não será excluído do Jira.
+            <br /><br />
+            <span style={{ color: 'var(--status-failed)', fontSize: '0.85rem' }}>
+              Esta operação não pode ser desfeita.
+            </span>
+          </p>
+        ) : (
+          <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+            Tem certeza que deseja excluir este caso de teste da suíte?
+            <br /><br />
+            O caso de teste não será excluído do Jira, mas será removido de todos os lotes que incluam esta suíte, e os resultados de execuções vinculadas serão perdidos.
+            <br /><br />
+            <span style={{ color: 'var(--status-failed)', fontSize: '0.85rem' }}>
+              Esta ação não pode ser desfeita.
+            </span>
+          </p>
+        )}
       </ConfirmModal>
     </div>
   );
