@@ -10,6 +10,7 @@ import { executionsApi, reportsApi, suitesApi, configApi } from '../api/client';
 import type { Execution, ExecutionTestCase, Issue, Suite } from '../api/client';
 import { StatusBadge } from '../components/StatusBadge';
 import { Modal } from '../components/Modal';
+import { Tooltip } from '../components/Tooltip';
 
 const STATUS_OPTIONS = ['PENDING', 'PASSED', 'FAILED', 'BLOCKED'];
 const STATUS_LABELS: Record<string, string> = {
@@ -172,8 +173,12 @@ function IssueCard({ issue, jiraUrl, onEdit, onDelete, confirmDelete, onConfirmD
           <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>{issue.title}</p>
         </div>
         <div style={{ display: 'flex', gap: '0.1rem', flexShrink: 0 }}>
-          <button className="btn btn-ghost btn-icon btn-sm" onClick={onEdit} title="Editar" style={{ color: 'var(--text-muted)' }}><Pencil size={13} /></button>
-          <button className="btn btn-ghost btn-icon btn-sm" onClick={onDelete} title="Remover" style={{ color: 'var(--text-muted)' }}><Trash size={13} /></button>
+          <Tooltip content="Editar" placement="top">
+            <button className="btn btn-ghost btn-icon btn-sm" onClick={onEdit} style={{ color: 'var(--text-muted)' }}><Pencil size={13} /></button>
+          </Tooltip>
+          <Tooltip content="Remover" placement="top">
+            <button className="btn btn-ghost btn-icon btn-sm" onClick={onDelete} style={{ color: 'var(--text-muted)' }}><Trash size={13} /></button>
+          </Tooltip>
         </div>
       </div>
       <AnimatePresence>
@@ -369,12 +374,16 @@ function TestCaseDrawer({
             </p>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.2rem', flexShrink: 0 }}>
-            <button className="btn btn-ghost btn-icon btn-sm" onClick={() => onNavigate(allTestCases[currentIndex - 1])} disabled={currentIndex <= 0} title="Caso anterior">
-              <CaretLeft size={15} />
-            </button>
-            <button className="btn btn-ghost btn-icon btn-sm" onClick={() => onNavigate(allTestCases[currentIndex + 1])} disabled={currentIndex >= allTestCases.length - 1} title="Próximo caso">
-              <CaretRight size={15} />
-            </button>
+            <Tooltip content="Caso anterior" placement="top">
+              <button className="btn btn-ghost btn-icon btn-sm" onClick={() => onNavigate(allTestCases[currentIndex - 1])} disabled={currentIndex <= 0}>
+                <CaretLeft size={15} />
+              </button>
+            </Tooltip>
+            <Tooltip content="Próximo caso" placement="top">
+              <button className="btn btn-ghost btn-icon btn-sm" onClick={() => onNavigate(allTestCases[currentIndex + 1])} disabled={currentIndex >= allTestCases.length - 1}>
+                <CaretRight size={15} />
+              </button>
+            </Tooltip>
             <div style={{ width: 1, height: 18, background: 'var(--border)', margin: '0 0.2rem' }} />
             <button className="btn btn-ghost btn-icon" onClick={onClose}><X size={18} /></button>
           </div>
@@ -644,7 +653,9 @@ export default function ExecutionRunPage() {
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', minWidth: 0, overflow: 'hidden' }}>
                   {batchSuites.map((suite) => (
-                    <h1 key={suite.id} className="page-title" title={suite.title} style={{ fontSize: '1.3rem', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{suite.title}</h1>
+                    <Tooltip key={suite.id} content={suite.title} placement="bottom" display="block">
+                      <h1 className="page-title" style={{ fontSize: '1.3rem', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{suite.title}</h1>
+                    </Tooltip>
                   ))}
                 </div>
               </div>

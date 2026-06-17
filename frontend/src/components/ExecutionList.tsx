@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { Clock } from '@phosphor-icons/react';
 import type { Execution } from '../api/client';
 import { ExecutionCard } from './ExecutionCard';
+import { Tooltip } from './Tooltip';
 
 interface ExecutionListProps {
   executions: Execution[];
@@ -57,20 +58,22 @@ export function ExecutionList({ executions, onExecutionClick }: ExecutionListPro
         </select>
 
         {/* Period */}
-        <input
-          type="date"
-          value={periodStart}
-          onChange={e => setPeriodStart(e.target.value)}
-          title="Data de início"
-          style={{ flex: '0 1 150px', minWidth: 130 }}
-        />
-        <input
-          type="date"
-          value={periodEnd}
-          onChange={e => setPeriodEnd(e.target.value)}
-          title="Data de fim"
-          style={{ flex: '0 1 150px', minWidth: 130 }}
-        />
+        <Tooltip content="Data de início" placement="top">
+          <input
+            type="date"
+            value={periodStart}
+            onChange={e => setPeriodStart(e.target.value)}
+            style={{ flex: '0 1 150px', minWidth: 130 }}
+          />
+        </Tooltip>
+        <Tooltip content="Data de fim" placement="top">
+          <input
+            type="date"
+            value={periodEnd}
+            onChange={e => setPeriodEnd(e.target.value)}
+            style={{ flex: '0 1 150px', minWidth: 130 }}
+          />
+        </Tooltip>
 
         {hasFilters && (
           <button

@@ -1,5 +1,6 @@
 import { Flask, ChartBar, Check, DotsThreeVertical, Trash } from '@phosphor-icons/react';
 import { DropdownMenu } from './DropdownMenu';
+import { Tooltip } from './Tooltip';
 import type { Suite } from '../api/client';
 
 function CustomCheckbox({ checked, onChange }: { checked: boolean; onChange: (checked: boolean) => void }) {
@@ -50,9 +51,11 @@ export function SuiteCard({ suite, selected, onSelect, onDelete }: SuiteCardProp
         </div>
       </div>
 
-      <h3 title={suite.title} style={{ fontSize: '0.95rem', fontWeight: 600, lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', marginBottom: 0 }}>
-        {suite.title}
-      </h3>
+      <Tooltip content={suite.title} placement="top" display="block">
+        <h3 style={{ fontSize: '0.95rem', fontWeight: 600, lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', marginBottom: 0 }}>
+          {suite.title}
+        </h3>
+      </Tooltip>
 
       <div style={{ display: 'flex', gap: '1.25rem', marginTop: '1rem', paddingTop: '0.85rem', borderTop: '1px solid var(--border-subtle)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>

@@ -1,5 +1,6 @@
 import { Flask, ChartBar, DotsThreeVertical, Trash } from '@phosphor-icons/react';
 import { DropdownMenu } from './DropdownMenu';
+import { Tooltip } from './Tooltip';
 
 interface BatchCardProps {
   batch: any;
@@ -46,9 +47,11 @@ export function BatchCard({ batch, onDelete }: BatchCardProps) {
       </div>
 
       <div>
-        <h3 title={batch.name || undefined} style={{ fontSize: '0.95rem', fontWeight: 600, marginBottom: '0.25rem', lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-          {batch.name || 'Batch ' + batch.id.substring(0, 8)}
-        </h3>
+        <Tooltip content={batch.name || undefined} placement="top" display="block">
+          <h3 style={{ fontSize: '0.95rem', fontWeight: 600, marginBottom: '0.25rem', lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+            {batch.name || 'Batch ' + batch.id.substring(0, 8)}
+          </h3>
+        </Tooltip>
         <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
           {suiteKeys.length} {suiteKeys.length === 1 ? 'suíte' : 'suítes'}
         </div>

@@ -7,6 +7,7 @@ interface TooltipProps {
   content: React.ReactNode;
   placement?: TooltipPlacement;
   delay?: number;
+  display?: React.CSSProperties['display'];
   children: React.ReactElement;
 }
 
@@ -57,7 +58,7 @@ const motionVariants: Record<TooltipPlacement, { initial: object; animate: objec
   right:  { initial: { opacity: 0, x: -4 }, animate: { opacity: 1, x: 0 } },
 };
 
-export function Tooltip({ content, placement = 'top', delay = 400, children }: TooltipProps) {
+export function Tooltip({ content, placement = 'top', delay = 400, display = 'inline-flex', children }: TooltipProps) {
   const [visible, setVisible] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -78,7 +79,7 @@ export function Tooltip({ content, placement = 'top', delay = 400, children }: T
 
   return (
     <span
-      style={{ position: 'relative', display: 'inline-flex' }}
+      style={{ position: 'relative', display }}
       onMouseEnter={show}
       onMouseLeave={hide}
       onFocus={show}

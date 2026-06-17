@@ -12,6 +12,7 @@ import type { Suite } from '../api/client';
 import { Modal } from '../components/Modal';
 import { SuiteCard } from '../components/SuiteCard';
 import { BatchCard } from '../components/BatchCard';
+import { Tooltip } from '../components/Tooltip';
 
 function ImportModal({ open, onClose, onSuccess }: { open: boolean; onClose: () => void; onSuccess: (s: Suite) => void }) {
   const [jiraKey, setJiraKey] = useState('');
@@ -227,9 +228,11 @@ export default function DashboardPage() {
                 style={{ width: 220, paddingLeft: '2.25rem', height: 48 }}
               />
             </div>
-            <button className={`btn-create-batch ${selectedSuites.length >= 2 ? 'active' : ''}`} onClick={() => setBatchModalOpen(true)} disabled={selectedSuites.length < 2} title={selectedSuites.length < 2 ? 'Selecione 2 ou mais suítes para criar um lote' : ''}>
-              <ChartBar size={16} /> Criar Lote de Suítes
-            </button>
+            <Tooltip content={selectedSuites.length < 2 ? 'Selecione 2 ou mais suítes para criar um lote' : undefined} placement="top">
+              <button className={`btn-create-batch ${selectedSuites.length >= 2 ? 'active' : ''}`} onClick={() => setBatchModalOpen(true)} disabled={selectedSuites.length < 2}>
+                <ChartBar size={16} /> Criar Lote de Suítes
+              </button>
+            </Tooltip>
             <button className="btn btn-primary" style={{ height: 48 }} onClick={() => setImportOpen(true)}>
               <Plus size={16} /> Importar Suíte do Jira
             </button>
