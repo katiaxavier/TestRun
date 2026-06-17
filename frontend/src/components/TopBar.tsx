@@ -1,5 +1,5 @@
 import { useLocation } from 'react-router-dom';
-import { Flask, Gear, Play, ChartBar } from '@phosphor-icons/react';
+import { Flask, Gear, Play, Copy } from '@phosphor-icons/react';
 
 type RouteConfig = {
   match: (pathname: string) => boolean;
@@ -9,9 +9,9 @@ type RouteConfig = {
 
 const routes: RouteConfig[] = [
   { match: p => p === '/config',                    title: 'Configurações',    Icon: Gear      },
-  { match: p => p.startsWith('/batch/'),            title: 'Execução em Lote', Icon: ChartBar  },
+  { match: p => p.startsWith('/batch/'),            title: 'Lote',             Icon: Copy      },
   { match: p => p.startsWith('/execution/'),        title: 'Execução',         Icon: Play      },
-  { match: p => p.startsWith('/suite/'),            title: 'Suites de Teste',  Icon: Flask     },
+  { match: p => p.startsWith('/suite/'),            title: 'Suite',            Icon: Flask     },
   { match: p => p === '/',                          title: 'Suites de Teste',  Icon: Flask     },
 ];
 
