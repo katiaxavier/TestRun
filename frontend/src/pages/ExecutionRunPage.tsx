@@ -633,8 +633,8 @@ export default function ExecutionRunPage() {
       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
         <div className="page-header" style={{ alignItems: 'flex-start' }}>
           <div style={{ flex: '1 1 0', minWidth: 0 }}>
-            <button className="btn btn-ghost btn-sm" onClick={() => navigate(execution?.batchId ? `/batch/${execution.batchId}` : `/suite/${execution.suiteId}`)} style={{ marginBottom: '0.5rem', paddingLeft: 0 }}>
-              <ArrowLeft size={15} /> {execution?.batchId ? 'Voltar ao Lote' : execution.suite?.jiraKey}
+            <button className="btn btn-ghost btn-sm" onClick={() => navigate(execution?.batchId ? `/batch/${execution.batchId}` : `/suite/${execution.suiteId}`)} style={{ marginBottom: '0.5rem', paddingLeft: 0, fontSize: '1rem' }}>
+              <ArrowLeft size={15} /> {execution?.batchId ? 'Voltar ao Lote' : 'Voltar à Suite'}
             </button>
             {isBatch ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>

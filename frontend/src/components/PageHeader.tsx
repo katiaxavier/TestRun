@@ -13,7 +13,7 @@ export function PageHeader({ backLabel, onBack, eyebrow, title, actions }: PageH
   return (
     <div className="page-header">
       <div style={{ flex: 1 }}>
-        <button className="btn btn-ghost btn-sm" onClick={onBack} style={{ marginBottom: '2rem', paddingLeft: 0 }}>
+        <button className="btn btn-ghost btn-sm" onClick={onBack} style={{ marginBottom: '2rem', paddingLeft: 0, fontSize: '1rem' }}>
           <ArrowLeft size={15} /> {backLabel}
         </button>
         <div>
