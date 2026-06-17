@@ -1,36 +1,62 @@
 import { NavLink } from 'react-router-dom';
-import { Flask, Gear } from '@phosphor-icons/react';
+import { FlaskIcon, GearIcon, CaretDoubleLeftIcon, CaretDoubleRightIcon } from '@phosphor-icons/react';
+import { Tooltip } from './Tooltip';
 
 const links = [
-  { to: '/', label: 'Suítes de Teste', icon: Flask, end: true },
-  { to: '/config', label: 'Jira Sync', icon: Gear },
+  { to: '/', label: 'Suítes de Teste', icon: FlaskIcon, end: true },
+  { to: '/config', label: 'Configurações', icon: GearIcon },
 ];
 
-export function Sidebar() {
+interface SidebarProps {
+  collapsed: boolean;
+  onToggle: () => void;
+}
+
+export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   return (
-    <nav className="sidebar">
+    <nav className={`sidebar${collapsed ? ' sidebar--collapsed' : ''}`}>
       <div className="sidebar-logo">
-        <img src="/testrun-logo.png" alt="Testrun" style={{ height: 28 }} />
+        {!collapsed && (
+          <img src="/testrun-logo.png" alt="Testrun" className="sidebar-logo-img" />
+        )}
+        <button
+          className="sidebar-toggle-btn"
+          onClick={onToggle}
+          aria-label={collapsed ? 'Expandir sidebar' : 'Recolher sidebar'}
+        >
+          {collapsed
+            ? <CaretDoubleRightIcon size={13} weight="bold" />
+            : <CaretDoubleLeftIcon size={13} weight="bold" />}
+        </button>
       </div>
 
-      <span className="sidebar-section-label">Navegação</span>
-
       {links.map(({ to, label, icon: Icon, end }) => (
-        <NavLink
+        <Tooltip
           key={to}
-          to={to}
-          end={end}
-          className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`}
+          content={collapsed ? label : undefined}
+          placement="right"
+          delay={150}
+          display="block"
         >
-          <Icon size={18} weight="duotone" />
-          {label}
-        </NavLink>
+          <NavLink
+            to={to}
+            end={end}
+            className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`}
+          >
+            {({ isActive }) => (
+              <>
+                <Icon size={18} weight={isActive ? 'fill' : 'duotone'} />
+                {!collapsed && <span className="sidebar-link-label">{label}</span>}
+              </>
+            )}
+          </NavLink>
+        </Tooltip>
       ))}
 
       <div className="sidebar-footer">
-        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', padding: '0 0.75rem' }}>
-          Testrun v1.0 — Local
-        </div>
+        {!collapsed && (
+          <span className="sidebar-footer-version">Testrun v1.0 — Local</span>
+        )}
       </div>
     </nav>
   );
