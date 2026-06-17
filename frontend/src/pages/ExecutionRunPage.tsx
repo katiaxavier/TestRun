@@ -528,6 +528,7 @@ export default function ExecutionRunPage() {
   const [search, setSearch] = useState('');
   const [priorityFilter, setPriorityFilter] = useState<string>('all');
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<number | 'all'>(10);
 
   const fetchExecution = useCallback(async () => {
     if (!id) return;
@@ -558,7 +559,7 @@ export default function ExecutionRunPage() {
   }, [id, navigate]);
 
   useEffect(() => { fetchExecution(); }, [fetchExecution]);
-  useEffect(() => { setPage(1); }, [statusFilter, search, priorityFilter]);
+  useEffect(() => { setPage(1); }, [statusFilter, search, priorityFilter, pageSize]);
 
   const handleDelete = async () => {
     if (!id) return;
@@ -630,11 +631,10 @@ export default function ExecutionRunPage() {
       if (!query) return true;
       return normalize(tc.testCase.jiraKey).includes(query) || normalize(tc.testCase.title).includes(query);
     });
-  const pageSize = 10;
-  const totalPages = Math.max(1, Math.ceil(filteredTcs.length / pageSize));
+  const totalPages = pageSize === 'all' ? 1 : Math.max(1, Math.ceil(filteredTcs.length / pageSize));
   const currentPage = Math.min(page, totalPages);
-  const pageStartIndex = (currentPage - 1) * pageSize;
-  const pageTcs = filteredTcs.slice(pageStartIndex, pageStartIndex + pageSize);
+  const pageStartIndex = pageSize === 'all' ? 0 : (currentPage - 1) * pageSize;
+  const pageTcs = pageSize === 'all' ? filteredTcs : filteredTcs.slice(pageStartIndex, pageStartIndex + pageSize);
   const isBatch = !!execution.batchId;
 
   return (
@@ -751,7 +751,7 @@ export default function ExecutionRunPage() {
             padding: '1rem',
             borderBottom: '1px solid var(--border-subtle)',
             display: 'grid',
-            gridTemplateColumns: '1fr 210px 210px',
+            gridTemplateColumns: '1fr 210px 210px 150px',
             gap: '0.75rem',
             alignItems: 'center',
           }}>
@@ -772,6 +772,10 @@ export default function ExecutionRunPage() {
             <select value={priorityFilter} onChange={e => setPriorityFilter(e.target.value)}>
               <option value="all">Todas as prioridades</option>
               {availablePriorities.map(p => <option key={p} value={p}>{p}</option>)}
+            </select>
+            <select value={pageSize} onChange={e => setPageSize(e.target.value === 'all' ? 'all' : Number(e.target.value))}>
+              {[10, 25, 50, 100].map(n => <option key={n} value={n}>{n} por página</option>)}
+              <option value="all">Todos</option>
             </select>
           </div>
           <div style={{ padding: '0.75rem 1.25rem', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
@@ -840,15 +844,21 @@ export default function ExecutionRunPage() {
               </tbody>
             </table>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', padding: '1rem 1.25rem', borderTop: '1px solid var(--border-subtle)' }}>
-<button className="btn btn-secondary" onClick={() => setPage(currentPage - 1)} disabled={currentPage <= 1}>
-               <CaretLeft size={16} /> Anterior
-             </button>
-             <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Página {currentPage} de {totalPages}</span>
-             <button className="btn btn-secondary" onClick={() => setPage(currentPage + 1)} disabled={currentPage >= totalPages}>
-               Próxima <CaretRight size={16} />
-             </button>
-          </div>
+          {pageSize !== 'all' && totalPages > 1 && (
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '0.75rem 1.25rem', borderTop: '1px solid var(--border-subtle)' }}>
+              <div className="filters" style={{ gap: 0 }}>
+                <button className="filter-item" onClick={() => setPage(p => p - 1)} disabled={currentPage <= 1} style={{ opacity: currentPage <= 1 ? 0.35 : 1 }}>
+                  <CaretLeft size={15} /> Anterior
+                </button>
+                <span style={{ display: 'flex', alignItems: 'center', padding: '0 14px', fontSize: '0.8rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                  {currentPage} / {totalPages}
+                </span>
+                <button className="filter-item" onClick={() => setPage(p => p + 1)} disabled={currentPage >= totalPages} style={{ opacity: currentPage >= totalPages ? 0.35 : 1 }}>
+                  Próxima <CaretRight size={15} />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </motion.div>
 

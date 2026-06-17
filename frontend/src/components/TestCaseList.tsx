@@ -1,6 +1,6 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowSquareOut, Flask, MagnifyingGlass, Trash } from '@phosphor-icons/react';
+import { ArrowSquareOut, CaretLeft, CaretRight, Flask, MagnifyingGlass, Trash } from '@phosphor-icons/react';
 import type { Suite, TestCase } from '../api/client';
 
 interface TestCaseListProps {
@@ -37,10 +37,14 @@ function priorityLabel(priority?: string | null): string {
   return map[n] ?? priority;
 }
 
+const PAGE_SIZES = [10, 25, 50, 100] as const;
+
 export function TestCaseList({ testCases, onDelete, suiteMap }: TestCaseListProps) {
   const [search, setSearch] = useState('');
   const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>('all');
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<number | 'all'>(10);
 
   const availablePriorities = useMemo(() =>
     Array.from(new Set(testCases.map(tc => priorityLabel(tc.priority)).filter(p => p !== '—'))) as PriorityFilter[],
@@ -55,6 +59,13 @@ export function TestCaseList({ testCases, onDelete, suiteMap }: TestCaseListProp
       return matchesSearch && matchesPriority;
     });
   }, [testCases, search, priorityFilter]);
+
+  useEffect(() => { setPage(1); }, [search, priorityFilter, pageSize]);
+
+  const totalPages = pageSize === 'all' ? 1 : Math.max(1, Math.ceil(filtered.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const pageStartIndex = pageSize === 'all' ? 0 : (currentPage - 1) * pageSize;
+  const displayed = pageSize === 'all' ? filtered : filtered.slice(pageStartIndex, pageStartIndex + pageSize);
 
   const handleDelete = async (id: string) => {
     if (!onDelete || !confirm('Excluir este caso de teste localmente?')) return;
@@ -79,7 +90,7 @@ export function TestCaseList({ testCases, onDelete, suiteMap }: TestCaseListProp
         padding: '1rem',
         borderBottom: '1px solid var(--border-subtle)',
         display: 'grid',
-        gridTemplateColumns: '1fr 210px',
+        gridTemplateColumns: '1fr 210px 150px',
         gap: '0.75rem',
         alignItems: 'center',
       }}>
@@ -99,6 +110,10 @@ export function TestCaseList({ testCases, onDelete, suiteMap }: TestCaseListProp
           <option value="all">Todas as prioridades</option>
           {availablePriorities.map(p => <option key={p} value={p}>{p}</option>)}
         </select>
+        <select value={pageSize} onChange={e => setPageSize(e.target.value === 'all' ? 'all' : Number(e.target.value))}>
+          {PAGE_SIZES.map(n => <option key={n} value={n}>{n} por página</option>)}
+          <option value="all">Todos</option>
+        </select>
       </div>
 
       {/* Table */}
@@ -114,13 +129,13 @@ export function TestCaseList({ testCases, onDelete, suiteMap }: TestCaseListProp
             </tr>
           </thead>
           <tbody>
-            {filtered.length === 0 ? (
+            {displayed.length === 0 ? (
               <tr>
                 <td colSpan={(onDelete ? 4 : 3) + (suiteMap ? 1 : 0)} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
                   Nenhum caso encontrado.
                 </td>
               </tr>
-            ) : filtered.map(tc => {
+            ) : displayed.map(tc => {
               const priority = priorityLabel(tc.priority);
               const suite = suiteMap?.[tc.suiteId];
               return (
@@ -185,6 +200,21 @@ export function TestCaseList({ testCases, onDelete, suiteMap }: TestCaseListProp
           </tbody>
         </table>
       </div>
+      {pageSize !== 'all' && totalPages > 1 && (
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '0.75rem 1.25rem', borderTop: '1px solid var(--border-subtle)' }}>
+          <div className="filters" style={{ gap: 0 }}>
+            <button className="filter-item" onClick={() => setPage(p => p - 1)} disabled={currentPage <= 1} style={{ opacity: currentPage <= 1 ? 0.35 : 1 }}>
+              <CaretLeft size={15} /> Anterior
+            </button>
+            <span style={{ display: 'flex', alignItems: 'center', padding: '0 14px', fontSize: '0.8rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+              {currentPage} / {totalPages}
+            </span>
+            <button className="filter-item" onClick={() => setPage(p => p + 1)} disabled={currentPage >= totalPages} style={{ opacity: currentPage >= totalPages ? 0.35 : 1 }}>
+              Próxima <CaretRight size={15} />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
