@@ -266,13 +266,13 @@ export default function DashboardPage() {
       </ConfirmModal>
       <ConfirmModal
         open={!!deleteTargetBatch}
-        title="Excluir Suíte em Lote"
+        title="Excluir Lote de Suítes"
         confirmLabel="Excluir"
         onClose={() => setDeleteTargetBatch(null)}
         onConfirm={handleDeleteBatch}
       >
         <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-          Tem certeza que deseja excluir a suíte em lote{' '}
+          Tem certeza que deseja excluir o lote{' '}
           <strong style={{ color: 'var(--text-primary)' }}>{deleteTargetBatch?.name || deleteTargetBatch?.id}</strong>?
           <br /><br />
           <span style={{ color: 'var(--status-failed)', fontSize: '0.85rem' }}>
