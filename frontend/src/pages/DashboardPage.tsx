@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, Trash, Flask, MagnifyingGlass,
   WarningCircle, CloudArrowDown, ChartBar,
+  GridFourIcon, FlaskIcon, CopyIcon,
 } from '@phosphor-icons/react';
 import { suitesApi, executionsApi } from '../api/client';
 import BatchExecutionModal from '../components/BatchExecutionModal';
@@ -237,13 +238,13 @@ export default function DashboardPage() {
 
         <div className="filters" style={{ marginBottom: '2rem' }}>
           <button className={`filter-item ${filter === 'all' ? 'active' : ''}`} onClick={() => setFilter('all')}>
-            Todas <span className="filter-count">{filterCounts.all.total}</span>
+            <GridFourIcon size={16} /> Todas <span className="filter-count">{filterCounts.all.total}</span>
           </button>
           <button className={`filter-item ${filter === 'suites' ? 'active' : ''}`} onClick={() => setFilter('suites')}>
-            Individuais <span className="filter-count">{filterCounts.suites.suites}</span>
+            <FlaskIcon size={16} /> Suites <span className="filter-count">{filterCounts.suites.suites}</span>
           </button>
           <button className={`filter-item ${filter === 'batches' ? 'active' : ''}`} onClick={() => setFilter('batches')}>
-            Lotes <span className="filter-count">{filterCounts.batches.batches}</span>
+            <CopyIcon size={16} /> Lotes <span className="filter-count">{filterCounts.batches.batches}</span>
           </button>
         </div>
         <div style={{ height: 1, background: 'var(--border-subtle)', marginBottom: '1.5rem' }}></div>
