@@ -1,4 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 
 type TooltipPlacement = 'top' | 'bottom' | 'left' | 'right';
@@ -11,58 +12,71 @@ interface TooltipProps {
   children: React.ReactElement;
 }
 
-const ARROW_SIZE = 6;
+interface Pos { x: number; y: number }
 
-const placementStyles: Record<TooltipPlacement, React.CSSProperties> = {
-  top:    { bottom: '100%', left: '50%', transform: 'translateX(-50%)', marginBottom: ARROW_SIZE + 4 },
-  bottom: { top: '100%',   left: '50%', transform: 'translateX(-50%)', marginTop: ARROW_SIZE + 4 },
-  left:   { right: '100%', top: '50%',  transform: 'translateY(-50%)', marginRight: ARROW_SIZE + 4 },
-  right:  { left: '100%',  top: '50%',  transform: 'translateY(-50%)', marginLeft: ARROW_SIZE + 4 },
+const ARROW = 6;
+const GAP = ARROW + 4;
+
+function computePos(rect: DOMRect, placement: TooltipPlacement): Pos {
+  switch (placement) {
+    case 'top':    return { x: rect.left + rect.width / 2, y: rect.top - GAP };
+    case 'bottom': return { x: rect.left + rect.width / 2, y: rect.bottom + GAP };
+    case 'left':   return { x: rect.left - GAP, y: rect.top + rect.height / 2 };
+    case 'right':  return { x: rect.right + GAP, y: rect.top + rect.height / 2 };
+  }
+}
+
+const transformMap: Record<TooltipPlacement, string> = {
+  top:    'translate(-50%, -100%)',
+  bottom: 'translate(-50%, 0%)',
+  left:   'translate(-100%, -50%)',
+  right:  'translate(0%, -50%)',
 };
 
-const arrowStyles: Record<TooltipPlacement, React.CSSProperties> = {
+const motionInitial: Record<TooltipPlacement, object> = {
+  top:    { opacity: 0, y: 4 },
+  bottom: { opacity: 0, y: -4 },
+  left:   { opacity: 0, x: 4 },
+  right:  { opacity: 0, x: -4 },
+};
+
+const arrowMap: Record<TooltipPlacement, React.CSSProperties> = {
   top: {
-    bottom: -ARROW_SIZE,
-    left: '50%',
-    transform: 'translateX(-50%)',
-    borderWidth: `${ARROW_SIZE}px ${ARROW_SIZE}px 0`,
+    bottom: -ARROW, left: '50%', transform: 'translateX(-50%)',
+    borderWidth: `${ARROW}px ${ARROW}px 0`,
     borderColor: 'var(--bg-overlay) transparent transparent',
   },
   bottom: {
-    top: -ARROW_SIZE,
-    left: '50%',
-    transform: 'translateX(-50%)',
-    borderWidth: `0 ${ARROW_SIZE}px ${ARROW_SIZE}px`,
+    top: -ARROW, left: '50%', transform: 'translateX(-50%)',
+    borderWidth: `0 ${ARROW}px ${ARROW}px`,
     borderColor: 'transparent transparent var(--bg-overlay)',
   },
   left: {
-    right: -ARROW_SIZE,
-    top: '50%',
-    transform: 'translateY(-50%)',
-    borderWidth: `${ARROW_SIZE}px 0 ${ARROW_SIZE}px ${ARROW_SIZE}px`,
+    right: -ARROW, top: '50%', transform: 'translateY(-50%)',
+    borderWidth: `${ARROW}px 0 ${ARROW}px ${ARROW}px`,
     borderColor: 'transparent transparent transparent var(--bg-overlay)',
   },
   right: {
-    left: -ARROW_SIZE,
-    top: '50%',
-    transform: 'translateY(-50%)',
-    borderWidth: `${ARROW_SIZE}px ${ARROW_SIZE}px ${ARROW_SIZE}px 0`,
+    left: -ARROW, top: '50%', transform: 'translateY(-50%)',
+    borderWidth: `${ARROW}px ${ARROW}px ${ARROW}px 0`,
     borderColor: 'transparent var(--bg-overlay) transparent transparent',
   },
 };
 
-const motionVariants: Record<TooltipPlacement, { initial: object; animate: object }> = {
-  top:    { initial: { opacity: 0, y: 4 },  animate: { opacity: 1, y: 0 } },
-  bottom: { initial: { opacity: 0, y: -4 }, animate: { opacity: 1, y: 0 } },
-  left:   { initial: { opacity: 0, x: 4 },  animate: { opacity: 1, x: 0 } },
-  right:  { initial: { opacity: 0, x: -4 }, animate: { opacity: 1, x: 0 } },
-};
-
 export function Tooltip({ content, placement = 'top', delay = 400, display = 'inline-flex', children }: TooltipProps) {
   const [visible, setVisible] = useState(false);
+  const [pos, setPos] = useState<Pos>({ x: 0, y: 0 });
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const wrapperRef = useRef<HTMLSpanElement>(null);
+
+  const updatePos = useCallback(() => {
+    if (wrapperRef.current) {
+      setPos(computePos(wrapperRef.current.getBoundingClientRect(), placement));
+    }
+  }, [placement]);
 
   const show = () => {
+    updatePos();
     timerRef.current = setTimeout(() => setVisible(true), delay);
   };
 
@@ -75,10 +89,9 @@ export function Tooltip({ content, placement = 'top', delay = 400, display = 'in
 
   if (!content) return children;
 
-  const { initial, animate } = motionVariants[placement];
-
   return (
     <span
+      ref={wrapperRef}
       style={{ position: 'relative', display }}
       onMouseEnter={show}
       onMouseLeave={hide}
@@ -86,51 +99,56 @@ export function Tooltip({ content, placement = 'top', delay = 400, display = 'in
       onBlur={hide}
     >
       {children}
-      <AnimatePresence>
-        {visible && (
-          <motion.div
-            role="tooltip"
-            initial={initial}
-            animate={animate}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.15, ease: [0.4, 0, 0.2, 1] }}
-            style={{
-              position: 'absolute',
-              zIndex: 9999,
-              pointerEvents: 'none',
-              whiteSpace: 'nowrap',
-              ...placementStyles[placement],
-            }}
-          >
-            <span
+      {createPortal(
+        <AnimatePresence>
+          {visible && (
+            <motion.div
+              role="tooltip"
+              initial={motionInitial[placement]}
+              animate={{ opacity: 1, x: 0, y: 0 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15, ease: [0.4, 0, 0.2, 1] }}
               style={{
-                display: 'block',
-                background: 'var(--bg-overlay)',
-                border: '1px solid var(--border)',
-                borderRadius: 'var(--radius-sm)',
-                boxShadow: 'var(--shadow-md)',
-                color: 'var(--text-primary)',
-                fontSize: '0.75rem',
-                fontWeight: 500,
-                lineHeight: 1.4,
-                padding: '0.35rem 0.65rem',
-                letterSpacing: '0.01em',
+                position: 'fixed',
+                top: pos.y,
+                left: pos.x,
+                transform: transformMap[placement],
+                zIndex: 9999,
+                pointerEvents: 'none',
               }}
             >
-              {content}
-            </span>
-            <span
-              style={{
-                position: 'absolute',
-                width: 0,
-                height: 0,
-                borderStyle: 'solid',
-                ...arrowStyles[placement],
-              }}
-            />
-          </motion.div>
-        )}
-      </AnimatePresence>
+              <span
+                style={{
+                  display: 'block',
+                  background: 'var(--bg-overlay)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 'var(--radius-sm)',
+                  boxShadow: 'var(--shadow-md)',
+                  color: 'var(--text-primary)',
+                  fontSize: '0.75rem',
+                  fontWeight: 500,
+                  lineHeight: 1.4,
+                  padding: '0.35rem 0.65rem',
+                  letterSpacing: '0.01em',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {content}
+              </span>
+              <span
+                style={{
+                  position: 'absolute',
+                  width: 0,
+                  height: 0,
+                  borderStyle: 'solid',
+                  ...arrowMap[placement],
+                }}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
     </span>
   );
 }
