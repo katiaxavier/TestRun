@@ -267,8 +267,11 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1); curso
   padding: 0.25rem;
 }
 .sidebar-logo-img {
-  height: 28px;
-  flex-shrink: 0;
+  width: auto;
+  height: auto;
+  max-height: 34px;
+  max-width: calc(100% - 38px);
+  flex-shrink: 1;
 }
 .sidebar-toggle-btn {
   display: flex;

@@ -17,7 +17,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
     <nav className={`sidebar${collapsed ? ' sidebar--collapsed' : ''}`}>
       <div className="sidebar-logo">
         {!collapsed && (
-          <img src="/testrun-logo.png" alt="Testrun" className="sidebar-logo-img" />
+          <img src="/tr-logo.svg" alt="Testrun" className="sidebar-logo-img" />
         )}
         <button
           className="sidebar-toggle-btn"

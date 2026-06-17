@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 80" width="360" height="80">
+  <defs>
+    <!-- Gradient: pending → running -->
+    <linearGradient id="g1" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#555e76"/>
+      <stop offset="100%" stop-color="#ff6002"/>
+    </linearGradient>
+    <!-- Gradient: running → passed -->
+    <linearGradient id="g2" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#ff6002"/>
+      <stop offset="100%" stop-color="#22c55e"/>
+    </linearGradient>
+  </defs>
+
+  <!-- ─── Pipeline track ─── -->
+  <line x1="58" y1="40" x2="91" y2="40"
+        stroke="url(#g1)" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="119" y1="40" x2="152" y2="40"
+        stroke="url(#g2)" stroke-width="2.5" stroke-linecap="round"/>
+
+  <!-- Tail + open arrowhead -->
+  <line x1="180" y1="40" x2="198" y2="40"
+        stroke="#22c55e" stroke-width="2.5" stroke-linecap="round"/>
+  <polyline points="193,34 201,40 193,46"
+            fill="none" stroke="#22c55e" stroke-width="2.5"
+            stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- ─── Node 1: Pending (hollow) ─── -->
+  <circle cx="44" cy="40" r="14" fill="none" stroke="#555e76" stroke-width="2"/>
+
+  <!-- ─── Node 2: Running (orange + inner ring) ─── -->
+  <circle cx="105" cy="40" r="14" fill="#ff6002"/>
+  <circle cx="105" cy="40" r="7" fill="none"
+          stroke="rgba(255,255,255,0.28)" stroke-width="1.5"/>
+
+  <!-- ─── Node 3: Passed (green + checkmark) ─── -->
+  <circle cx="166" cy="40" r="14" fill="#22c55e"/>
+  <path d="M 158 40 L 163 46 L 175 32"
+        fill="none" stroke="white" stroke-width="2.5"
+        stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- ─── Wordmark ─── -->
+  <text font-family="Inter, -apple-system, system-ui, sans-serif"
+        font-size="25" letter-spacing="-0.3">
+    <tspan x="218" y="48" fill="#e8eaf0" font-weight="600">TEST</tspan><tspan fill="#ff6002" font-weight="800">RUN</tspan>
+  </text>
+</svg>
