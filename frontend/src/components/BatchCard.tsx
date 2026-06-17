@@ -29,7 +29,7 @@ export function BatchCard({ batch, onDelete }: BatchCardProps) {
   return (
     <>
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
-        <span className="tag" style={{ fontFamily: 'monospace', fontSize: '0.7rem', background: 'rgba(139, 92, 246, 0.15)', color: '#8b5cf6', flexShrink: 0 }}>
+        <span className="tag" style={{ fontFamily: 'monospace', fontSize: '0.7rem', background: 'rgba(255, 209, 90, 0.18)', color: 'var(--tertiary)', flexShrink: 0 }}>
           LOTE
         </span>
         {suiteKeys.map((key, i) => (
