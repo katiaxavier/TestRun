@@ -14,8 +14,7 @@ interface TooltipProps {
 
 interface Pos { x: number; y: number }
 
-const ARROW = 6;
-const GAP = ARROW + 4;
+const GAP = 6;
 
 function computePos(rect: DOMRect, placement: TooltipPlacement): Pos {
   switch (placement) {
@@ -40,28 +39,6 @@ const motionInitial: Record<TooltipPlacement, object> = {
   right:  { opacity: 0, x: -4 },
 };
 
-const arrowMap: Record<TooltipPlacement, React.CSSProperties> = {
-  top: {
-    bottom: -ARROW, left: '50%', transform: 'translateX(-50%)',
-    borderWidth: `${ARROW}px ${ARROW}px 0`,
-    borderColor: 'var(--bg-overlay) transparent transparent',
-  },
-  bottom: {
-    top: -ARROW, left: '50%', transform: 'translateX(-50%)',
-    borderWidth: `0 ${ARROW}px ${ARROW}px`,
-    borderColor: 'transparent transparent var(--bg-overlay)',
-  },
-  left: {
-    right: -ARROW, top: '50%', transform: 'translateY(-50%)',
-    borderWidth: `${ARROW}px 0 ${ARROW}px ${ARROW}px`,
-    borderColor: 'transparent transparent transparent var(--bg-overlay)',
-  },
-  right: {
-    left: -ARROW, top: '50%', transform: 'translateY(-50%)',
-    borderWidth: `${ARROW}px ${ARROW}px ${ARROW}px 0`,
-    borderColor: 'transparent var(--bg-overlay) transparent transparent',
-  },
-};
 
 export function Tooltip({ content, placement = 'top', delay = 400, display = 'inline-flex', children }: TooltipProps) {
   const [visible, setVisible] = useState(false);
@@ -135,15 +112,6 @@ export function Tooltip({ content, placement = 'top', delay = 400, display = 'in
               >
                 {content}
               </span>
-              <span
-                style={{
-                  position: 'absolute',
-                  width: 0,
-                  height: 0,
-                  borderStyle: 'solid',
-                  ...arrowMap[placement],
-                }}
-              />
             </motion.div>
           )}
         </AnimatePresence>,
