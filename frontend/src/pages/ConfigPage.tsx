@@ -142,9 +142,6 @@ export default function ConfigPage() {
                     {showToken ? <EyeSlash size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
-                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
-                  Gere em: Jira → Profile → Security → API tokens
-                </p>
               </div>
 
               {error && (
