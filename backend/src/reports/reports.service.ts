@@ -227,6 +227,7 @@ export class ReportsService {
       where: { id: executionId },
       include: {
         suite: true,
+        batch: { select: { suiteIds: true } },
         testCases: {
           include: { testCase: true, issues: true },
           orderBy: { testCase: { jiraKey: 'asc' } },
@@ -237,6 +238,9 @@ export class ReportsService {
     if (!execution) {
       throw new HttpException('Ciclo de execução não encontrado.', HttpStatus.NOT_FOUND);
     }
+
+    const batchSuites = await this.resolveBatchSuites(execution.batch?.suiteIds);
+    const isBatch = batchSuites.length > 0;
 
     const workbook = new ExcelJS.Workbook();
 
@@ -293,8 +297,10 @@ export class ReportsService {
     xlMetaValue(ws.getCell('G5'), { formula: 'G2+G3+G4' });
 
     ws.getRow(6).height = 22;
-    xlMetaLabel(ws.getCell('A6'), 'Suíte');
-    xlMetaValue(ws.getCell('C6'), execution.suite ? `${execution.suite.jiraKey} — ${execution.suite.title}` : '-');
+    xlMetaLabel(ws.getCell('A6'), isBatch ? 'Suítes' : 'Suíte');
+    xlMetaValue(ws.getCell('C6'), isBatch
+      ? batchSuites.map((s) => `${s.jiraKey} — ${s.title}`).join(' | ')
+      : (execution.suite ? `${execution.suite.jiraKey} — ${execution.suite.title}` : '-'));
     xlMetaLabel(ws.getCell('F6'), 'Total de testes');
     xlMetaValue(ws.getCell('G6'), execution.testCases.length);
 
@@ -644,6 +650,7 @@ export class ReportsService {
       where: { id: executionId },
       include: {
         suite: true,
+        batch: { select: { suiteIds: true } },
         testCases: {
           include: { testCase: true, issues: true },
           orderBy: { testCase: { jiraKey: 'asc' } },
@@ -654,6 +661,9 @@ export class ReportsService {
     if (!execution) {
       throw new HttpException('Ciclo de execução não encontrado.', HttpStatus.NOT_FOUND);
     }
+
+    const batchSuites = await this.resolveBatchSuites(execution.batch?.suiteIds);
+    const isBatch = batchSuites.length > 0;
 
     const totalTests    = execution.testCases.length;
     const passedTests   = execution.testCases.filter((tc) => tc.status === 'PASSED').length;
@@ -702,7 +712,11 @@ export class ReportsService {
                   { text: 'Versão: ',           bold: true }, `${execution.version}\n`,
                   { text: 'Data de início: ',   bold: true }, `${this.formatDate(execution.startDate)}\n`,
                   { text: 'Data de fim: ',      bold: true }, `${this.formatDate(execution.endDate)}\n`,
-                  { text: 'Suíte: ',            bold: true }, `${execution.suite ? `${execution.suite.jiraKey} — ${execution.suite.title}` : '-'}\n`,
+                  { text: isBatch ? 'Suítes: ' : 'Suíte: ', bold: true },
+                  `${isBatch
+                    ? batchSuites.map((s) => `${s.jiraKey} — ${s.title}`).join(' | ')
+                    : (execution.suite ? `${execution.suite.jiraKey} — ${execution.suite.title}` : '-')
+                  }\n`,
                   { text: 'Responsável: ',      bold: true }, `${execution.responsible}\n`,
                 ],
                 lineHeight: 1.5,
@@ -723,29 +737,66 @@ export class ReportsService {
         this.pdfChartLegend(chartSegments, totalTests),
 
         pdfSectionHeader('Detalhamento dos Casos de Teste'),
-        {
-          table: {
-            headerRows: 1,
-            widths: ['10%', '42%', '15%', '18%', '15%'],
-            body: [
-              pdfHeaderCells(['Key', 'Caso de Teste', 'Status', 'Responsável', 'Issues']),
-              ...execution.testCases.map((tc, i) => {
-                const bg = rowBg(i);
-                const issues = tc.issues.map((iss) => iss.jiraKey || iss.title).join(', ') || '-';
-                return [
-                  pdfCell(tc.testCase.jiraKey, bg, { color: '#2563eb', decoration: 'underline' }),
-                  pdfCell(tc.testCase.title, bg),
-                  pdfStatusCell(tc.status),
-                  pdfCell(tc.responsible || '-', bg),
-                  pdfCell(issues, bg),
-                ];
-              }),
-            ],
-          },
-          layout: TABLE_LAYOUT,
-          fontSize: 8,
-          margin: [0, 0, 0, 20],
-        },
+        ...(isBatch
+          ? batchSuites.flatMap((suite) => {
+              const suiteTcs = execution.testCases.filter((tc) => tc.testCase.suiteId === suite.id);
+              if (suiteTcs.length === 0) return [];
+              return [
+                {
+                  text: `${suite.jiraKey} — ${suite.title}`,
+                  fontSize: 10,
+                  bold: true,
+                  color: '#334155',
+                  margin: [0, 10, 0, 4],
+                },
+                {
+                  table: {
+                    headerRows: 1,
+                    widths: ['10%', '42%', '15%', '18%', '15%'],
+                    body: [
+                      pdfHeaderCells(['Key', 'Caso de Teste', 'Status', 'Responsável', 'Issues']),
+                      ...suiteTcs.map((tc, i) => {
+                        const bg = rowBg(i);
+                        const issues = tc.issues.map((iss) => iss.jiraKey || iss.title).join(', ') || '-';
+                        return [
+                          pdfCell(tc.testCase.jiraKey, bg, { color: '#2563eb', decoration: 'underline' }),
+                          pdfCell(tc.testCase.title, bg),
+                          pdfStatusCell(tc.status),
+                          pdfCell(tc.responsible || '-', bg),
+                          pdfCell(issues, bg),
+                        ];
+                      }),
+                    ],
+                  },
+                  layout: TABLE_LAYOUT,
+                  fontSize: 8,
+                  margin: [0, 0, 0, 14],
+                },
+              ];
+            })
+          : [{
+              table: {
+                headerRows: 1,
+                widths: ['10%', '42%', '15%', '18%', '15%'],
+                body: [
+                  pdfHeaderCells(['Key', 'Caso de Teste', 'Status', 'Responsável', 'Issues']),
+                  ...execution.testCases.map((tc, i) => {
+                    const bg = rowBg(i);
+                    const issues = tc.issues.map((iss) => iss.jiraKey || iss.title).join(', ') || '-';
+                    return [
+                      pdfCell(tc.testCase.jiraKey, bg, { color: '#2563eb', decoration: 'underline' }),
+                      pdfCell(tc.testCase.title, bg),
+                      pdfStatusCell(tc.status),
+                      pdfCell(tc.responsible || '-', bg),
+                      pdfCell(issues, bg),
+                    ];
+                  }),
+                ],
+              },
+              layout: TABLE_LAYOUT,
+              fontSize: 8,
+              margin: [0, 0, 0, 20],
+            }]),
 
         pdfSectionHeader('Bugs e Melhorias Reportados'),
         this.pdfIssuesTable(allIssues, 'Nenhum bug ou melhoria reportado neste ciclo.'),
@@ -858,6 +909,12 @@ export class ReportsService {
       layout: TABLE_LAYOUT,
       fontSize: 8,
     };
+  }
+
+  private async resolveBatchSuites(suiteIds: unknown): Promise<Array<{ id: string; jiraKey: string; title: string }>> {
+    const ids = Array.isArray(suiteIds) ? (suiteIds as string[]) : [];
+    if (ids.length === 0) return [];
+    return this.prisma.suite.findMany({ where: { id: { in: ids } } });
   }
 
   private renderPdf(docDefinition: any): Promise<Buffer> {
