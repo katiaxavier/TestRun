@@ -16,11 +16,12 @@ const printer = new PdfPrinter(fonts);
 
 // ── Paleta ───────────────────────────────────────────────────────────────────
 
-const GRAY_DARK  = '3F3F3F';   // cinza — headers e títulos (texto branco)
-const ORANGE_ACC = 'FF6002';   // laranja — destaques e section headers
-const GRAY_LABEL = 'E8E8E8';   // cinza claro — células de label
-const LEAD_COLOR = '818B9D';   // chumbo — subtítulos e suíte headers no PDF
-const ROW_ALT    = 'F5F5F5';   // cinza sutilíssimo — linhas alternadas
+const BLACK      = '161616';   // preto — título principal PDF e Excel
+const GRAY_DARK  = '3F3F3F';   // cinza — section headers e table headers
+const DARK_ORA   = 'DD4012';   // laranja escuro — destaque único (summary)
+const CHUMBO     = '818B9D';   // chumbo — labels e subtítulos de suíte
+const CREAM      = 'FFFEEE';   // creme — linhas alternadas (calor da marca)
+const ORANGE_ACC = 'FF6002';   // laranja primário — links Jira
 
 const XL_BORDER_THIN = {
   top:    { style: 'thin' as const, color: { argb: 'C8D0D8' } },
@@ -64,7 +65,7 @@ function xlTitleRow(ws: ExcelJS.Worksheet, merge: string, value: string, row: nu
   const c = ws.getCell(`A${row}`);
   c.value = value;
   c.font = { name: 'Arial', size: 15, bold: true, color: { argb: 'FFFFFF' } };
-  c.fill = xlFill(GRAY_DARK);
+  c.fill = xlFill(BLACK);
   c.alignment = { horizontal: 'center', vertical: 'middle' };
   ws.getRow(row).height = 40;
 }
@@ -87,7 +88,7 @@ function xlHeaderRow(row: ExcelJS.Row, count: number) {
 
 function xlDataRow(row: ExcelJS.Row, count: number, isEven: boolean, skipFill: number[] = []) {
   row.height = 18;
-  const bg = isEven ? 'FFFFFF' : ROW_ALT;
+  const bg = isEven ? 'FFFFFF' : CREAM;
   for (let i = 1; i <= count; i++) {
     const c = row.getCell(i);
     if (!skipFill.includes(i)) c.fill = xlFill(bg);
@@ -98,7 +99,7 @@ function xlDataRow(row: ExcelJS.Row, count: number, isEven: boolean, skipFill: n
 function xlMetaLabel(c: ExcelJS.Cell, text: string) {
   c.value = text;
   c.font = { name: 'Arial', size: 11, bold: true };
-  c.fill = xlFill(GRAY_LABEL);
+  c.fill = xlFill('F0F0F0');
   c.border = XL_BORDER_THIN;
   c.alignment = { vertical: 'middle' };
 }
@@ -121,7 +122,7 @@ function pdfSectionHeader(title: string): any {
         bold: true,
         fontSize: 11,
         color: '#FFFFFF',
-        fillColor: `#${ORANGE_ACC}`,
+        fillColor: `#${GRAY_DARK}`,
         border: [false, false, false, false],
         margin: [8, 5, 8, 5],
       }]],
@@ -137,7 +138,7 @@ function pdfHeaderCells(labels: string[]): any[] {
     bold: true,
     fontSize: 9,
     color: '#FFFFFF',
-    fillColor: `#${ORANGE_ACC}`,
+    fillColor: `#${GRAY_DARK}`,
     alignment: 'center',
     margin: [3, 5, 3, 5],
   }));
@@ -159,7 +160,7 @@ function pdfStatusCell(status: string): any {
 }
 
 function rowBg(i: number): string | null {
-  return i % 2 === 1 ? '#F2F7FF' : null;
+  return i % 2 === 1 ? `#${CREAM}` : null;
 }
 
 function buildChartCanvas(
@@ -819,7 +820,7 @@ export class ReportsService {
           bold: true,
           fontSize: 16,
           color: '#FFFFFF',
-          fillColor: `#${GRAY_DARK}`,
+          fillColor: `#${BLACK}`,
           alignment: 'center',
           border: [false, false, false, false],
           margin: [0, 12, 0, 12],
@@ -848,12 +849,12 @@ export class ReportsService {
         widths: ['*', 'auto'],
         body: [
           [
-            { text: 'Métrica', bold: true, fontSize: 9, fillColor: `#${ORANGE_ACC}`, color: '#FFFFFF', alignment: 'center', margin: [4, 5, 4, 5] },
-            { text: 'Valor',   bold: true, fontSize: 9, fillColor: `#${ORANGE_ACC}`, color: '#FFFFFF', alignment: 'center', margin: [4, 5, 4, 5] },
+            { text: 'Métrica', bold: true, fontSize: 9, fillColor: `#${DARK_ORA}`, color: '#FFFFFF', alignment: 'center', margin: [4, 5, 4, 5] },
+            { text: 'Valor',   bold: true, fontSize: 9, fillColor: `#${DARK_ORA}`, color: '#FFFFFF', alignment: 'center', margin: [4, 5, 4, 5] },
           ],
           ...rows.map(([label, value], i) => [
-            { text: label, fontSize: 9, fillColor: i % 2 === 0 ? '#F5F5F5' : '#FFFFFF', margin: [4, 3, 4, 3] },
-            { text: value, fontSize: 9, fillColor: i % 2 === 0 ? '#F5F5F5' : '#FFFFFF', alignment: 'center', margin: [4, 3, 4, 3] },
+            { text: label, fontSize: 9, fillColor: i % 2 === 0 ? `#${CREAM}` : '#FFFFFF', margin: [4, 3, 4, 3] },
+            { text: value, fontSize: 9, fillColor: i % 2 === 0 ? `#${CREAM}` : '#FFFFFF', alignment: 'center', margin: [4, 3, 4, 3] },
           ]),
         ],
       },
