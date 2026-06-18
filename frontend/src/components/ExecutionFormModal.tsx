@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Play, WarningCircle } from '@phosphor-icons/react';
 import { Modal } from './Modal';
 
@@ -23,6 +23,15 @@ export function ExecutionFormModal({ open, onClose, onSubmit, title = 'Novo Cicl
   const [form, setForm] = useState<ExecutionFormData>({ sprint: '', version: '', startDate: today, endDate: '', responsible: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (!open) {
+      const n = new Date();
+      const t = `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`;
+      setForm({ sprint: '', version: '', startDate: t, endDate: '', responsible: '' });
+      setError('');
+    }
+  }, [open]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

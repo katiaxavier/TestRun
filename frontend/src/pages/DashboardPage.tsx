@@ -20,6 +20,13 @@ function ImportModal({ open, onClose, onSuccess }: { open: boolean; onClose: () 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  useEffect(() => {
+    if (!open) {
+      setJiraKey('');
+      setError('');
+    }
+  }, [open]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!jiraKey.trim()) return;

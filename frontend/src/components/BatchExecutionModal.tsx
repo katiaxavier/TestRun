@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Modal } from './Modal';
 import { executionsApi } from '../api/client';
 import type { Suite } from '../api/client';
@@ -10,6 +10,13 @@ export function BatchExecutionModal({
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (!open) {
+      setName('');
+      setError('');
+    }
+  }, [open]);
 
   const totalTests = suites.reduce((s, su) => s + (su._count?.testCases ?? 0), 0);
 
