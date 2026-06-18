@@ -41,7 +41,13 @@ export function ExecutionFormModal({ open, onClose, onSubmit, title = 'Novo Cicl
   };
 
   const set = (k: keyof ExecutionFormData) => (e: React.ChangeEvent<HTMLInputElement>) =>
-    setForm(f => ({ ...f, [k]: e.target.value }));
+    setForm(f => {
+      const updated = { ...f, [k]: e.target.value };
+      if (k === 'startDate' && updated.endDate && updated.endDate < e.target.value) {
+        updated.endDate = '';
+      }
+      return updated;
+    });
 
   return (
     <Modal open={open} onClose={onClose} title={title} maxWidth={580}
@@ -78,7 +84,7 @@ export function ExecutionFormModal({ open, onClose, onSubmit, title = 'Novo Cicl
           </div>
           <div className="form-group">
             <label className="form-label">Data de fim *</label>
-            <input type="date" value={form.endDate} onChange={set('endDate')} />
+            <input type="date" value={form.endDate} min={form.startDate} onChange={set('endDate')} />
           </div>
         </div>
         {error && (

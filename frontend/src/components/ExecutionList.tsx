@@ -62,7 +62,10 @@ export function ExecutionList({ executions, onExecutionClick }: ExecutionListPro
           <input
             type="date"
             value={periodStart}
-            onChange={e => setPeriodStart(e.target.value)}
+            onChange={e => {
+              setPeriodStart(e.target.value);
+              if (periodEnd && periodEnd < e.target.value) setPeriodEnd('');
+            }}
             style={{ flex: '0 1 150px', minWidth: 130 }}
           />
         </Tooltip>
@@ -70,6 +73,7 @@ export function ExecutionList({ executions, onExecutionClick }: ExecutionListPro
           <input
             type="date"
             value={periodEnd}
+            min={periodStart || undefined}
             onChange={e => setPeriodEnd(e.target.value)}
             style={{ flex: '0 1 150px', minWidth: 130 }}
           />
