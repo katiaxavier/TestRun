@@ -321,7 +321,7 @@ export class ReportsService {
       row.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
 
       if (etc.testCase.link) {
-        row.getCell(2).value = { text: etc.testCase.jiraKey, hyperlink: etc.testCase.link };
+        row.getCell(2).value = { formula: `HYPERLINK("${etc.testCase.link}","${etc.testCase.jiraKey}")`, result: etc.testCase.jiraKey };
       } else {
         row.getCell(2).value = etc.testCase.jiraKey;
       }
@@ -511,7 +511,7 @@ export class ReportsService {
         row.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
         row.getCell(3).value = suite?.jiraKey || '';
         if (etc.testCase.link) {
-          row.getCell(4).value = { text: etc.testCase.jiraKey, hyperlink: etc.testCase.link };
+          row.getCell(4).value = { formula: `HYPERLINK("${etc.testCase.link}","${etc.testCase.jiraKey}")`, result: etc.testCase.jiraKey };
         } else {
           row.getCell(4).value = etc.testCase.jiraKey;
         }
