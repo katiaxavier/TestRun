@@ -308,7 +308,7 @@ export class ReportsService {
 
     // Linha 7 – Cabeçalho da tabela
     const headerRow = ws.getRow(7);
-    headerRow.values = ['', 'Key', 'Título do teste', 'Status', 'Responsável', 'Comentários', 'Issues'];
+    headerRow.values = ['', 'ID', 'Título do teste', 'Status', 'Responsável', 'Comentários', 'Issues'];
     xlHeaderRow(headerRow, 7);
 
     // Linhas 8+ – Dados
@@ -495,7 +495,7 @@ export class ReportsService {
     xlMetaValue(ws.getCell('G3'), summary.pending);
 
     const headerRow = ws.getRow(4);
-    headerRow.values = ['#', '', 'Suíte', 'Key', 'Título do teste', 'Status', 'Responsável', 'Issues'];
+    headerRow.values = ['#', '', 'Suíte', 'ID', 'Título do teste', 'Status', 'Responsável', 'Issues'];
     xlHeaderRow(headerRow, 8);
 
     const allBatchTcs = report.executions.flatMap((ex) => ex.testCases);
@@ -618,7 +618,7 @@ export class ReportsService {
                   headerRows: 1,
                   widths: ['16%', '36%', '15%', '18%', '15%'],
                   body: [
-                    pdfHeaderCells(['Key', 'Caso de Teste', 'Status', 'Responsável', 'Issues']),
+                    pdfHeaderCells(['ID', 'Caso de Teste', 'Status', 'Responsável', 'Issues']),
                     ...suiteTcs.map((tc, i) => {
                       const bg = rowBg(i);
                       const issues = tc.issues.map((iss) => iss.jiraKey || iss.title).join(', ') || '-';
@@ -760,7 +760,7 @@ export class ReportsService {
                     headerRows: 1,
                     widths: ['16%', '36%', '15%', '18%', '15%'],
                     body: [
-                      pdfHeaderCells(['Key', 'Caso de Teste', 'Status', 'Responsável', 'Issues']),
+                      pdfHeaderCells(['ID', 'Caso de Teste', 'Status', 'Responsável', 'Issues']),
                       ...suiteTcs.map((tc, i) => {
                         const bg = rowBg(i);
                         const issues = tc.issues.map((iss) => iss.jiraKey || iss.title).join(', ') || '-';
@@ -785,7 +785,7 @@ export class ReportsService {
                 headerRows: 1,
                 widths: ['16%', '36%', '15%', '18%', '15%'],
                 body: [
-                  pdfHeaderCells(['Key', 'Caso de Teste', 'Status', 'Responsável', 'Issues']),
+                  pdfHeaderCells(['ID', 'Caso de Teste', 'Status', 'Responsável', 'Issues']),
                   ...execution.testCases.map((tc, i) => {
                     const bg = rowBg(i);
                     const issues = tc.issues.map((iss) => iss.jiraKey || iss.title).join(', ') || '-';
