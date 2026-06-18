@@ -16,10 +16,11 @@ const printer = new PdfPrinter(fonts);
 
 // ── Paleta ───────────────────────────────────────────────────────────────────
 
-const BLUE_DARK  = '1F4E78';
-const BLUE_MID   = '2E75B6';
-const BLUE_LABEL = 'D9E1F2';
-const ROW_ALT    = 'EEF5FF';
+const GRAY_DARK  = '3F3F3F';   // cinza — headers e títulos (texto branco)
+const ORANGE_ACC = 'FF6002';   // laranja — destaques e section headers
+const GRAY_LABEL = 'E8E8E8';   // cinza claro — células de label
+const LEAD_COLOR = '818B9D';   // chumbo — subtítulos e suíte headers no PDF
+const ROW_ALT    = 'F5F5F5';   // cinza sutilíssimo — linhas alternadas
 
 const XL_BORDER_THIN = {
   top:    { style: 'thin' as const, color: { argb: 'C8D0D8' } },
@@ -63,7 +64,7 @@ function xlTitleRow(ws: ExcelJS.Worksheet, merge: string, value: string, row: nu
   const c = ws.getCell(`A${row}`);
   c.value = value;
   c.font = { name: 'Arial', size: 15, bold: true, color: { argb: 'FFFFFF' } };
-  c.fill = xlFill(BLUE_DARK);
+  c.fill = xlFill(GRAY_DARK);
   c.alignment = { horizontal: 'center', vertical: 'middle' };
   ws.getRow(row).height = 40;
 }
@@ -72,14 +73,14 @@ function xlHeaderRow(row: ExcelJS.Row, count: number) {
   row.height = 24;
   for (let i = 1; i <= count; i++) {
     const c = row.getCell(i);
-    c.fill = xlFill(BLUE_DARK);
+    c.fill = xlFill(GRAY_DARK);
     c.font = { name: 'Arial', size: 11, bold: true, color: { argb: 'FFFFFF' } };
     c.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
     c.border = {
-      top:    { style: 'medium', color: { argb: BLUE_DARK } },
-      left:   { style: 'thin',   color: { argb: '4A6FA5' } },
-      bottom: { style: 'medium', color: { argb: BLUE_DARK } },
-      right:  { style: 'thin',   color: { argb: '4A6FA5' } },
+      top:    { style: 'medium', color: { argb: GRAY_DARK } },
+      left:   { style: 'thin',   color: { argb: '5A5A5A' } },
+      bottom: { style: 'medium', color: { argb: GRAY_DARK } },
+      right:  { style: 'thin',   color: { argb: '5A5A5A' } },
     };
   }
 }
@@ -97,7 +98,7 @@ function xlDataRow(row: ExcelJS.Row, count: number, isEven: boolean, skipFill: n
 function xlMetaLabel(c: ExcelJS.Cell, text: string) {
   c.value = text;
   c.font = { name: 'Arial', size: 11, bold: true };
-  c.fill = xlFill(BLUE_LABEL);
+  c.fill = xlFill(GRAY_LABEL);
   c.border = XL_BORDER_THIN;
   c.alignment = { vertical: 'middle' };
 }
@@ -120,7 +121,7 @@ function pdfSectionHeader(title: string): any {
         bold: true,
         fontSize: 11,
         color: '#FFFFFF',
-        fillColor: `#${BLUE_MID}`,
+        fillColor: `#${ORANGE_ACC}`,
         border: [false, false, false, false],
         margin: [8, 5, 8, 5],
       }]],
@@ -136,7 +137,7 @@ function pdfHeaderCells(labels: string[]): any[] {
     bold: true,
     fontSize: 9,
     color: '#FFFFFF',
-    fillColor: `#${BLUE_MID}`,
+    fillColor: `#${ORANGE_ACC}`,
     alignment: 'center',
     margin: [3, 5, 3, 5],
   }));
@@ -604,7 +605,7 @@ export class ReportsService {
                 text: `${suite.jiraKey} — ${suite.title}`,
                 fontSize: 10,
                 bold: true,
-                color: '#334155',
+                color: '#818B9D',
                 margin: [0, 10, 0, 4],
               },
               {
@@ -617,7 +618,7 @@ export class ReportsService {
                       const bg = rowBg(i);
                       const issues = tc.issues.map((iss) => iss.jiraKey || iss.title).join(', ') || '-';
                       return [
-                        pdfCell(tc.testCase.jiraKey, bg, { color: '#2563eb', decoration: 'underline' }),
+                        pdfCell(tc.testCase.jiraKey, bg, { color: '#FF6002', decoration: 'underline' }),
                         pdfCell(tc.testCase.title, bg),
                         pdfStatusCell(tc.status),
                         pdfCell(tc.responsible || '-', bg),
@@ -746,7 +747,7 @@ export class ReportsService {
                   text: `${suite.jiraKey} — ${suite.title}`,
                   fontSize: 10,
                   bold: true,
-                  color: '#334155',
+                  color: '#818B9D',
                   margin: [0, 10, 0, 4],
                 },
                 {
@@ -759,7 +760,7 @@ export class ReportsService {
                         const bg = rowBg(i);
                         const issues = tc.issues.map((iss) => iss.jiraKey || iss.title).join(', ') || '-';
                         return [
-                          pdfCell(tc.testCase.jiraKey, bg, { color: '#2563eb', decoration: 'underline' }),
+                          pdfCell(tc.testCase.jiraKey, bg, { color: '#FF6002', decoration: 'underline' }),
                           pdfCell(tc.testCase.title, bg),
                           pdfStatusCell(tc.status),
                           pdfCell(tc.responsible || '-', bg),
@@ -784,7 +785,7 @@ export class ReportsService {
                     const bg = rowBg(i);
                     const issues = tc.issues.map((iss) => iss.jiraKey || iss.title).join(', ') || '-';
                     return [
-                      pdfCell(tc.testCase.jiraKey, bg, { color: '#2563eb', decoration: 'underline' }),
+                      pdfCell(tc.testCase.jiraKey, bg, { color: '#FF6002', decoration: 'underline' }),
                       pdfCell(tc.testCase.title, bg),
                       pdfStatusCell(tc.status),
                       pdfCell(tc.responsible || '-', bg),
@@ -818,7 +819,7 @@ export class ReportsService {
           bold: true,
           fontSize: 16,
           color: '#FFFFFF',
-          fillColor: `#${BLUE_DARK}`,
+          fillColor: `#${GRAY_DARK}`,
           alignment: 'center',
           border: [false, false, false, false],
           margin: [0, 12, 0, 12],
@@ -847,12 +848,12 @@ export class ReportsService {
         widths: ['*', 'auto'],
         body: [
           [
-            { text: 'Métrica', bold: true, fontSize: 9, fillColor: `#${BLUE_MID}`, color: '#FFFFFF', alignment: 'center', margin: [4, 5, 4, 5] },
-            { text: 'Valor',   bold: true, fontSize: 9, fillColor: `#${BLUE_MID}`, color: '#FFFFFF', alignment: 'center', margin: [4, 5, 4, 5] },
+            { text: 'Métrica', bold: true, fontSize: 9, fillColor: `#${ORANGE_ACC}`, color: '#FFFFFF', alignment: 'center', margin: [4, 5, 4, 5] },
+            { text: 'Valor',   bold: true, fontSize: 9, fillColor: `#${ORANGE_ACC}`, color: '#FFFFFF', alignment: 'center', margin: [4, 5, 4, 5] },
           ],
           ...rows.map(([label, value], i) => [
-            { text: label, fontSize: 9, fillColor: i % 2 === 0 ? '#F8FAFC' : '#FFFFFF', margin: [4, 3, 4, 3] },
-            { text: value, fontSize: 9, fillColor: i % 2 === 0 ? '#F8FAFC' : '#FFFFFF', alignment: 'center', margin: [4, 3, 4, 3] },
+            { text: label, fontSize: 9, fillColor: i % 2 === 0 ? '#F5F5F5' : '#FFFFFF', margin: [4, 3, 4, 3] },
+            { text: value, fontSize: 9, fillColor: i % 2 === 0 ? '#F5F5F5' : '#FFFFFF', alignment: 'center', margin: [4, 3, 4, 3] },
           ]),
         ],
       },
