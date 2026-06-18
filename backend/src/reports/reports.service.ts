@@ -325,7 +325,7 @@ export class ReportsService {
       } else {
         row.getCell(2).value = etc.testCase.jiraKey;
       }
-      row.getCell(2).font = { name: 'Calibri', size: 11, color: { argb: '0563C1' }, underline: true };
+      row.getCell(2).font = { name: 'Calibri', size: 11, color: { argb: 'FF6002' }, underline: true };
 
       row.getCell(3).value = etc.testCase.title;
       row.getCell(3).alignment = { wrapText: true, vertical: 'middle' };
@@ -510,8 +510,12 @@ export class ReportsService {
         row.getCell(1).value = testIndex;
         row.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
         row.getCell(3).value = suite?.jiraKey || '';
-        row.getCell(4).value = etc.testCase.jiraKey;
-        row.getCell(4).font = { name: 'Calibri', size: 11, color: { argb: '0563C1' }, underline: true };
+        if (etc.testCase.link) {
+          row.getCell(4).value = { text: etc.testCase.jiraKey, hyperlink: etc.testCase.link };
+        } else {
+          row.getCell(4).value = etc.testCase.jiraKey;
+        }
+        row.getCell(4).font = { name: 'Calibri', size: 11, color: { argb: 'FF6002' }, underline: true };
         row.getCell(5).value = etc.testCase.title;
         row.getCell(5).alignment = { wrapText: true, vertical: 'middle' };
         row.getCell(6).value = etc.status;
@@ -612,14 +616,14 @@ export class ReportsService {
               {
                 table: {
                   headerRows: 1,
-                  widths: ['10%', '42%', '15%', '18%', '15%'],
+                  widths: ['16%', '36%', '15%', '18%', '15%'],
                   body: [
                     pdfHeaderCells(['Key', 'Caso de Teste', 'Status', 'Responsável', 'Issues']),
                     ...suiteTcs.map((tc, i) => {
                       const bg = rowBg(i);
                       const issues = tc.issues.map((iss) => iss.jiraKey || iss.title).join(', ') || '-';
                       return [
-                        pdfCell(tc.testCase.jiraKey, bg, { color: '#FF6002', decoration: 'underline' }),
+                        pdfCell(tc.testCase.jiraKey, bg, { color: '#FF6002', decoration: 'underline', ...(tc.testCase.link ? { link: tc.testCase.link } : {}) }),
                         pdfCell(tc.testCase.title, bg),
                         pdfStatusCell(tc.status),
                         pdfCell(tc.responsible || '-', bg),
@@ -754,14 +758,14 @@ export class ReportsService {
                 {
                   table: {
                     headerRows: 1,
-                    widths: ['10%', '42%', '15%', '18%', '15%'],
+                    widths: ['16%', '36%', '15%', '18%', '15%'],
                     body: [
                       pdfHeaderCells(['Key', 'Caso de Teste', 'Status', 'Responsável', 'Issues']),
                       ...suiteTcs.map((tc, i) => {
                         const bg = rowBg(i);
                         const issues = tc.issues.map((iss) => iss.jiraKey || iss.title).join(', ') || '-';
                         return [
-                          pdfCell(tc.testCase.jiraKey, bg, { color: '#FF6002', decoration: 'underline' }),
+                          pdfCell(tc.testCase.jiraKey, bg, { color: '#FF6002', decoration: 'underline', ...(tc.testCase.link ? { link: tc.testCase.link } : {}) }),
                           pdfCell(tc.testCase.title, bg),
                           pdfStatusCell(tc.status),
                           pdfCell(tc.responsible || '-', bg),
@@ -779,14 +783,14 @@ export class ReportsService {
           : [{
               table: {
                 headerRows: 1,
-                widths: ['10%', '42%', '15%', '18%', '15%'],
+                widths: ['16%', '36%', '15%', '18%', '15%'],
                 body: [
                   pdfHeaderCells(['Key', 'Caso de Teste', 'Status', 'Responsável', 'Issues']),
                   ...execution.testCases.map((tc, i) => {
                     const bg = rowBg(i);
                     const issues = tc.issues.map((iss) => iss.jiraKey || iss.title).join(', ') || '-';
                     return [
-                      pdfCell(tc.testCase.jiraKey, bg, { color: '#FF6002', decoration: 'underline' }),
+                      pdfCell(tc.testCase.jiraKey, bg, { color: '#FF6002', decoration: 'underline', ...(tc.testCase.link ? { link: tc.testCase.link } : {}) }),
                       pdfCell(tc.testCase.title, bg),
                       pdfStatusCell(tc.status),
                       pdfCell(tc.responsible || '-', bg),
