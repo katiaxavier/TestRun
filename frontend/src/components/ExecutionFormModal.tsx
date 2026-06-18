@@ -75,7 +75,7 @@ export function ExecutionFormModal({ open, onClose, onSubmit, title = 'Novo Cicl
         <div className="form-row">
           <div className="form-group">
             <label className="form-label">Sprint *</label>
-            <input placeholder="Ex: Sprint 42" value={form.sprint} onChange={set('sprint')} />
+            <input autoFocus placeholder="Ex: Sprint 42" value={form.sprint} onChange={set('sprint')} />
           </div>
           <div className="form-group">
             <label className="form-label">Versão do sistema</label>
