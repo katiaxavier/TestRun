@@ -53,6 +53,7 @@ function ImportModal({ open, onClose, onSuccess }: { open: boolean; onClose: () 
       }
     >
       <form onSubmit={handleSubmit}>
+        <button type="submit" style={{ display: 'none' }} aria-hidden />
         <div className="form-group">
           <label className="form-label">Key da suíte no Jira</label>
           <input
