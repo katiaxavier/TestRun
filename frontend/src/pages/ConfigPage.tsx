@@ -1,20 +1,33 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { FloppyDisk, Eye, EyeSlash, CheckCircle, WarningCircle } from '@phosphor-icons/react';
+import { FloppyDisk, Eye, EyeSlash, CheckCircle, WarningCircle, WifiHigh } from '@phosphor-icons/react';
 import { configApi } from '../api/client';
 import type { JiraConfig } from '../api/client';
 
+const EMPTY: JiraConfig = { url: '', email: '', token: '' };
+
+function isEqual(a: JiraConfig, b: JiraConfig) {
+  return a.url === b.url && a.email === b.email && a.token === b.token;
+}
+
 export default function ConfigPage() {
-  const [form, setForm] = useState<JiraConfig>({ url: '', email: '', token: '' });
+  const [form, setForm] = useState<JiraConfig>(EMPTY);
+  const [savedForm, setSavedForm] = useState<JiraConfig | null>(null);
   const [showToken, setShowToken] = useState(false);
   const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState('');
   const [fetching, setFetching] = useState(true);
 
+  const isConfigured = savedForm !== null && (savedForm.url || savedForm.email || savedForm.token);
+  const isDirty = savedForm === null || !isEqual(form, savedForm);
+
   useEffect(() => {
     configApi.get()
-      .then(r => setForm(r.data))
+      .then(r => {
+        setForm(r.data);
+        setSavedForm(r.data);
+      })
       .catch(() => {})
       .finally(() => setFetching(false));
   }, []);
@@ -22,7 +35,6 @@ export default function ConfigPage() {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    setSaved(false);
     if (!form.url || !form.email || !form.token) {
       setError('Preencha todos os campos.');
       return;
@@ -30,13 +42,18 @@ export default function ConfigPage() {
     setLoading(true);
     try {
       await configApi.save(form);
+      setSavedForm({ ...form });
       setSaved(true);
-      setTimeout(() => setSaved(false), 3000);
     } catch {
       setError('Erro ao salvar configurações.');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleChange = (field: keyof JiraConfig) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSaved(false);
+    setForm(f => ({ ...f, [field]: e.target.value }));
   };
 
   if (fetching) {
@@ -61,14 +78,25 @@ export default function ConfigPage() {
           <div className="card">
             <form onSubmit={handleSave}>
               <div style={{ marginBottom: '1.5rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--accent)' }} />
-                  <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                    Jira Cloud
-                  </span>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                      Credenciais
+                    </span>
+                  </div>
+                  {isConfigured && !isDirty && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.75rem', color: 'var(--status-passed)', fontWeight: 500 }}>
+                      <WifiHigh size={14} weight="bold" /> Conectado
+                    </div>
+                  )}
+                  {isDirty && savedForm !== null && isConfigured && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 500 }}>
+                      <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--text-muted)' }} /> Alterações não salvas
+                    </div>
+                  )}
                 </div>
                 <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                  As credenciais são salvas localmente no arquivo <code>config.json</code> da aplicação.
+                  Conecte sua conta do Jira para importar projetos e suítes de testes.
                 </p>
               </div>
 
@@ -78,7 +106,7 @@ export default function ConfigPage() {
                   type="url"
                   placeholder="https://sua-empresa.atlassian.net"
                   value={form.url}
-                  onChange={e => setForm(f => ({ ...f, url: e.target.value }))}
+                  onChange={handleChange('url')}
                 />
               </div>
 
@@ -88,7 +116,7 @@ export default function ConfigPage() {
                   type="email"
                   placeholder="voce@empresa.com"
                   value={form.email}
-                  onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+                  onChange={handleChange('email')}
                 />
               </div>
 
@@ -99,7 +127,7 @@ export default function ConfigPage() {
                     type={showToken ? 'text' : 'password'}
                     placeholder="Seu token da API do Jira"
                     value={form.token}
-                    onChange={e => setForm(f => ({ ...f, token: e.target.value }))}
+                    onChange={handleChange('token')}
                     style={{ paddingRight: '2.5rem' }}
                   />
                   <button
@@ -125,13 +153,13 @@ export default function ConfigPage() {
                 </div>
               )}
 
-              {saved && (
+              {saved && !isDirty && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem', background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.25)', borderRadius: 'var(--radius-sm)', marginBottom: '1rem', fontSize: '0.85rem', color: 'var(--status-passed)' }}>
                   <CheckCircle size={16} /> Configurações salvas com sucesso!
                 </div>
               )}
 
-              <button type="submit" className="btn btn-primary" disabled={loading} style={{ width: '100%', justifyContent: 'center' }}>
+              <button type="submit" className="btn btn-primary" disabled={loading || !isDirty} style={{ width: '100%', justifyContent: 'center' }}>
                 {loading ? <><div className="spinner" style={{ width: 16, height: 16 }} /> Salvando...</> : <><FloppyDisk size={16} /> Salvar configurações</>}
               </button>
             </form>
@@ -140,10 +168,10 @@ export default function ConfigPage() {
           <div className="card" style={{ marginTop: '1rem' }}>
             <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', lineHeight: 1.6 }}>
               <strong style={{ color: 'var(--text-secondary)' }}>Como obter o token:</strong><br />
-              1. Acesse seu Jira Cloud<br />
-              2. Clique no avatar → <strong>Manage account</strong><br />
-              3. Vá em <strong>Security → API tokens → Create API token</strong><br />
-              4. Copie e cole o token aqui
+              1. Acesse a página de <a href="https://id.atlassian.com/manage-profile/security/api-tokens" target="_blank" rel="noreferrer" style={{ color: 'var(--accent)' }}>Tokens de API da Atlassian</a><br />
+              2. Clique em <strong>Criar token de API</strong> (Create API token)<br />
+              3. Dê um nome para identificar o token (ex: <em>Exportador de Testes</em>) e clique em <strong>Criar</strong><br />
+              4. Copie o código gerado e salve-o em um local seguro — a Atlassian só exibe esse código uma vez!
             </p>
           </div>
         </div>
