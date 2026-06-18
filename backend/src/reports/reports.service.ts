@@ -4,7 +4,6 @@ import * as ExcelJS from 'exceljs';
 
 const PdfPrinter = require('pdfmake/src/printer');
 
-// Configurar as fontes padrão do pdfmake
 const fonts = {
   DejaVuSans: {
     normal: '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
@@ -15,6 +14,193 @@ const fonts = {
 };
 const printer = new PdfPrinter(fonts);
 
+// ── Paleta ───────────────────────────────────────────────────────────────────
+
+const BLUE_DARK  = '1F4E78';
+const BLUE_MID   = '2E75B6';
+const BLUE_LABEL = 'D9E1F2';
+const ROW_ALT    = 'EEF5FF';
+
+const XL_BORDER_THIN = {
+  top:    { style: 'thin' as const, color: { argb: 'C8D0D8' } },
+  left:   { style: 'thin' as const, color: { argb: 'C8D0D8' } },
+  bottom: { style: 'thin' as const, color: { argb: 'C8D0D8' } },
+  right:  { style: 'thin' as const, color: { argb: 'C8D0D8' } },
+};
+
+const STATUS_ARGB: Record<string, string> = {
+  PASSED:      'C6EFCE',
+  FAILED:      'FFCCCC',
+  BLOCKED:     'FFEB9C',
+  IN_PROGRESS: 'BDD7EE',
+  PENDING:     'EEEEEE',
+};
+
+const STATUS_HEX: Record<string, string> = {
+  PASSED:      '#E2EFDA',
+  FAILED:      '#FCE4D6',
+  BLOCKED:     '#FFF2CC',
+  IN_PROGRESS: '#DDEBF7',
+  PENDING:     '#F0F0F0',
+};
+
+const STATUS_LABEL: Record<string, string> = {
+  PASSED:      'Passou',
+  FAILED:      'Falhou',
+  BLOCKED:     'Bloqueado',
+  IN_PROGRESS: 'Em andamento',
+  PENDING:     'Pendente',
+};
+
+// ── Helpers Excel ─────────────────────────────────────────────────────────────
+
+function xlFill(argb: string): ExcelJS.Fill {
+  return { type: 'pattern', pattern: 'solid', fgColor: { argb } };
+}
+
+function xlTitleRow(ws: ExcelJS.Worksheet, merge: string, value: string, row: number) {
+  ws.mergeCells(merge);
+  const c = ws.getCell(`A${row}`);
+  c.value = value;
+  c.font = { name: 'Arial', size: 15, bold: true, color: { argb: 'FFFFFF' } };
+  c.fill = xlFill(BLUE_DARK);
+  c.alignment = { horizontal: 'center', vertical: 'middle' };
+  ws.getRow(row).height = 40;
+}
+
+function xlHeaderRow(row: ExcelJS.Row, count: number) {
+  row.height = 24;
+  for (let i = 1; i <= count; i++) {
+    const c = row.getCell(i);
+    c.fill = xlFill(BLUE_DARK);
+    c.font = { name: 'Arial', size: 11, bold: true, color: { argb: 'FFFFFF' } };
+    c.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+    c.border = {
+      top:    { style: 'medium', color: { argb: BLUE_DARK } },
+      left:   { style: 'thin',   color: { argb: '4A6FA5' } },
+      bottom: { style: 'medium', color: { argb: BLUE_DARK } },
+      right:  { style: 'thin',   color: { argb: '4A6FA5' } },
+    };
+  }
+}
+
+function xlDataRow(row: ExcelJS.Row, count: number, isEven: boolean, skipFill: number[] = []) {
+  row.height = 18;
+  const bg = isEven ? 'FFFFFF' : ROW_ALT;
+  for (let i = 1; i <= count; i++) {
+    const c = row.getCell(i);
+    if (!skipFill.includes(i)) c.fill = xlFill(bg);
+    c.border = XL_BORDER_THIN;
+  }
+}
+
+function xlMetaLabel(c: ExcelJS.Cell, text: string) {
+  c.value = text;
+  c.font = { name: 'Arial', size: 11, bold: true };
+  c.fill = xlFill(BLUE_LABEL);
+  c.border = XL_BORDER_THIN;
+  c.alignment = { vertical: 'middle' };
+}
+
+function xlMetaValue(c: ExcelJS.Cell, val: any) {
+  c.value = val;
+  c.font = { name: 'Arial', size: 11 };
+  c.border = XL_BORDER_THIN;
+  c.alignment = { vertical: 'middle' };
+}
+
+// ── Helpers PDF ───────────────────────────────────────────────────────────────
+
+function pdfSectionHeader(title: string): any {
+  return {
+    table: {
+      widths: ['*'],
+      body: [[{
+        text: title,
+        bold: true,
+        fontSize: 11,
+        color: '#FFFFFF',
+        fillColor: `#${BLUE_MID}`,
+        border: [false, false, false, false],
+        margin: [8, 5, 8, 5],
+      }]],
+    },
+    layout: 'noBorders',
+    margin: [0, 15, 0, 8],
+  };
+}
+
+function pdfHeaderCells(labels: string[]): any[] {
+  return labels.map((text) => ({
+    text,
+    bold: true,
+    fontSize: 9,
+    color: '#FFFFFF',
+    fillColor: `#${BLUE_MID}`,
+    alignment: 'center',
+    margin: [3, 5, 3, 5],
+  }));
+}
+
+function pdfCell(text: any, bg: string | null, extra: any = {}): any {
+  return { text: String(text ?? '-'), fontSize: 8, fillColor: bg, margin: [3, 3, 3, 3], ...extra };
+}
+
+function pdfStatusCell(status: string): any {
+  return {
+    text: STATUS_LABEL[status] ?? status,
+    fontSize: 8,
+    bold: true,
+    alignment: 'center',
+    fillColor: STATUS_HEX[status] ?? '#F0F0F0',
+    margin: [2, 4, 2, 4],
+  };
+}
+
+function rowBg(i: number): string | null {
+  return i % 2 === 1 ? '#F2F7FF' : null;
+}
+
+function buildChartCanvas(
+  segments: Array<{ count: number; color: string }>,
+  total: number,
+  width: number,
+  h: number,
+): any[] {
+  if (total <= 0) return [];
+  const rects: any[] = [{ type: 'rect', x: 0, y: 0, w: width, h, color: '#E2E8F0' }];
+  let x = 0;
+  for (const seg of segments) {
+    if (seg.count <= 0) continue;
+    const w = Math.max((seg.count / total) * width, 10);
+    rects.push({ type: 'rect', x, y: 0, w, h, color: seg.color });
+    x += w;
+  }
+  return rects;
+}
+
+function pdfFooter(date: string) {
+  return (currentPage: number, pageCount: number): any => ({
+    columns: [
+      { text: `Gerado em ${date}`, fontSize: 7, color: '#94a3b8', margin: [40, 8, 0, 0] },
+      { text: `Página ${currentPage} de ${pageCount}`, fontSize: 7, color: '#94a3b8', alignment: 'right', margin: [0, 8, 40, 0] },
+    ],
+  });
+}
+
+const TABLE_LAYOUT = {
+  hLineWidth: () => 0.5,
+  vLineWidth: () => 0.5,
+  hLineColor: () => '#CBD5E1',
+  vLineColor: () => '#CBD5E1',
+  paddingLeft:   () => 4,
+  paddingRight:  () => 4,
+  paddingTop:    () => 2,
+  paddingBottom: () => 2,
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 @Injectable()
 export class ReportsService {
   constructor(private readonly prisma: PrismaService) {}
@@ -22,11 +208,19 @@ export class ReportsService {
   private formatDate(date: Date): string {
     if (!date) return '-';
     const d = new Date(date);
-    const year = d.getFullYear();
+    const day   = String(d.getDate()).padStart(2, '0');
     const month = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+    return `${day}/${month}/${d.getFullYear()}`;
   }
+
+  private get today(): string {
+    const d = new Date();
+    const day   = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    return `${day}/${month}/${d.getFullYear()}`;
+  }
+
+  // ── Excel – ciclo individual ────────────────────────────────────────────────
 
   async generateXlsx(executionId: string): Promise<Buffer> {
     const execution = await this.prisma.execution.findUnique({
@@ -34,289 +228,163 @@ export class ReportsService {
       include: {
         suite: true,
         testCases: {
-          include: {
-            testCase: true,
-            issues: true,
-          },
-          orderBy: {
-            testCase: {
-              jiraKey: 'asc',
-            },
-          },
+          include: { testCase: true, issues: true },
+          orderBy: { testCase: { jiraKey: 'asc' } },
         },
       },
     });
 
     if (!execution) {
-      throw new HttpException(
-        'Ciclo de execução não encontrado.',
-        HttpStatus.NOT_FOUND,
-      );
+      throw new HttpException('Ciclo de execução não encontrado.', HttpStatus.NOT_FOUND);
     }
 
     const workbook = new ExcelJS.Workbook();
 
-    // ----------------------------------------------------
-    // ABA 1: Visualizar Resultado
-    // ----------------------------------------------------
+    // ── Aba 1: Visualizar Resultado ──────────────────────────────────────────
     const ws = workbook.addWorksheet('Visualizar Resultado');
-
-    // Configurar larguras das colunas com base no template
     ws.columns = [
-      { key: 'index', width: 6 },
-      { key: 'key', width: 12 },
-      { key: 'title', width: 65 },
-      { key: 'status', width: 18 },
-      { key: 'responsible', width: 15 },
-      { key: 'comments', width: 20 },
-      { key: 'issue', width: 15 },
+      { key: 'index',       width: 6  },
+      { key: 'key',         width: 14 },
+      { key: 'title',       width: 65 },
+      { key: 'status',      width: 18 },
+      { key: 'responsible', width: 18 },
+      { key: 'comments',    width: 22 },
+      { key: 'issue',       width: 18 },
     ];
 
-    // Linha 1: Título do Relatório
-    ws.mergeCells('A1:G1');
-    const titleCell = ws.getCell('A1');
-    titleCell.value = 'Relatório de Execução';
-    titleCell.font = {
-      name: 'Arial',
-      size: 14,
-      bold: true,
-      color: { argb: '000000' },
-    };
-    titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
-    ws.getRow(1).height = 30;
+    // Linha 1 – Título
+    xlTitleRow(ws, 'A1:G1', 'Relatório de Execução', 1);
 
-    // Estilos gerais para labels de metadados
-    const boldLabelFont = { name: 'Arial', size: 11, bold: true };
-    const normalFont = { name: 'Arial', size: 11 };
+    // Linhas 2-6 – Metadados
+    ws.getRow(2).height = 22;
+    xlMetaLabel(ws.getCell('A2'), 'Sprint');
+    xlMetaValue(ws.getCell('C2'), execution.sprint);
+    xlMetaLabel(ws.getCell('D2'), '% Aprovação');
+    const e2 = ws.getCell('E2');
+    e2.value = { formula: 'G2/G6' };
+    e2.numFmt = '0.0%';
+    e2.font = { name: 'Arial', size: 11 };
+    e2.border = XL_BORDER_THIN;
+    xlMetaLabel(ws.getCell('F2'), 'Total Passou');
+    xlMetaValue(ws.getCell('G2'), { formula: 'COUNTIF(D8:D1000,"Passed")' });
 
-    // Linha 2
-    ws.getCell('A2').value = 'Sprint';
-    ws.getCell('A2').font = boldLabelFont;
-    ws.getCell('C2').value = execution.sprint;
-    ws.getCell('C2').font = normalFont;
-    ws.getCell('C2').alignment = { horizontal: 'right' };
+    ws.getRow(3).height = 22;
+    xlMetaLabel(ws.getCell('A3'), 'Versão do sistema');
+    xlMetaValue(ws.getCell('C3'), execution.version);
+    xlMetaLabel(ws.getCell('D3'), '% S/ Bloqueios');
+    const e3 = ws.getCell('E3');
+    e3.value = { formula: 'IF((G6-G4)>0, G2/(G6-G4), 0)' };
+    e3.numFmt = '0.0%';
+    e3.font = { name: 'Arial', size: 11 };
+    e3.border = XL_BORDER_THIN;
+    xlMetaLabel(ws.getCell('F3'), 'Total Falhou');
+    xlMetaValue(ws.getCell('G3'), { formula: 'COUNTIF(D8:D1000,"Failed")' });
 
-    ws.getCell('D2').value = '%(Passou/Total)';
-    ws.getCell('D2').font = normalFont;
-    ws.getCell('E2').value = { formula: 'G2/G6' };
-    ws.getCell('E2').font = normalFont;
-    ws.getCell('E2').numFmt = '0%';
-    ws.getCell('F2').value = 'Total Passou';
-    ws.getCell('F2').font = normalFont;
-    ws.getCell('G2').value = { formula: 'COUNTIF(D8:D1000,"Passed")' };
-    ws.getCell('G2').font = normalFont;
+    ws.getRow(4).height = 22;
+    xlMetaLabel(ws.getCell('A4'), 'Data de início');
+    xlMetaValue(ws.getCell('C4'), this.formatDate(execution.startDate));
+    xlMetaLabel(ws.getCell('F4'), 'Total Bloqueado');
+    xlMetaValue(ws.getCell('G4'), { formula: 'COUNTIF(D8:D1000,"Blocked")' });
 
-    // Linha 3
-    ws.getCell('A3').value = 'Versão do sistema';
-    ws.getCell('A3').font = boldLabelFont;
-    ws.getCell('C3').value = execution.version;
-    ws.getCell('C3').font = normalFont;
+    ws.getRow(5).height = 22;
+    xlMetaLabel(ws.getCell('A5'), 'Data de fim');
+    xlMetaValue(ws.getCell('C5'), this.formatDate(execution.endDate));
+    xlMetaLabel(ws.getCell('F5'), 'Total Executado');
+    xlMetaValue(ws.getCell('G5'), { formula: 'G2+G3+G4' });
 
-    ws.getCell('D3').value =
-      'Descontando os Blocked (Passou/(Total - Blocked))';
-    ws.getCell('D3').font = normalFont;
-    ws.getCell('E3').value = { formula: 'IF((G6-G4)>0, G2/(G6-G4), 0)' };
-    ws.getCell('E3').font = normalFont;
-    ws.getCell('E3').numFmt = '0%';
-    ws.getCell('F3').value = 'Total Falhou';
-    ws.getCell('F3').font = normalFont;
-    ws.getCell('G3').value = { formula: 'COUNTIF(D8:D1000,"Failed")' };
-    ws.getCell('G3').font = normalFont;
+    ws.getRow(6).height = 22;
+    xlMetaLabel(ws.getCell('A6'), 'Suíte');
+    xlMetaValue(ws.getCell('C6'), execution.suite ? `${execution.suite.jiraKey} — ${execution.suite.title}` : '-');
+    xlMetaLabel(ws.getCell('F6'), 'Total de testes');
+    xlMetaValue(ws.getCell('G6'), execution.testCases.length);
 
-    // Linha 4
-    ws.getCell('A4').value = 'Data de início';
-    ws.getCell('A4').font = boldLabelFont;
-    ws.getCell('C4').value = this.formatDate(execution.startDate);
-    ws.getCell('C4').font = normalFont;
+    // Linha 7 – Cabeçalho da tabela
+    const headerRow = ws.getRow(7);
+    headerRow.values = ['', 'Key', 'Título do teste', 'Status', 'Responsável', 'Comentários', 'Issues'];
+    xlHeaderRow(headerRow, 7);
 
-    ws.getCell('F4').value = 'Total Bloqueado';
-    ws.getCell('F4').font = normalFont;
-    ws.getCell('G4').value = { formula: 'COUNTIF(D8:D1000,"Blocked")' };
-    ws.getCell('G4').font = normalFont;
-
-    // Linha 5
-    ws.getCell('A5').value = 'Data de fim';
-    ws.getCell('A5').font = boldLabelFont;
-    ws.getCell('C5').value = this.formatDate(execution.endDate);
-    ws.getCell('C5').font = normalFont;
-
-    ws.getCell('F5').value = 'Total Executado';
-    ws.getCell('F5').font = normalFont;
-    ws.getCell('G5').value = { formula: 'G2+G3+G4' };
-    ws.getCell('G5').font = normalFont;
-
-    // Linha 6
-    ws.getCell('A6').value = 'Funcionalidade a ser testada';
-    ws.getCell('A6').font = boldLabelFont;
-    ws.getCell('C6').value = execution.testedFeature;
-    ws.getCell('C6').font = normalFont;
-
-    ws.getCell('F6').value = 'Numero total de testes';
-    ws.getCell('F6').font = normalFont;
-    // O total de testes pode ser o tamanho da lista estática de casos
-    ws.getCell('G6').value = execution.testCases.length;
-    ws.getCell('G6').font = normalFont;
-
-    // Linha 7: Cabeçalhos da Tabela
-    ws.getRow(7).values = [
-      '',
-      'Key',
-      'Título do teste',
-      'Status',
-      'Responsável',
-      'Comentarios',
-      'Issue',
-    ];
-    ws.getRow(7).font = { name: 'Arial', size: 11, bold: true };
-    ws.getRow(7).height = 20;
-
-    // Linha 8+: Casos de Teste
-    let rowIndex = 8;
+    // Linhas 8+ – Dados
     execution.testCases.forEach((etc, idx) => {
-      const row = ws.getRow(rowIndex);
-
+      const row = ws.getRow(idx + 8);
       const jiraIssues = etc.issues.map((i) => i.jiraKey || i.title).join(', ');
+      const statusArgb = STATUS_ARGB[etc.status] ?? 'EEEEEE';
 
-      row.getCell(1).value = idx + 1; // Index
-      row.getCell(2).value = etc.testCase.jiraKey; // Key
-      row.getCell(3).value = etc.testCase.title; // Título do teste
-      row.getCell(4).value = etc.status; // Status (Passed, Failed, etc)
-      row.getCell(5).value = etc.responsible || ''; // Responsável
-      row.getCell(6).value = etc.comments || ''; // Comentarios
-      row.getCell(7).value = jiraIssues || ''; // Issue (Bugs)
+      row.getCell(1).value = idx + 1;
+      row.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
 
-      // Aplicar fontes de acordo com a análise do template
-      row.getCell(1).font = { name: 'Calibri', size: 11 };
-      row.getCell(1).alignment = { horizontal: 'center' };
-
-      // Chave em azul como hiperlink
-      row.getCell(2).font = {
-        name: 'Calibri',
-        size: 11,
-        color: { argb: '0000FF' },
-        underline: true,
-      };
       if (etc.testCase.link) {
-        row.getCell(2).value = {
-          text: etc.testCase.jiraKey,
-          hyperlink: etc.testCase.link,
-        };
+        row.getCell(2).value = { text: etc.testCase.jiraKey, hyperlink: etc.testCase.link };
+      } else {
+        row.getCell(2).value = etc.testCase.jiraKey;
       }
+      row.getCell(2).font = { name: 'Calibri', size: 11, color: { argb: '0563C1' }, underline: true };
 
-      row.getCell(3).font = { name: 'Calibri', size: 12 };
-      row.getCell(4).font = { name: 'Calibri', size: 12 };
-      row.getCell(5).font = { name: 'Calibri', size: 12 };
-      row.getCell(6).font = { name: 'Arial', size: 11 };
-      row.getCell(7).font = { name: 'Calibri', size: 11 };
+      row.getCell(3).value = etc.testCase.title;
+      row.getCell(3).alignment = { wrapText: true, vertical: 'middle' };
 
-      // Cor de fundo leve nos status para visualização premium
-      const statusValue = String(etc.status).toUpperCase();
-      let statusColor = 'FFFFFF';
-      if (statusValue === 'PASSED')
-        statusColor = 'E2EFDA'; // Verde claro
-      else if (statusValue === 'FAILED')
-        statusColor = 'FCE4D6'; // Vermelho claro
-      else if (statusValue === 'BLOCKED')
-        statusColor = 'FFF2CC'; // Amarelo/Laranja claro
-      else if (statusValue === 'IN_PROGRESS') statusColor = 'DDEBF7'; // Azul claro
+      row.getCell(4).value = etc.status;
+      row.getCell(4).fill = xlFill(statusArgb);
+      row.getCell(4).font = { name: 'Calibri', size: 11, bold: true };
+      row.getCell(4).alignment = { horizontal: 'center', vertical: 'middle' };
 
-      if (statusColor !== 'FFFFFF') {
-        row.getCell(4).fill = {
-          type: 'pattern',
-          pattern: 'solid',
-          fgColor: { argb: statusColor },
-        };
-      }
+      row.getCell(5).value = etc.responsible || '';
+      row.getCell(6).value = etc.comments || '';
+      row.getCell(6).alignment = { wrapText: true, vertical: 'middle' };
+      row.getCell(7).value = jiraIssues || '';
 
-      rowIndex++;
+      xlDataRow(row, 7, idx % 2 === 0, [4]);
     });
 
-    // ----------------------------------------------------
-    // ABA 2: Bugs e Melhorias
-    // ----------------------------------------------------
+    // ── Aba 2: Bugs e Melhorias ──────────────────────────────────────────────
     const wsBugs = workbook.addWorksheet('Bugs e Melhorias');
     wsBugs.columns = [
-      { key: 'type', width: 12 },
-      { key: 'key', width: 15 },
-      { key: 'title', width: 66 },
-      { key: 'severity', width: 12 },
-      { key: 'createdAt', width: 15 },
-      { key: 'updatedAt', width: 15 },
-      { key: 'status', width: 13 },
-      { key: 'responsible', width: 15 },
+      { key: 'type',        width: 12 },
+      { key: 'key',         width: 16 },
+      { key: 'title',       width: 66 },
+      { key: 'severity',    width: 14 },
+      { key: 'createdAt',   width: 16 },
+      { key: 'updatedAt',   width: 16 },
+      { key: 'status',      width: 14 },
+      { key: 'responsible', width: 16 },
     ];
 
-    // Linha 1: Cabeçalho da página
-    wsBugs.mergeCells('A1:H1');
-    const bugsTitle = wsBugs.getCell('A1');
-    bugsTitle.value = 'Bugs e Melhorias reportados durante execução';
-    bugsTitle.font = { name: 'Arial', size: 11, bold: true };
-    wsBugs.getRow(1).height = 25;
+    xlTitleRow(wsBugs, 'A1:H1', 'Bugs e Melhorias', 1);
 
-    // Linha 2: Cabeçalhos das Colunas
-    wsBugs.getRow(2).values = [
-      'Tipo',
-      'ID',
-      'Titulo',
-      'Severidade',
-      'Data de criação',
-      'Data de atualização',
-      'Status',
-      'Responsável',
-    ];
-    wsBugs.getRow(2).font = { name: 'Arial', size: 11, bold: true };
-    wsBugs.getRow(2).height = 20;
+    const bugsHeader = wsBugs.getRow(2);
+    bugsHeader.values = ['Tipo', 'ID', 'Título', 'Severidade', 'Criado em', 'Atualizado em', 'Status', 'Responsável'];
+    xlHeaderRow(bugsHeader, 8);
 
-    // Extrair todas as issues de todos os test cases executados
-    const allIssues: Array<{
-      type: string;
-      jiraKey: string;
-      title: string;
-      severity: string;
-      createdAt: Date;
-      updatedAt: Date;
-      status: string;
-      responsible: string;
-    }> = [];
-
+    const allIssues: any[] = [];
     execution.testCases.forEach((etc) => {
       etc.issues.forEach((issue) => {
         allIssues.push({
-          type: issue.type === 'BUG' ? 'Bug' : 'Melhoria',
-          jiraKey: issue.jiraKey || 'N/A',
-          title: issue.title,
-          severity: issue.severity || '-',
-          createdAt: issue.createdAt,
-          updatedAt: issue.updatedAt,
-          status: issue.status || 'Open',
+          type:        issue.type === 'BUG' ? 'Bug' : 'Melhoria',
+          jiraKey:     issue.jiraKey || 'N/A',
+          title:       issue.title,
+          severity:    issue.severity || '-',
+          createdAt:   this.formatDate(issue.createdAt),
+          updatedAt:   this.formatDate(issue.updatedAt),
+          status:      issue.status || 'Open',
           responsible: issue.responsible || '-',
         });
       });
     });
 
-    let bugsRowIndex = 3;
-    allIssues.forEach((issue) => {
-      const row = wsBugs.getRow(bugsRowIndex);
+    allIssues.forEach((issue, idx) => {
+      const row = wsBugs.getRow(idx + 3);
       row.values = [
-        issue.type,
-        issue.jiraKey,
-        issue.title,
-        issue.severity,
-        this.formatDate(issue.createdAt),
-        this.formatDate(issue.updatedAt),
-        issue.status,
-        issue.responsible,
+        issue.type, issue.jiraKey, issue.title, issue.severity,
+        issue.createdAt, issue.updatedAt, issue.status, issue.responsible,
       ];
-
-      // Aplicar estilos básicos
       row.font = { name: 'Arial', size: 11 };
-
-      bugsRowIndex++;
+      xlDataRow(row, 8, idx % 2 === 0);
     });
 
     const buffer = await workbook.xlsx.writeBuffer();
     return Buffer.from(buffer);
   }
+
+  // ── Batch report data ───────────────────────────────────────────────────────
 
   async getBatchReport(batchId: string) {
     const batch = await this.prisma.executionBatch.findUnique({
@@ -338,425 +406,238 @@ export class ReportsService {
       throw new HttpException('Batch não encontrado.', HttpStatus.NOT_FOUND);
     }
 
+    // Busca as suítes pelos IDs registrados no lote
+    const suiteIds = Array.isArray(batch.suiteIds) ? (batch.suiteIds as string[]) : [];
+    const suites = suiteIds.length > 0
+      ? await this.prisma.suite.findMany({ where: { id: { in: suiteIds } } })
+      : [];
+
     const allTestCases = batch.executions.flatMap((ex) => ex.testCases);
 
     const summary = {
-      totalTests: allTestCases.length,
-      passed: allTestCases.filter((tc) => tc.status === 'PASSED').length,
-      failed: allTestCases.filter((tc) => tc.status === 'FAILED').length,
-      blocked: allTestCases.filter((tc) => tc.status === 'BLOCKED').length,
-      inProgress: allTestCases.filter((tc) => tc.status === 'IN_PROGRESS')
-        .length,
-      pending: allTestCases.filter((tc) => tc.status === 'PENDING').length,
+      totalTests:  allTestCases.length,
+      passed:      allTestCases.filter((tc) => tc.status === 'PASSED').length,
+      failed:      allTestCases.filter((tc) => tc.status === 'FAILED').length,
+      blocked:     allTestCases.filter((tc) => tc.status === 'BLOCKED').length,
+      inProgress:  allTestCases.filter((tc) => tc.status === 'IN_PROGRESS').length,
+      pending:     allTestCases.filter((tc) => tc.status === 'PENDING').length,
     };
 
     return {
       batch: {
-        id: batch.id,
-        name: batch.name,
+        id:            batch.id,
+        name:          batch.name,
         testedFeature: batch.testedFeature,
-        status: batch.status,
-        suiteIds: batch.suiteIds,
+        status:        batch.status,
+        suiteIds:      batch.suiteIds,
       },
+      suites,
       summary,
       executions: batch.executions.map((ex) => ({
-        id: ex.id,
-        suite: ex.suite,
-        sprint: ex.sprint,
-        version: ex.version,
-        startDate: ex.startDate,
-        endDate: ex.endDate,
+        id:            ex.id,
+        suite:         ex.suite,
+        sprint:        ex.sprint,
+        version:       ex.version,
+        startDate:     ex.startDate,
+        endDate:       ex.endDate,
         testedFeature: ex.testedFeature,
-        responsible: ex.responsible,
-        status: ex.status,
-        testCases: ex.testCases,
+        responsible:   ex.responsible,
+        status:        ex.status,
+        testCases:     ex.testCases,
       })),
     };
   }
 
+  // ── Excel – lote ────────────────────────────────────────────────────────────
+
   async generateBatchXlsx(batchId: string): Promise<Buffer> {
     const report = await this.getBatchReport(batchId);
-    const batch = report.batch;
-    const summary = report.summary;
+    const { batch, summary } = report;
 
     const workbook = new ExcelJS.Workbook();
-
     const ws = workbook.addWorksheet('Relatório Consolidado');
     ws.columns = [
-      { key: 'index', width: 6 },
-      { key: 'suite', width: 15 },
-      { key: 'key', width: 12 },
-      { key: 'title', width: 65 },
-      { key: 'status', width: 18 },
-      { key: 'responsible', width: 15 },
-      { key: 'comments', width: 20 },
-      { key: 'issue', width: 15 },
+      { key: 'index',       width: 6  },
+      { key: 'empty',       width: 4  },
+      { key: 'suite',       width: 16 },
+      { key: 'key',         width: 14 },
+      { key: 'title',       width: 65 },
+      { key: 'status',      width: 18 },
+      { key: 'responsible', width: 18 },
+      { key: 'issue',       width: 18 },
     ];
 
-    ws.mergeCells('A1:H1');
-    const titleCell = ws.getCell('A1');
-    titleCell.value = `Relatório Consolidado - ${batch.name || 'Batch ' + batch.id}`;
-    titleCell.font = {
-      name: 'Arial',
-      size: 14,
-      bold: true,
-      color: { argb: '000000' },
-    };
-    titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
-    ws.getRow(1).height = 30;
+    xlTitleRow(ws, 'A1:H1', `Relatório Consolidado — ${batch.name || 'Lote ' + batch.id}`, 1);
 
-    const boldLabelFont = { name: 'Arial', size: 11, bold: true };
-    const normalFont = { name: 'Arial', size: 11 };
+    ws.getRow(2).height = 22;
+    xlMetaLabel(ws.getCell('A2'), 'Total de Testes');
+    xlMetaValue(ws.getCell('C2'), summary.totalTests);
+    xlMetaLabel(ws.getCell('D2'), 'Passou');
+    xlMetaValue(ws.getCell('E2'), summary.passed);
+    xlMetaLabel(ws.getCell('F2'), 'Falhou');
+    xlMetaValue(ws.getCell('G2'), summary.failed);
 
-    let rowIdx = 2;
+    ws.getRow(3).height = 22;
+    xlMetaLabel(ws.getCell('A3'), 'Suítes');
+    const suiteNamesBatch = report.suites.map((s) => `${s.jiraKey} — ${s.title}`).join(' | ');
+    xlMetaValue(ws.getCell('C3'), suiteNamesBatch || '-');
+    xlMetaLabel(ws.getCell('D3'), 'Bloqueado');
+    xlMetaValue(ws.getCell('E3'), summary.blocked);
+    xlMetaLabel(ws.getCell('F3'), 'Pendente');
+    xlMetaValue(ws.getCell('G3'), summary.pending);
 
-    ws.getCell(`A${rowIdx}`).value = 'Total de Testes';
-    ws.getCell(`A${rowIdx}`).font = boldLabelFont;
-    ws.getCell(`C${rowIdx}`).value = summary.totalTests;
-    ws.getCell(`C${rowIdx}`).font = normalFont;
+    const headerRow = ws.getRow(4);
+    headerRow.values = ['#', '', 'Suíte', 'Key', 'Título do teste', 'Status', 'Responsável', 'Issues'];
+    xlHeaderRow(headerRow, 8);
 
-    ws.getCell(`D${rowIdx}`).value = 'Passou';
-    ws.getCell(`D${rowIdx}`).font = normalFont;
-    ws.getCell(`E${rowIdx}`).value = summary.passed;
-    ws.getCell(`E${rowIdx}`).font = normalFont;
-
-    ws.getCell(`F${rowIdx}`).value = 'Falhou';
-    ws.getCell(`F${rowIdx}`).font = normalFont;
-    ws.getCell(`G${rowIdx}`).value = summary.failed;
-    ws.getCell(`G${rowIdx}`).font = normalFont;
-    rowIdx++;
-
-    ws.getCell(`A${rowIdx}`).value = 'Funcionalidade';
-    ws.getCell(`A${rowIdx}`).font = boldLabelFont;
-    ws.getCell(`C${rowIdx}`).value = batch.testedFeature;
-    ws.getCell(`C${rowIdx}`).font = normalFont;
-    rowIdx++;
-
-    ws.getRow(rowIdx).values = [
-      '',
-      '',
-      'Suíte',
-      'Key',
-      'Título do teste',
-      'Status',
-      'Responsável',
-      'Issue',
-    ];
-    ws.getRow(rowIdx).font = { name: 'Arial', size: 11, bold: true };
-    ws.getRow(rowIdx).height = 20;
-    rowIdx++;
-
+    const allBatchTcs = report.executions.flatMap((ex) => ex.testCases);
     let testIndex = 1;
-    report.executions.forEach((ex) => {
-      ex.testCases.forEach((etc) => {
-        const row = ws.getRow(rowIdx);
-        const jiraIssues = etc.issues
-          .map((i) => i.jiraKey || i.title)
-          .join(', ');
-        row.getCell(1).value = testIndex++;
-        row.getCell(2).value = '';
-        row.getCell(3).value = ex.suite?.jiraKey || '';
+    let rowIdx = 5;
+    allBatchTcs.forEach((etc) => {
+      const row = ws.getRow(rowIdx);
+      const jiraIssues = etc.issues.map((i) => i.jiraKey || i.title).join(', ');
+      const statusArgb = STATUS_ARGB[etc.status] ?? 'EEEEEE';
+      const suite = report.suites.find((s) => s.id === etc.testCase.suiteId);
+
+        row.getCell(1).value = testIndex;
+        row.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
+        row.getCell(3).value = suite?.jiraKey || '';
         row.getCell(4).value = etc.testCase.jiraKey;
+        row.getCell(4).font = { name: 'Calibri', size: 11, color: { argb: '0563C1' }, underline: true };
         row.getCell(5).value = etc.testCase.title;
+        row.getCell(5).alignment = { wrapText: true, vertical: 'middle' };
         row.getCell(6).value = etc.status;
+        row.getCell(6).fill = xlFill(statusArgb);
+        row.getCell(6).font = { name: 'Calibri', size: 11, bold: true };
+        row.getCell(6).alignment = { horizontal: 'center', vertical: 'middle' };
         row.getCell(7).value = etc.responsible || '';
         row.getCell(8).value = jiraIssues || '';
 
-        row.getCell(1).font = { name: 'Calibri', size: 11 };
-        row.getCell(1).alignment = { horizontal: 'center' };
-        row.getCell(3).font = { name: 'Calibri', size: 11 };
-        row.getCell(4).font = {
-          name: 'Calibri',
-          size: 11,
-          color: { argb: '0000FF' },
-          underline: true,
-        };
-        row.getCell(5).font = { name: 'Calibri', size: 12 };
-        row.getCell(6).font = { name: 'Calibri', size: 12 };
-        row.getCell(7).font = { name: 'Calibri', size: 12 };
-        row.getCell(8).font = { name: 'Calibri', size: 11 };
-
-        const statusValue = String(etc.status).toUpperCase();
-        let statusColor = 'FFFFFF';
-        if (statusValue === 'PASSED') statusColor = 'E2EFDA';
-        else if (statusValue === 'FAILED') statusColor = 'FCE4D6';
-        else if (statusValue === 'BLOCKED') statusColor = 'FFF2CC';
-        else if (statusValue === 'IN_PROGRESS') statusColor = 'DDEBF7';
-
-        if (statusColor !== 'FFFFFF') {
-          row.getCell(6).fill = {
-            type: 'pattern',
-            pattern: 'solid',
-            fgColor: { argb: statusColor },
-          };
-        }
-
+        xlDataRow(row, 8, testIndex % 2 !== 0, [6]);
+        testIndex++;
         rowIdx++;
-      });
     });
 
     const buffer = await workbook.xlsx.writeBuffer();
     return Buffer.from(buffer);
   }
 
+  // ── PDF – lote ──────────────────────────────────────────────────────────────
+
   async generateBatchPdf(batchId: string): Promise<Buffer> {
     const report = await this.getBatchReport(batchId);
-    const batch = report.batch;
-    const summary = report.summary;
+    const { batch, summary } = report;
 
-    const approvalRate =
-      summary.totalTests > 0 ? (summary.passed / summary.totalTests) * 100 : 0;
-    const adjustedRate =
-      summary.totalTests - summary.blocked > 0
-        ? (summary.passed / (summary.totalTests - summary.blocked)) * 100
-        : 0;
+    const approvalRate = summary.totalTests > 0 ? (summary.passed / summary.totalTests) * 100 : 0;
+    const adjustedRate = summary.totalTests - summary.blocked > 0
+      ? (summary.passed / (summary.totalTests - summary.blocked)) * 100
+      : 0;
     const executedTests = summary.passed + summary.failed + summary.blocked;
 
     const chartSegments = [
-      { label: 'Passou', count: summary.passed, color: '#22c55e' },
-      { label: 'Falhou', count: summary.failed, color: '#ef4444' },
-      { label: 'Bloqueado', count: summary.blocked, color: '#ffd15a' },
-      { label: 'Pendente', count: summary.pending, color: '#0066ff' },
+      { label: 'Passou',    count: summary.passed,  color: '#22c55e' },
+      { label: 'Falhou',    count: summary.failed,  color: '#ef4444' },
+      { label: 'Bloqueado', count: summary.blocked, color: '#f59e0b' },
+      { label: 'Pendente',  count: summary.pending, color: '#3b82f6' },
     ];
-
-    const chartWidth = 460;
-    let chartCurrentX = 0;
-    const chartCanvas: any[] = [];
-
-    if (summary.totalTests > 0) {
-      chartCanvas.push({
-        type: 'rect',
-        x: 0,
-        y: 0,
-        w: chartWidth,
-        h: 16,
-        color: '#f8fafc',
-      });
-      chartSegments.forEach((segment) => {
-        if (segment.count <= 0) return;
-        const width = Math.max(
-          (segment.count / summary.totalTests) * chartWidth,
-          12,
-        );
-        chartCanvas.push({
-          type: 'rect',
-          x: chartCurrentX,
-          y: 0,
-          w: width,
-          h: 16,
-          color: segment.color,
-        });
-        chartCurrentX += width;
-      });
-    }
 
     const allIssues: any[] = [];
     report.executions.forEach((ex) => {
       ex.testCases.forEach((etc) => {
         etc.issues.forEach((issue) => {
           allIssues.push({
-            type: issue.type === 'BUG' ? 'Bug' : 'Melhoria',
-            key: issue.jiraKey || 'N/A',
-            title: issue.title,
-            severity: issue.severity || '-',
-            status: issue.status || 'Open',
-            responsible: issue.responsible || '-',
+            type:        issue.type === 'BUG' ? 'Bug' : 'Melhoria',
+            key:         issue.jiraKey || 'N/A',
+            title:       issue.title,
+            severity:    issue.severity || '-',
+            status:      issue.status || 'Open',
           });
         });
       });
     });
 
     const docDefinition: any = {
+      pageMargins: [40, 50, 40, 50],
+      footer: pdfFooter(this.today),
       content: [
-        {
-          text: 'RELATÓRIO CONSOLIDADO DE TESTES',
-          style: 'docTitle',
-          alignment: 'center',
-          margin: [0, 0, 0, 15],
-        },
-
+        this.pdfTitle('RELATÓRIO CONSOLIDADO DE TESTES'),
         {
           columns: [
             {
-              width: '55%',
-              stack: [
-                {
-                  text: [
-                    { text: 'Funcionalidade: ', bold: true },
-                    `${batch.testedFeature ?? '-'}\n`,
-                  ],
-                  lineHeight: 1.4,
-                  fontSize: 10,
-                },
-              ],
+              width: '52%',
+              stack: [{
+                text: [
+                  { text: 'Suítes: ', bold: true },
+                  `${report.suites.map((s) => `${s.jiraKey} — ${s.title}`).join(' | ') || '-'}\n`,
+                ],
+                lineHeight: 1.5,
+                fontSize: 10,
+                margin: [0, 4, 12, 0],
+              }],
             },
             {
-              width: '45%',
-              table: {
-                widths: ['60%', '40%'],
-                body: [
-                  [
-                    { text: 'Métrica', bold: true, fillColor: '#EEEEEE' },
-                    { text: 'Valor', bold: true, fillColor: '#EEEEEE' },
-                  ],
-                  ['Total de Testes', `${summary.totalTests}`],
-                  ['Total Executado', `${executedTests}`],
-                  ['Total Passou', `${summary.passed}`],
-                  ['Total Falhou', `${summary.failed}`],
-                  ['Total Bloqueado', `${summary.blocked}`],
-                  ['% Aprovação', `${approvalRate.toFixed(1)}%`],
-                  ['% Sem Bloqueios', `${adjustedRate.toFixed(1)}%`],
-                ],
-              },
-              fontSize: 9,
+              width: '48%',
+              ...this.pdfSummaryTable(summary.totalTests, executedTests, summary.passed, summary.failed, summary.blocked, approvalRate, adjustedRate),
             },
           ],
           margin: [0, 0, 0, 20],
         },
 
-        {
-          text: 'Gráfico de Execução',
-          style: 'sectionHeader',
-          margin: [0, 10, 0, 5],
-        },
-        {
-          canvas: [
-            { type: 'rect', x: 0, y: 0, w: 460, h: 18, color: '#e2e8f0' },
-            ...(summary.totalTests > 0 ? chartCanvas : []),
-          ],
-          margin: [0, 0, 0, 10],
-        },
+        pdfSectionHeader('Distribuição de Resultados'),
+        { canvas: buildChartCanvas(chartSegments, summary.totalTests, 460, 22), margin: [0, 0, 0, 8] },
+        this.pdfChartLegend(chartSegments, summary.totalTests),
 
-        {
-          columns: chartSegments
-            .filter((s) => s.count > 0)
-            .map((segment) => ({
-              width: 'auto',
-              stack: [
-                { text: segment.label, bold: true, fontSize: 9 },
-                {
-                  text: `${segment.count} (${summary.totalTests > 0 ? ((segment.count / summary.totalTests) * 100).toFixed(0) : 0}%)`,
-                  fontSize: 9,
-                  color: segment.color,
+        pdfSectionHeader('Detalhamento por Suíte'),
+        ...(() => {
+          const allTcs = report.executions.flatMap((ex) => ex.testCases);
+          return report.suites.flatMap((suite) => {
+            const suiteTcs = allTcs.filter((tc) => tc.testCase.suiteId === suite.id);
+            if (suiteTcs.length === 0) return [];
+            return [
+              {
+                text: `${suite.jiraKey} — ${suite.title}`,
+                fontSize: 10,
+                bold: true,
+                color: '#334155',
+                margin: [0, 10, 0, 4],
+              },
+              {
+                table: {
+                  headerRows: 1,
+                  widths: ['10%', '42%', '15%', '18%', '15%'],
+                  body: [
+                    pdfHeaderCells(['Key', 'Caso de Teste', 'Status', 'Responsável', 'Issues']),
+                    ...suiteTcs.map((tc, i) => {
+                      const bg = rowBg(i);
+                      const issues = tc.issues.map((iss) => iss.jiraKey || iss.title).join(', ') || '-';
+                      return [
+                        pdfCell(tc.testCase.jiraKey, bg, { color: '#2563eb', decoration: 'underline' }),
+                        pdfCell(tc.testCase.title, bg),
+                        pdfStatusCell(tc.status),
+                        pdfCell(tc.responsible || '-', bg),
+                        pdfCell(issues, bg),
+                      ];
+                    }),
+                  ],
                 },
-              ],
-              margin: [0, 0, 16, 0],
-            })),
-          margin: [0, 0, 0, 20],
-        },
-
-        {
-          text: 'Detalhamento por Suíte',
-          style: 'sectionHeader',
-          margin: [0, 10, 0, 5],
-        },
-        ...report.executions.map((ex) => [
-          ex.suite ? {
-            text: `${ex.suite.jiraKey} — ${ex.suite.title}`,
-            style: 'suiteHeader',
-            margin: [0, 10, 0, 5],
-          } : {
-            text: 'Execução do Lote',
-            style: 'suiteHeader',
-            margin: [0, 10, 0, 5],
-          },
-          {
-            table: {
-              headerRows: 1,
-              widths: ['10%', '45%', '15%', '15%', '15%'],
-              body: [
-                [
-                  { text: 'Key', bold: true, fillColor: '#D9E1F2' },
-                  { text: 'Caso de Teste', bold: true, fillColor: '#D9E1F2' },
-                  { text: 'Status', bold: true, fillColor: '#D9E1F2' },
-                  { text: 'Responsável', bold: true, fillColor: '#D9E1F2' },
-                  { text: 'Issues', bold: true, fillColor: '#D9E1F2' },
-                ],
-                ...ex.testCases.map((tc) => {
-                  const statusColor =
-                    tc.status === 'PASSED'
-                      ? '#E2EFDA'
-                      : tc.status === 'FAILED'
-                        ? '#FCE4D6'
-                        : tc.status === 'BLOCKED'
-                          ? '#FFF2CC'
-                          : '#DDEBF7';
-                  const issueText =
-                    tc.issues.map((i) => i.jiraKey || i.title).join(', ') ||
-                    '-';
-                  return [
-                    {
-                      text: tc.testCase.jiraKey,
-                      color: 'blue',
-                      decoration: 'underline',
-                    },
-                    tc.testCase.title,
-                    { text: tc.status, fillColor: statusColor },
-                    tc.responsible || '-',
-                    issueText,
-                  ];
-                }),
-              ],
-            },
-            fontSize: 8,
-            margin: [0, 0, 0, 15],
-          },
-        ]),
-
-        {
-          text: 'Bugs e Melhorias Reportados',
-          style: 'sectionHeader',
-          margin: [0, 10, 0, 5],
-        },
-        allIssues.length === 0
-          ? {
-              text: 'Nenhum bug ou melhoria reportado neste batch.',
-              italics: true,
-              fontSize: 9,
-            }
-          : {
-              table: {
-                headerRows: 1,
-                widths: ['15%', '15%', '40%', '15%', '15%'],
-                body: [
-                  [
-                    { text: 'Tipo', bold: true, fillColor: '#F2F2F2' },
-                    { text: 'ID/Key', bold: true, fillColor: '#F2F2F2' },
-                    { text: 'Título', bold: true, fillColor: '#F2F2F2' },
-                    { text: 'Severidade', bold: true, fillColor: '#F2F2F2' },
-                    { text: 'Status', bold: true, fillColor: '#F2F2F2' },
-                  ],
-                  ...allIssues.map((issue) => [
-                    issue.type,
-                    issue.key,
-                    issue.title,
-                    issue.severity,
-                    issue.status,
-                  ]),
-                ],
+                layout: TABLE_LAYOUT,
+                fontSize: 8,
+                margin: [0, 0, 0, 14],
               },
-              fontSize: 8,
-            },
+            ];
+          });
+        })(),
+
+        pdfSectionHeader('Bugs e Melhorias Reportados'),
+        this.pdfIssuesTable(allIssues, 'Nenhum bug ou melhoria reportado neste lote.'),
       ],
       defaultStyle: { font: 'DejaVuSans' },
-      styles: {
-        docTitle: { fontSize: 16, bold: true },
-        sectionHeader: { fontSize: 12, bold: true, color: '#1F4E78' },
-        suiteHeader: { fontSize: 11, bold: true, color: '#334155' },
-      },
     };
 
-    const pdfDoc = printer.createPdfKitDocument(docDefinition);
-    const chunks: Buffer[] = [];
-    pdfDoc.on('data', (chunk: Buffer) => chunks.push(chunk));
-    pdfDoc.end();
-
-    return await new Promise<Buffer>((resolve) => {
-      pdfDoc.on('end', () => {
-        resolve(Buffer.concat(chunks));
-      });
-    });
+    return this.renderPdf(docDefinition);
   }
+
+  // ── PDF – ciclo individual ──────────────────────────────────────────────────
 
   async generatePdf(executionId: string): Promise<Buffer> {
     const execution = await this.prisma.execution.findUnique({
@@ -764,306 +645,228 @@ export class ReportsService {
       include: {
         suite: true,
         testCases: {
-          include: {
-            testCase: true,
-            issues: true,
-          },
-          orderBy: {
-            testCase: {
-              jiraKey: 'asc',
-            },
-          },
+          include: { testCase: true, issues: true },
+          orderBy: { testCase: { jiraKey: 'asc' } },
         },
       },
     });
 
     if (!execution) {
-      throw new HttpException(
-        'Ciclo de execução não encontrado.',
-        HttpStatus.NOT_FOUND,
-      );
+      throw new HttpException('Ciclo de execução não encontrado.', HttpStatus.NOT_FOUND);
     }
 
-    // Calcular métricas
-    const totalTests = execution.testCases.length;
-    const passedTests = execution.testCases.filter(
-      (tc) => tc.status === 'PASSED',
-    ).length;
-    const failedTests = execution.testCases.filter(
-      (tc) => tc.status === 'FAILED',
-    ).length;
-    const blockedTests = execution.testCases.filter(
-      (tc) => tc.status === 'BLOCKED',
-    ).length;
+    const totalTests    = execution.testCases.length;
+    const passedTests   = execution.testCases.filter((tc) => tc.status === 'PASSED').length;
+    const failedTests   = execution.testCases.filter((tc) => tc.status === 'FAILED').length;
+    const blockedTests  = execution.testCases.filter((tc) => tc.status === 'BLOCKED').length;
     const executedTests = passedTests + failedTests + blockedTests;
+    const pendingTests  = totalTests - executedTests;
 
     const approvalRate = totalTests > 0 ? (passedTests / totalTests) * 100 : 0;
-    const adjustedRate =
-      totalTests - blockedTests > 0
-        ? (passedTests / (totalTests - blockedTests)) * 100
-        : 0;
-    const pendingTests = totalTests - executedTests;
+    const adjustedRate = totalTests - blockedTests > 0
+      ? (passedTests / (totalTests - blockedTests)) * 100
+      : 0;
 
     const chartSegments = [
-      { label: 'Passou', count: passedTests, color: '#22c55e' },
-      { label: 'Falhou', count: failedTests, color: '#ef4444' },
-      { label: 'Bloqueado', count: blockedTests, color: '#ffd15a' },
-      { label: 'Pendente', count: pendingTests, color: '#0066ff' },
+      { label: 'Passou',    count: passedTests,  color: '#22c55e' },
+      { label: 'Falhou',    count: failedTests,  color: '#ef4444' },
+      { label: 'Bloqueado', count: blockedTests, color: '#f59e0b' },
+      { label: 'Pendente',  count: pendingTests, color: '#3b82f6' },
     ];
 
-    const chartWidth = 460;
-    let chartCurrentX = 0;
-    const chartCanvas: any[] = [];
-
-    if (totalTests > 0) {
-      chartCanvas.push({
-        type: 'rect',
-        x: 0,
-        y: 0,
-        w: chartWidth,
-        h: 16,
-        color: '#f8fafc',
-      });
-      chartSegments.forEach((segment) => {
-        if (segment.count <= 0) {
-          return;
-        }
-        const width = Math.max((segment.count / totalTests) * chartWidth, 12);
-        chartCanvas.push({
-          type: 'rect',
-          x: chartCurrentX,
-          y: 0,
-          w: width,
-          h: 16,
-          color: segment.color,
-        });
-        chartCurrentX += width;
-      });
-    }
-
-    // Extrair todas as issues
     const allIssues: any[] = [];
     execution.testCases.forEach((etc) => {
       etc.issues.forEach((issue) => {
         allIssues.push({
-          type: issue.type === 'BUG' ? 'Bug' : 'Melhoria',
-          key: issue.jiraKey || 'N/A',
-          title: issue.title,
-          severity: issue.severity || '-',
-          status: issue.status || 'Open',
-          responsible: issue.responsible || '-',
+          type:        issue.type === 'BUG' ? 'Bug' : 'Melhoria',
+          key:         issue.jiraKey || 'N/A',
+          title:       issue.title,
+          severity:    issue.severity || '-',
+          status:      issue.status || 'Open',
         });
       });
     });
 
-    // Definir a estrutura do documento PDF
     const docDefinition: any = {
+      pageMargins: [40, 50, 40, 50],
+      footer: pdfFooter(this.today),
       content: [
-        {
-          text: 'RELATÓRIO DE EXECUÇÃO DE TESTES',
-          style: 'docTitle',
-          alignment: 'center',
-          margin: [0, 0, 0, 15],
-        },
-
-        // Seção 1: Metadados da Execução e Resumo Estatístico em Colunas
+        this.pdfTitle('RELATÓRIO DE EXECUÇÃO DE TESTES'),
         {
           columns: [
-            // Metadados
             {
-              width: '55%',
-              stack: [
-                {
-                  text: [
-                    { text: 'Sprint: ', bold: true },
-                    `${execution.sprint}\n`,
-                    { text: 'Versão do sistema: ', bold: true },
-                    `${execution.version}\n`,
-                    { text: 'Data de início: ', bold: true },
-                    `${this.formatDate(execution.startDate)}\n`,
-                    { text: 'Data de fim: ', bold: true },
-                    `${this.formatDate(execution.endDate)}\n`,
-                    { text: 'Funcionalidade: ', bold: true },
-                    `${execution.testedFeature}\n`,
-                    { text: 'Responsável: ', bold: true },
-                    `${execution.responsible}\n`,
-                  ],
-                  lineHeight: 1.4,
-                  fontSize: 10,
-                },
-              ],
-            },
-            // Resumo Estatístico
-            {
-              width: '45%',
-              table: {
-                widths: ['60%', '40%'],
-                body: [
-                  [
-                    { text: 'Métrica', bold: true, fillColor: '#EEEEEE' },
-                    { text: 'Valor', bold: true, fillColor: '#EEEEEE' },
-                  ],
-                  ['Total de Testes', `${totalTests}`],
-                  ['Total Executado', `${executedTests}`],
-                  ['Total Passou', `${passedTests}`],
-                  ['Total Falhou', `${failedTests}`],
-                  ['Total Bloqueado', `${blockedTests}`],
-                  ['% Aprovação', `${approvalRate.toFixed(1)}%`],
-                  ['% Sem Bloqueios', `${adjustedRate.toFixed(1)}%`],
+              width: '52%',
+              stack: [{
+                text: [
+                  { text: 'Sprint: ',           bold: true }, `${execution.sprint}\n`,
+                  { text: 'Versão: ',           bold: true }, `${execution.version}\n`,
+                  { text: 'Data de início: ',   bold: true }, `${this.formatDate(execution.startDate)}\n`,
+                  { text: 'Data de fim: ',      bold: true }, `${this.formatDate(execution.endDate)}\n`,
+                  { text: 'Suíte: ',            bold: true }, `${execution.suite ? `${execution.suite.jiraKey} — ${execution.suite.title}` : '-'}\n`,
+                  { text: 'Responsável: ',      bold: true }, `${execution.responsible}\n`,
                 ],
-              },
-              fontSize: 9,
+                lineHeight: 1.5,
+                fontSize: 10,
+                margin: [0, 4, 12, 0],
+              }],
+            },
+            {
+              width: '48%',
+              ...this.pdfSummaryTable(totalTests, executedTests, passedTests, failedTests, blockedTests, approvalRate, adjustedRate),
             },
           ],
           margin: [0, 0, 0, 20],
         },
 
-        // Seção 2: Gráfico de Execução
-        {
-          text: 'Gráfico de Execução',
-          style: 'sectionHeader',
-          margin: [0, 10, 0, 5],
-        },
-        {
-          canvas: [
-            { type: 'rect', x: 0, y: 0, w: 460, h: 18, color: '#e2e8f0' },
-            ...(totalTests > 0 ? chartCanvas : []),
-          ],
-          margin: [0, 0, 0, 10],
-        },
-        {
-          columns: [
-            ...chartSegments
-              .filter((s) => s.count > 0)
-              .map((segment) => ({
-                width: 'auto',
-                stack: [
-                  { text: segment.label, bold: true, fontSize: 9 },
-                  {
-                    text: `${segment.count} (${totalTests > 0 ? ((segment.count / totalTests) * 100).toFixed(0) : 0}%)`,
-                    fontSize: 9,
-                    color: segment.color,
-                  },
-                ],
-                margin: [0, 0, 16, 0],
-              })),
-          ],
-          margin: [0, 0, 0, 20],
-        },
+        pdfSectionHeader('Distribuição de Resultados'),
+        { canvas: buildChartCanvas(chartSegments, totalTests, 460, 22), margin: [0, 0, 0, 8] },
+        this.pdfChartLegend(chartSegments, totalTests),
 
-        // Seção 3: Detalhamento dos Casos de Teste
-        {
-          text: 'Detalhamento dos Casos de Teste',
-          style: 'sectionHeader',
-          margin: [0, 10, 0, 5],
-        },
+        pdfSectionHeader('Detalhamento dos Casos de Teste'),
         {
           table: {
             headerRows: 1,
-            widths: ['10%', '45%', '15%', '15%', '15%'],
+            widths: ['10%', '42%', '15%', '18%', '15%'],
             body: [
-              [
-                { text: 'Key', bold: true, fillColor: '#D9E1F2' },
-                { text: 'Caso de Teste', bold: true, fillColor: '#D9E1F2' },
-                { text: 'Status', bold: true, fillColor: '#D9E1F2' },
-                { text: 'Responsável', bold: true, fillColor: '#D9E1F2' },
-                { text: 'Issues', bold: true, fillColor: '#D9E1F2' },
-              ],
-              ...execution.testCases.map((tc) => {
-                const statusColor =
-                  tc.status === 'PASSED'
-                    ? '#E2EFDA'
-                    : tc.status === 'FAILED'
-                      ? '#FCE4D6'
-                      : tc.status === 'BLOCKED'
-                        ? '#FFF2CC'
-                        : '#DDEBF7';
-
-                const issueText =
-                  tc.issues.map((i) => i.jiraKey || i.title).join(', ') || '-';
-
+              pdfHeaderCells(['Key', 'Caso de Teste', 'Status', 'Responsável', 'Issues']),
+              ...execution.testCases.map((tc, i) => {
+                const bg = rowBg(i);
+                const issues = tc.issues.map((iss) => iss.jiraKey || iss.title).join(', ') || '-';
                 return [
-                  {
-                    text: tc.testCase.jiraKey,
-                    color: 'blue',
-                    decoration: 'underline',
-                  },
-                  tc.testCase.title,
-                  { text: tc.status, fillColor: statusColor },
-                  tc.responsible || '-',
-                  issueText,
+                  pdfCell(tc.testCase.jiraKey, bg, { color: '#2563eb', decoration: 'underline' }),
+                  pdfCell(tc.testCase.title, bg),
+                  pdfStatusCell(tc.status),
+                  pdfCell(tc.responsible || '-', bg),
+                  pdfCell(issues, bg),
                 ];
               }),
             ],
           },
+          layout: TABLE_LAYOUT,
           fontSize: 8,
           margin: [0, 0, 0, 20],
         },
 
-        // Seção 3: Bugs e Melhorias Reportados
-        {
-          text: 'Bugs e Melhorias Reportados',
-          style: 'sectionHeader',
-          margin: [0, 10, 0, 5],
-        },
-        allIssues.length === 0
-          ? {
-              text: 'Nenhum bug ou melhoria reportado neste ciclo.',
-              italics: true,
-              fontSize: 9,
-            }
-          : {
-              table: {
-                headerRows: 1,
-                widths: ['15%', '15%', '40%', '15%', '15%'],
-                body: [
-                  [
-                    { text: 'Tipo', bold: true, fillColor: '#F2F2F2' },
-                    { text: 'ID/Key', bold: true, fillColor: '#F2F2F2' },
-                    { text: 'Título', bold: true, fillColor: '#F2F2F2' },
-                    { text: 'Severidade', bold: true, fillColor: '#F2F2F2' },
-                    { text: 'Status', bold: true, fillColor: '#F2F2F2' },
-                  ],
-                  ...allIssues.map((issue) => [
-                    issue.type,
-                    issue.key,
-                    issue.title,
-                    issue.severity,
-                    issue.status,
-                  ]),
-                ],
-              },
-              fontSize: 8,
-            },
+        pdfSectionHeader('Bugs e Melhorias Reportados'),
+        this.pdfIssuesTable(allIssues, 'Nenhum bug ou melhoria reportado neste ciclo.'),
       ],
-      defaultStyle: {
-        font: 'DejaVuSans',
-      },
-      styles: {
-        docTitle: {
-          fontSize: 16,
-          bold: true,
-        },
-        sectionHeader: {
-          fontSize: 12,
-          bold: true,
-          color: '#1F4E78',
-        },
-      },
+      defaultStyle: { font: 'DejaVuSans' },
     };
 
+    return this.renderPdf(docDefinition);
+  }
+
+  // ── Private helpers ─────────────────────────────────────────────────────────
+
+  private pdfTitle(text: string): any {
+    return {
+      table: {
+        widths: ['*'],
+        body: [[{
+          text,
+          bold: true,
+          fontSize: 16,
+          color: '#FFFFFF',
+          fillColor: `#${BLUE_DARK}`,
+          alignment: 'center',
+          border: [false, false, false, false],
+          margin: [0, 12, 0, 12],
+        }]],
+      },
+      layout: 'noBorders',
+      margin: [0, 0, 0, 18],
+    };
+  }
+
+  private pdfSummaryTable(
+    total: number, executed: number, passed: number, failed: number,
+    blocked: number, approvalRate: number, adjustedRate: number,
+  ): any {
+    const rows = [
+      ['Total de Testes',  `${total}`],
+      ['Total Executado',  `${executed}`],
+      ['Total Passou',     `${passed}`],
+      ['Total Falhou',     `${failed}`],
+      ['Total Bloqueado',  `${blocked}`],
+      ['% Aprovação',      `${approvalRate.toFixed(1)}%`],
+      ['% Sem Bloqueios',  `${adjustedRate.toFixed(1)}%`],
+    ];
+    return {
+      table: {
+        widths: ['*', 'auto'],
+        body: [
+          [
+            { text: 'Métrica', bold: true, fontSize: 9, fillColor: `#${BLUE_MID}`, color: '#FFFFFF', alignment: 'center', margin: [4, 5, 4, 5] },
+            { text: 'Valor',   bold: true, fontSize: 9, fillColor: `#${BLUE_MID}`, color: '#FFFFFF', alignment: 'center', margin: [4, 5, 4, 5] },
+          ],
+          ...rows.map(([label, value], i) => [
+            { text: label, fontSize: 9, fillColor: i % 2 === 0 ? '#F8FAFC' : '#FFFFFF', margin: [4, 3, 4, 3] },
+            { text: value, fontSize: 9, fillColor: i % 2 === 0 ? '#F8FAFC' : '#FFFFFF', alignment: 'center', margin: [4, 3, 4, 3] },
+          ]),
+        ],
+      },
+      fontSize: 9,
+    };
+  }
+
+  private pdfChartLegend(
+    segments: Array<{ label: string; count: number; color: string }>,
+    total: number,
+  ): any {
+    return {
+      columns: segments
+        .filter((s) => s.count > 0)
+        .map((s) => ({
+          width: 'auto',
+          stack: [
+            { canvas: [{ type: 'rect', x: 0, y: 2, w: 10, h: 10, color: s.color }] },
+            { text: s.label, bold: true, fontSize: 9, margin: [0, 3, 0, 0] },
+            {
+              text: `${s.count} (${total > 0 ? ((s.count / total) * 100).toFixed(0) : 0}%)`,
+              fontSize: 9,
+              color: s.color,
+            },
+          ],
+          margin: [0, 4, 20, 0],
+        })),
+      margin: [0, 0, 0, 20],
+    };
+  }
+
+  private pdfIssuesTable(issues: any[], emptyMessage: string): any {
+    if (issues.length === 0) {
+      return { text: emptyMessage, italics: true, fontSize: 9 };
+    }
+    return {
+      table: {
+        headerRows: 1,
+        widths: ['12%', '14%', '38%', '16%', '20%'],
+        body: [
+          pdfHeaderCells(['Tipo', 'ID/Key', 'Título', 'Severidade', 'Status']),
+          ...issues.map((issue, i) => {
+            const bg = rowBg(i);
+            return [
+              pdfCell(issue.type, bg),
+              pdfCell(issue.key, bg),
+              pdfCell(issue.title, bg),
+              pdfCell(issue.severity, bg),
+              pdfCell(issue.status, bg),
+            ];
+          }),
+        ],
+      },
+      layout: TABLE_LAYOUT,
+      fontSize: 8,
+    };
+  }
+
+  private renderPdf(docDefinition: any): Promise<Buffer> {
     const pdfDoc = printer.createPdfKitDocument(docDefinition);
-
     const chunks: Buffer[] = [];
-
     pdfDoc.on('data', (chunk: Buffer) => chunks.push(chunk));
-
     pdfDoc.end();
-
-    return await new Promise<Buffer>((resolve) => {
-      pdfDoc.on('end', () => {
-        resolve(Buffer.concat(chunks));
-      });
+    return new Promise<Buffer>((resolve) => {
+      pdfDoc.on('end', () => resolve(Buffer.concat(chunks)));
     });
   }
 }
