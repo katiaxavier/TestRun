@@ -18,7 +18,8 @@ interface ExecutionFormModalProps {
 }
 
 export function ExecutionFormModal({ open, onClose, onSubmit, title = 'Novo Ciclo de Execução' }: ExecutionFormModalProps) {
-  const today = new Date().toISOString().split('T')[0];
+  const now = new Date();
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   const [form, setForm] = useState<ExecutionFormData>({ sprint: '', version: '', startDate: today, endDate: '', responsible: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');

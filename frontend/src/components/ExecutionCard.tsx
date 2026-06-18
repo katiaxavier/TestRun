@@ -30,7 +30,7 @@ const EXECUTION_STATUS_MAP: Record<string, { label: string; color: string; bg: s
 
 function formatDate(value?: string) {
   if (!value) return '—';
-  return new Date(value).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+  return new Date(value.slice(0, 10) + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
 }
 
 export function ExecutionCard({ execution, title, onClick }: ExecutionCardProps) {

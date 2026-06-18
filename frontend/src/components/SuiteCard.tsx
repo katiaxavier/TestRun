@@ -28,7 +28,7 @@ interface SuiteCardProps {
 export function SuiteCard({ suite, selected, onSelect, onDelete }: SuiteCardProps) {
   const formatDate = (date: string | Date | undefined) => {
     if (!date) return '';
-    return new Date(date).toLocaleDateString('pt-BR');
+    return new Date(typeof date === 'string' ? date.slice(0, 10) + 'T00:00:00' : date).toLocaleDateString('pt-BR');
   };
 
   return (
