@@ -85,7 +85,7 @@ export function BatchExecutionModal({
 
         <div style={{ marginBottom: '0.75rem' }}>
           <label className="form-label">Nome do lote</label>
-          <input value={name} onChange={e => setName(e.target.value)} placeholder="Ex: Regressão Sprint 25" />
+          <input value={name} onChange={e => setName(e.target.value)} onKeyDown={e => e.key === 'Enter' && !loading && suites.length > 0 && handleSubmit()} placeholder="Ex: Regressão Sprint 25" />
         </div>
       </div>
     </Modal>

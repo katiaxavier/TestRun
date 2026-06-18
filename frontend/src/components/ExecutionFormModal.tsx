@@ -56,6 +56,7 @@ export function ExecutionFormModal({ open, onClose, onSubmit, title = 'Novo Cicl
       }
     >
       <form onSubmit={handleSubmit}>
+        <button type="submit" style={{ display: 'none' }} aria-hidden />
         <div className="form-row">
           <div className="form-group">
             <label className="form-label">Sprint *</label>
