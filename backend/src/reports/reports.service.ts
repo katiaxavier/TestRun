@@ -265,33 +265,33 @@ export class ReportsService {
     ws.getRow(2).height = 22;
     xlMetaLabel(ws.getCell('A2'), 'Sprint');
     xlMetaValue(ws.getCell('C2'), execution.sprint);
-    xlMetaLabel(ws.getCell('F2'), 'Total Passou');
-    xlMetaValue(ws.getCell('G2'), { formula: 'COUNTIF(D8:D1000,"Passed")' });
+    xlMetaLabel(ws.getCell('F2'), 'Total Executado');
+    xlMetaValue(ws.getCell('G2'), { formula: 'G3+G4+G5' });
 
     ws.getRow(3).height = 22;
     xlMetaLabel(ws.getCell('A3'), 'Versão do sistema');
     xlMetaValue(ws.getCell('C3'), execution.version);
-    xlMetaLabel(ws.getCell('F3'), 'Total Falhou');
-    xlMetaValue(ws.getCell('G3'), { formula: 'COUNTIF(D8:D1000,"Failed")' });
+    xlMetaLabel(ws.getCell('F3'), 'Total Passou');
+    xlMetaValue(ws.getCell('G3'), { formula: 'COUNTIF(D8:D1000,"Passed")' });
 
     ws.getRow(4).height = 22;
     xlMetaLabel(ws.getCell('A4'), 'Data de início');
     xlMetaValue(ws.getCell('C4'), this.formatDate(execution.startDate));
-    xlMetaLabel(ws.getCell('F4'), 'Total Bloqueado');
-    xlMetaValue(ws.getCell('G4'), { formula: 'COUNTIF(D8:D1000,"Blocked")' });
+    xlMetaLabel(ws.getCell('F4'), 'Total Falhou');
+    xlMetaValue(ws.getCell('G4'), { formula: 'COUNTIF(D8:D1000,"Failed")' });
 
     ws.getRow(5).height = 22;
     xlMetaLabel(ws.getCell('A5'), 'Data de fim');
     xlMetaValue(ws.getCell('C5'), this.formatDate(execution.endDate));
-    xlMetaLabel(ws.getCell('F5'), 'Total Executado');
-    xlMetaValue(ws.getCell('G5'), { formula: 'G2+G3+G4' });
+    xlMetaLabel(ws.getCell('F5'), 'Total Bloqueado');
+    xlMetaValue(ws.getCell('G5'), { formula: 'COUNTIF(D8:D1000,"Blocked")' });
 
     ws.getRow(6).height = 22;
     xlMetaLabel(ws.getCell('A6'), isBatch ? 'Suítes' : 'Suíte');
     xlMetaValue(ws.getCell('C6'), isBatch
       ? batchSuites.map((s) => `${s.jiraKey} — ${s.title}`).join(' | ')
       : (execution.suite ? `${execution.suite.jiraKey} — ${execution.suite.title}` : '-'));
-    xlMetaLabel(ws.getCell('F6'), 'Total de testes');
+    xlMetaLabel(ws.getCell('F6'), 'Total de Testes');
     xlMetaValue(ws.getCell('G6'), execution.testCases.length);
 
     // Linha 7 – Cabeçalho da tabela
@@ -820,11 +820,11 @@ export class ReportsService {
     blocked: number,
   ): any {
     const rows = [
-      ['Total de Testes',  `${total}`],
       ['Total Executado',  `${executed}`],
       ['Total Passou',     `${passed}`],
       ['Total Falhou',     `${failed}`],
       ['Total Bloqueado',  `${blocked}`],
+      ['Total de Testes',  `${total}`],
     ];
     return {
       table: {
