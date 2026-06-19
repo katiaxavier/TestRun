@@ -716,7 +716,7 @@ export class ReportsService {
               stack: [{
                 text: [
                   { text: 'Sprint: ',           bold: true }, `${execution.sprint}\n`,
-                  { text: 'Versão: ',           bold: true }, `${execution.version}\n`,
+                  { text: 'Versão do sistema: ',  bold: true }, `${execution.version}\n`,
                   { text: 'Data de início: ',   bold: true }, `${this.formatDate(execution.startDate)}\n`,
                   { text: 'Data de fim: ',      bold: true }, `${this.formatDate(execution.endDate)}\n`,
                   { text: isBatch ? 'Suítes: ' : 'Suíte: ', bold: true },
