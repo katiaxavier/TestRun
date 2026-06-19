@@ -708,11 +708,11 @@ export default function ExecutionRunPage() {
             )}
           </div>
           <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0, alignSelf: 'flex-start' }}>
-            <button className="btn btn-secondary" onClick={() => handleExport('xlsx')} disabled={!!exporting}>
+            <button className="btn" onClick={() => handleExport('xlsx')} disabled={!!exporting} style={{ background: 'transparent', border: '1px solid var(--accent)', color: 'var(--accent)', height: 48 }}>
               {exporting === 'xlsx' ? <div className="spinner" style={{ width: 14, height: 14 }} /> : <FileXls size={16} />}
               Excel
             </button>
-            <button className="btn btn-secondary" onClick={() => handleExport('pdf')} disabled={!!exporting}>
+            <button className="btn" onClick={() => handleExport('pdf')} disabled={!!exporting} style={{ background: 'transparent', border: '1px solid var(--accent)', color: 'var(--accent)', height: 48 }}>
               {exporting === 'pdf' ? <div className="spinner" style={{ width: 14, height: 14 }} /> : <FilePdf size={16} />}
               PDF
             </button>

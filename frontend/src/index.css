@@ -99,8 +99,8 @@ input[type="checkbox"] {
 
 .btn-create-batch.active {
   background: #0F172A;
-  border-color: #3B82F6;
-  box-shadow: 0 0 0 1px rgba(59, 130, 246, .25);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px rgba(255, 96, 2, .25);
 }
 
 .filters {
@@ -377,10 +377,10 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1); curso
 .btn-primary:hover { background: var(--accent-hover); transform: translateY(-1px); box-shadow: var(--shadow-sm); }
 .btn-secondary {
   background: transparent;
-  color: var(--secondary);
-  border: 1px solid var(--secondary);
+  color: var(--accent);
+  border: 1px solid var(--accent);
 }
-.btn-secondary:hover { background: var(--secondary-subtle); color: var(--text-primary); border-color: var(--secondary); }
+.btn-secondary:hover { background: var(--accent-subtle); color: var(--text-primary); border-color: var(--accent); }
 .btn-ghost {
   background: transparent;
   color: var(--text-secondary);
