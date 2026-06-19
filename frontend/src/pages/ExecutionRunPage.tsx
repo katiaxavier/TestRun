@@ -11,6 +11,7 @@ import type { Execution, ExecutionTestCase, Issue, Suite } from '../api/client';
 import { StatusBadge } from '../components/StatusBadge';
 import { Modal } from '../components/Modal';
 import { Tooltip } from '../components/Tooltip';
+import { PRIORITY_COLORS, SEVERITY_COLORS, priorityLabel, normalize } from '../utils/priority';
 
 const STATUS_OPTIONS = ['PENDING', 'PASSED', 'FAILED', 'BLOCKED'];
 const STATUS_LABELS: Record<string, string> = {
@@ -45,54 +46,11 @@ function formatVersion(version?: string | null) {
   return version?.trim() ? version : '—';
 }
 
-function normalize(value: string) {
-  return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-}
-
-const PRIORITY_COLORS: Record<string, string> = {
-  Gravíssima: '#DC2626',
-  Crítica: '#F97316',
-  Alta: '#F59E0B',
-  Média: '#22C55E',
-  Normal: '#3B82F6',
-  Trivial: '#6B7280',
-};
-
-function priorityLabel(priority?: string | null): string {
-  if (!priority) return '—';
-  const normalized = normalize(priority);
-  const labels: Record<string, string> = {
-    highest: 'Gravíssima',
-    critical: 'Gravíssima',
-    gravissima: 'Gravíssima',
-    gravíssima: 'Gravíssima',
-    high: 'Crítica',
-    critica: 'Crítica',
-    crítica: 'Crítica',
-    medium: 'Média',
-    media: 'Média',
-    média: 'Média',
-    low: 'Normal',
-    normal: 'Normal',
-    trivial: 'Trivial',
-  };
-  return labels[normalized] ?? priority;
-}
-
 // ── Issue helpers ────────────────────────────────────────────────────────────
 const SEVERITY_PT: Record<string, string> = { Trivial: 'Trivial', Normal: 'Normal', Low: 'Trivial', Medium: 'Média', High: 'Alta', Critical: 'Crítica', Gravissima: 'Gravíssima' };
 const SEVERITY_EN: Record<string, string> = { Trivial: 'Trivial', Normal: 'Normal', Média: 'Medium', Alta: 'High', Crítica: 'Critical', 'Gravíssima': 'Gravissima' };
 const ISSUE_STATUS_PT: Record<string, string> = { Open: 'Aberto', 'In Progress': 'Em Andamento', Resolved: 'Resolvido', Cancelled: 'Cancelado' };
 const ISSUE_STATUS_EN: Record<string, string> = { Aberto: 'Open', 'Em Andamento': 'In Progress', Resolvido: 'Resolved', Cancelado: 'Cancelled' };
-
-const SEVERITY_COLORS: Record<string, { color: string; bg: string }> = {
-  Trivial:    { color: '#9ca3af', bg: 'rgba(156,163,175,0.12)' },
-  Normal:     { color: '#6b7280', bg: 'rgba(107,114,128,0.12)' },
-  Média:      { color: '#d97706', bg: 'rgba(217,119,6,0.12)' },
-  Alta:       { color: '#f97316', bg: 'rgba(249,115,22,0.12)' },
-  Crítica:    { color: '#ef4444', bg: 'rgba(239,68,68,0.12)' },
-  'Gravíssima': { color: '#991b1b', bg: 'rgba(153,27,27,0.12)' },
-};
 
 const ISSUE_STATUS_STYLE: Record<string, { color: string; bg: string }> = {
   Aberto:        { color: 'var(--status-blocked)',   bg: 'var(--status-blocked-bg)' },

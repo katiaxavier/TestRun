@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { ArrowSquareOut, CaretLeft, CaretRight, Flask, MagnifyingGlass, Trash } from '@phosphor-icons/react';
 import type { Suite, TestCase } from '../api/client';
 import { ConfirmModal } from './ConfirmModal';
+import { PRIORITY_COLORS, priorityLabel, normalize } from '../utils/priority';
 
 interface TestCaseListProps {
   testCases: TestCase[];
@@ -11,32 +12,6 @@ interface TestCaseListProps {
 }
 
 type PriorityFilter = 'all' | 'Gravíssima' | 'Crítica' | 'Alta' | 'Média' | 'Normal' | 'Trivial';
-
-const PRIORITY_COLORS: Record<string, string> = {
-  Gravíssima: '#DC2626',
-  Crítica: '#F97316',
-  Alta: '#F59E0B',
-  Média: '#22C55E',
-  Normal: '#3B82F6',
-  Trivial: '#6B7280',
-};
-
-function normalize(value: string) {
-  return value.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
-}
-
-function priorityLabel(priority?: string | null): string {
-  if (!priority) return '—';
-  const n = normalize(priority);
-  const map: Record<string, string> = {
-    highest: 'Gravíssima', critical: 'Gravíssima', gravissima: 'Gravíssima', 'gravíssima': 'Gravíssima',
-    high: 'Crítica', critica: 'Crítica', 'crítica': 'Crítica',
-    medium: 'Média', media: 'Média', 'média': 'Média',
-    low: 'Normal', normal: 'Normal',
-    trivial: 'Trivial',
-  };
-  return map[n] ?? priority;
-}
 
 const PAGE_SIZES = [10, 25, 50, 100] as const;
 
