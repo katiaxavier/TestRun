@@ -198,7 +198,7 @@ function IssueCard({ issue, jiraUrl, onEdit, onDelete, confirmDelete, onConfirmD
 
 // ── Drawer ──────────────────────────────────────────────────────────────────
 function TestCaseDrawer({
-  executionId, etc, allTestCases, currentIndex, onClose, onUpdated, onNavigate,
+  executionId, etc, allTestCases, currentIndex, onClose, onUpdated, onNavigate, onRemoved,
 }: {
   executionId: string;
   etc: ExecutionTestCase;
@@ -207,6 +207,7 @@ function TestCaseDrawer({
   onClose: () => void;
   onUpdated: (updated: ExecutionTestCase) => void;
   onNavigate: (etc: ExecutionTestCase) => void;
+  onRemoved: () => void;
 }) {
   const [status, setStatus] = useState(etc.status);
   const [comments, setComments] = useState(etc.comments ?? '');
@@ -224,6 +225,8 @@ function TestCaseDrawer({
   const [updatingIssue, setUpdatingIssue] = useState(false);
   const [toasts, setToasts] = useState<{ id: number; message: string; type: 'success' | 'error' }[]>([]);
   const [jiraUrl, setJiraUrl] = useState('');
+  const [removeConfirm, setRemoveConfirm] = useState(false);
+  const [removing, setRemoving] = useState(false);
 
   useEffect(() => {
     configApi.get().then(({ data }) => setJiraUrl(data.url ?? '')).catch(() => {});
@@ -342,6 +345,18 @@ function TestCaseDrawer({
       addToast(label);
     } catch {
       addToast('Erro ao remover', 'error');
+    }
+  };
+
+  const handleRemoveFromExecution = async () => {
+    setRemoving(true);
+    try {
+      await executionsApi.removeTestCase(executionId, etc.id);
+      onClose();
+      onRemoved();
+    } catch {
+      addToast('Erro ao remover caso de teste', 'error');
+      setRemoving(false);
     }
   };
 
@@ -482,7 +497,7 @@ function TestCaseDrawer({
         </div>
 
         {/* Footer */}
-        <div className="drawer-footer">
+        <div className="drawer-footer" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
           <button
             className="btn btn-primary"
             onClick={handleSave}
@@ -495,6 +510,29 @@ function TestCaseDrawer({
               ? <><CheckCircle size={16} weight="fill" /> Salvo</>
               : <><CheckCircle size={16} /> Salvar comentários</>}
           </button>
+          <AnimatePresence>
+            {removeConfirm ? (
+              <motion.div key="confirm" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} style={{ overflow: 'hidden' }}>
+                <div style={{ display: 'flex', gap: '0.5rem', paddingTop: '0.25rem' }}>
+                  <button className="btn btn-danger" onClick={handleRemoveFromExecution} disabled={removing} style={{ flex: 1, justifyContent: 'center' }}>
+                    {removing ? <div className="spinner" style={{ width: 14, height: 14 }} /> : <Trash size={14} />}
+                    Confirmar remoção
+                  </button>
+                  <button className="btn btn-ghost" onClick={() => setRemoveConfirm(false)} disabled={removing}>Cancelar</button>
+                </div>
+              </motion.div>
+            ) : (
+              <motion.div key="remove-btn" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                <button
+                  className="btn btn-ghost btn-sm"
+                  onClick={() => setRemoveConfirm(true)}
+                  style={{ width: '100%', justifyContent: 'center', color: 'var(--status-failed)', fontSize: '0.8rem' }}
+                >
+                  <Trash size={13} /> Remover da execução
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* Toasts */}
@@ -582,6 +620,18 @@ export default function ExecutionRunPage() {
       return { ...prev, testCases, status };
     });
     setSelectedEtc(updated);
+  };
+
+  const handleTestCaseRemoved = (etcId: string) => {
+    setSelectedEtc(null);
+    setExecution(prev => {
+      if (!prev) return prev;
+      const testCases = prev.testCases.filter(tc => tc.id !== etcId);
+      const allPending = testCases.length > 0 && testCases.every(tc => tc.status === 'PENDING');
+      const allDone = testCases.length > 0 && testCases.every(tc => tc.status !== 'PENDING');
+      const status = allPending ? 'PENDING' : allDone ? 'COMPLETED' : 'IN_PROGRESS';
+      return { ...prev, testCases, status };
+    });
   };
 
   const handleExport = async (type: 'xlsx' | 'pdf') => {
@@ -871,6 +921,7 @@ export default function ExecutionRunPage() {
             currentIndex={filteredTcs.findIndex(tc => tc.id === selectedEtc.id)}
             onClose={() => setSelectedEtc(null)}
             onUpdated={handleUpdated}
+            onRemoved={() => handleTestCaseRemoved(selectedEtc.id)}
             onNavigate={tc => {
               setSelectedEtc(tc);
               if (pageSize !== 'all') {
