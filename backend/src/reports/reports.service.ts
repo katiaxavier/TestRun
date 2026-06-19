@@ -27,7 +27,7 @@ const SEVERITY_PT: Record<string, string> = {
   Trivial: 'Trivial', Normal: 'Normal', Low: 'Trivial', Medium: 'Médio', High: 'Alto', Critical: 'Crítico', Gravissima: 'Gravíssima',
 };
 const ISSUE_STATUS_PT: Record<string, string> = {
-  Open: 'Aberto', 'In Progress': 'Em Andamento', Resolved: 'Resolvido',
+  Open: 'Aberto', 'In Progress': 'Em Andamento', Resolved: 'Resolvido', Cancelled: 'Cancelado',
 };
 
 const XL_BORDER_THIN = {

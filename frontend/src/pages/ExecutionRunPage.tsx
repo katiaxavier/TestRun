@@ -82,8 +82,8 @@ function priorityLabel(priority?: string | null): string {
 // ── Issue helpers ────────────────────────────────────────────────────────────
 const SEVERITY_PT: Record<string, string> = { Trivial: 'Trivial', Normal: 'Normal', Low: 'Trivial', Medium: 'Média', High: 'Alta', Critical: 'Crítica', Gravissima: 'Gravíssima' };
 const SEVERITY_EN: Record<string, string> = { Trivial: 'Trivial', Normal: 'Normal', Média: 'Medium', Alta: 'High', Crítica: 'Critical', 'Gravíssima': 'Gravissima' };
-const ISSUE_STATUS_PT: Record<string, string> = { Open: 'Aberto', 'In Progress': 'Em Andamento', Resolved: 'Resolvido' };
-const ISSUE_STATUS_EN: Record<string, string> = { Aberto: 'Open', 'Em Andamento': 'In Progress', Resolvido: 'Resolved' };
+const ISSUE_STATUS_PT: Record<string, string> = { Open: 'Aberto', 'In Progress': 'Em Andamento', Resolved: 'Resolvido', Cancelled: 'Cancelado' };
+const ISSUE_STATUS_EN: Record<string, string> = { Aberto: 'Open', 'Em Andamento': 'In Progress', Resolvido: 'Resolved', Cancelado: 'Cancelled' };
 
 type IssueFormState = { type: string; jiraKey: string; title: string; severity: string; status: string };
 const EMPTY_ISSUE_FORM: IssueFormState = { type: 'BUG', jiraKey: '', title: '', severity: 'Média', status: 'Aberto' };
@@ -125,7 +125,7 @@ function IssueForm({ form, onChange, onSubmit, onCancel, loading, submitLabel }:
         <div>
           <label className="form-label">Status</label>
           <select value={form.status} onChange={e => onChange({ ...form, status: e.target.value })}>
-            <option>Aberto</option><option>Em Andamento</option><option>Resolvido</option>
+            <option>Aberto</option><option>Em Andamento</option><option>Resolvido</option><option>Cancelado</option>
           </select>
         </div>
       </div>
