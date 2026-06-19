@@ -57,7 +57,7 @@ export function SuiteCard({ suite, selected, onSelect, onDelete }: SuiteCardProp
         </h3>
       </Tooltip>
 
-      <div style={{ display: 'flex', gap: '1.25rem', marginTop: '1rem', paddingTop: '0.85rem', borderTop: '1px solid var(--border-subtle)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', marginTop: '1rem', paddingTop: '0.85rem', borderTop: '1px solid var(--border-subtle)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
           <Flask size={14} style={{ color: 'var(--accent)' }} />
           <strong style={{ color: 'var(--text-primary)' }}>{suite._count?.testCases ?? 0}</strong> casos
@@ -66,7 +66,7 @@ export function SuiteCard({ suite, selected, onSelect, onDelete }: SuiteCardProp
           <ChartBar size={14} style={{ color: 'var(--status-inprogress)' }} />
           <strong style={{ color: 'var(--text-primary)' }}>{suite._count?.executions ?? 0}</strong> execuções
         </div>
-        <div style={{ marginLeft: 'auto', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+        <div style={{ marginLeft: 'auto', fontSize: '0.75rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
           Criado em {formatDate(suite.createdAt)}
         </div>
       </div>
