@@ -75,19 +75,34 @@ model ExecutionTestCase {
   responsible String?
   comments    String?
   issues      Issue[]
+  scenarios   Scenario[]
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 }
 
-model Issue {
+model Scenario {
   id                  String            @id @default(uuid())
   executionTestCaseId String
   executionTestCase   ExecutionTestCase @relation(fields: [executionTestCaseId], references: [id], onDelete: Cascade)
+  name                String
+  status              String            @default("PENDING") // PENDING, PASSED, FAILED, IN_PROGRESS, BLOCKED
+  comments            String?
+  issues              Issue[]
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+}
+
+model Issue {
+  id                  String             @id @default(uuid())
+  executionTestCaseId String?
+  executionTestCase   ExecutionTestCase? @relation(fields: [executionTestCaseId], references: [id], onDelete: Cascade)
+  scenarioId          String?
+  scenario            Scenario?          @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
   type                String // BUG, IMPROVEMENT
   jiraKey             String? // ex: PD-2110 (opcional)
   title               String
   severity            String? // Low, Medium, High, Critical
   status              String? // Open, In Progress, Resolved
-  createdAt           DateTime          @default(now())
-  updatedAt           DateTime          @updatedAt
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
 }

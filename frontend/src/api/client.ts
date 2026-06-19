@@ -50,6 +50,15 @@ export interface Execution {
   createdAt: string;
 }
 
+export interface Scenario {
+  id: string;
+  executionTestCaseId: string;
+  name: string;
+  status: string;
+  comments?: string;
+  issues: Issue[];
+}
+
 export interface ExecutionTestCase {
   id: string;
   executionId: string;
@@ -59,6 +68,7 @@ export interface ExecutionTestCase {
   responsible?: string;
   comments?: string;
   issues: Issue[];
+  scenarios: Scenario[];
 }
 
 export interface Issue {
@@ -126,6 +136,20 @@ export const executionsApi = {
     api.delete(`/executions/${executionId}/test-cases/${etcId}/issues/${issueId}`),
   updateIssue: (executionId: string, etcId: string, issueId: string, data: { type?: string; jiraKey?: string | null; title?: string; severity?: string; status?: string }) =>
     api.patch<Issue>(`/executions/${executionId}/test-cases/${etcId}/issues/${issueId}`, data),
+
+  createScenario: (executionId: string, etcId: string, name: string) =>
+    api.post<Scenario>(`/executions/${executionId}/test-cases/${etcId}/scenarios`, { name }),
+  updateScenario: (executionId: string, etcId: string, scenarioId: string, data: { name?: string; status?: string; comments?: string }) =>
+    api.patch<Scenario>(`/executions/${executionId}/test-cases/${etcId}/scenarios/${scenarioId}`, data),
+  deleteScenario: (executionId: string, etcId: string, scenarioId: string) =>
+    api.delete(`/executions/${executionId}/test-cases/${etcId}/scenarios/${scenarioId}`),
+
+  addScenarioIssue: (executionId: string, etcId: string, scenarioId: string, data: { type: string; jiraKey?: string; title: string; severity?: string; status?: string }) =>
+    api.post<Issue>(`/executions/${executionId}/test-cases/${etcId}/scenarios/${scenarioId}/issues`, data),
+  updateScenarioIssue: (executionId: string, etcId: string, scenarioId: string, issueId: string, data: { type?: string; jiraKey?: string | null; title?: string; severity?: string; status?: string }) =>
+    api.patch<Issue>(`/executions/${executionId}/test-cases/${etcId}/scenarios/${scenarioId}/issues/${issueId}`, data),
+  removeScenarioIssue: (executionId: string, etcId: string, scenarioId: string, issueId: string) =>
+    api.delete(`/executions/${executionId}/test-cases/${etcId}/scenarios/${scenarioId}/issues/${issueId}`),
 };
 
 export const reportsApi = {

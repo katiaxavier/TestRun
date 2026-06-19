@@ -246,7 +246,11 @@ export class ReportsService {
         suite: true,
         batch: { select: { suiteIds: true } },
         testCases: {
-          include: { testCase: true, issues: true },
+          include: {
+            testCase: true,
+            issues: true,
+            scenarios: { include: { issues: true }, orderBy: { createdAt: 'asc' } },
+          },
           orderBy: { testCase: { jiraKey: 'asc' } },
         },
       },
@@ -316,11 +320,13 @@ export class ReportsService {
     xlHeaderRow(headerRow, 8);
 
     // Linhas 8+ – Dados
+    let xlRowIdx = 8;
     execution.testCases.forEach((etc, idx) => {
-      const row = ws.getRow(idx + 8);
+      const hasScenarios = (etc as any).scenarios?.length > 0;
       const jiraIssues = etc.issues.map((i) => i.jiraKey || i.title).join(', ');
       const statusArgb = STATUS_ARGB[etc.status] ?? 'EEEEEE';
 
+      const row = ws.getRow(xlRowIdx++);
       row.getCell(1).value = idx + 1;
       row.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
 
@@ -339,15 +345,41 @@ export class ReportsService {
 
       row.getCell(5).value = STATUS_PT[etc.status] ?? etc.status;
       row.getCell(5).fill = xlFill(statusArgb);
-      row.getCell(5).font = { name: 'Calibri', size: 11, bold: true };
+      row.getCell(5).font = { name: 'Calibri', size: 11, bold: hasScenarios, italic: hasScenarios };
       row.getCell(5).alignment = { horizontal: 'center', vertical: 'middle' };
 
       row.getCell(6).value = etc.responsible || '';
-      row.getCell(7).value = etc.comments || '';
+      row.getCell(7).value = hasScenarios ? '(ver cenários)' : (etc.comments || '');
       row.getCell(7).alignment = { wrapText: true, vertical: 'middle' };
       row.getCell(8).value = jiraIssues || '';
 
       xlDataRow(row, 8, idx % 2 === 0, [5]);
+
+      if (hasScenarios) {
+        for (const scenario of (etc as any).scenarios) {
+          const sRow = ws.getRow(xlRowIdx++);
+          const sArgb = STATUS_ARGB[scenario.status] ?? 'EEEEEE';
+          const sIssues = scenario.issues.map((i: any) => i.jiraKey || i.title).join(', ');
+
+          sRow.getCell(1).value = '';
+          sRow.getCell(2).value = '↳';
+          sRow.getCell(2).font = { name: 'Calibri', size: 11, color: { argb: '818B9D' } };
+          sRow.getCell(3).value = scenario.name;
+          sRow.getCell(3).font = { name: 'Calibri', size: 10, italic: true };
+          sRow.getCell(3).alignment = { indent: 2, wrapText: true, vertical: 'middle' };
+          sRow.getCell(4).value = '';
+          sRow.getCell(5).value = STATUS_PT[scenario.status] ?? scenario.status;
+          sRow.getCell(5).fill = xlFill(sArgb);
+          sRow.getCell(5).font = { name: 'Calibri', size: 10, bold: true };
+          sRow.getCell(5).alignment = { horizontal: 'center', vertical: 'middle' };
+          sRow.getCell(6).value = '';
+          sRow.getCell(7).value = scenario.comments || '';
+          sRow.getCell(7).alignment = { wrapText: true, vertical: 'middle' };
+          sRow.getCell(8).value = sIssues || '';
+
+          xlDataRow(sRow, 8, idx % 2 === 0, [5]);
+        }
+      }
     });
 
     // ── Aba 2: Bugs e Melhorias ──────────────────────────────────────────────
@@ -381,6 +413,19 @@ export class ReportsService {
           status:    ISSUE_STATUS_PT[issue.status ?? ''] || issue.status || 'Aberto',
         });
       });
+      (etc as any).scenarios?.forEach((scenario: any) => {
+        scenario.issues.forEach((issue: any) => {
+          allIssues.push({
+            type:      issue.type === 'BUG' ? 'Bug' : 'Melhoria',
+            jiraKey:   issue.jiraKey || 'N/A',
+            title:     issue.title,
+            severity:  SEVERITY_PT[issue.severity ?? ''] || issue.severity || '-',
+            createdAt: this.formatDate(issue.createdAt),
+            updatedAt: this.formatDate(issue.updatedAt),
+            status:    ISSUE_STATUS_PT[issue.status ?? ''] || issue.status || 'Aberto',
+          });
+        });
+      });
     });
 
     allIssues.forEach((issue, idx) => {
@@ -407,7 +452,11 @@ export class ReportsService {
           include: {
             suite: true,
             testCases: {
-              include: { testCase: true, issues: true },
+              include: {
+                testCase: true,
+                issues: true,
+                scenarios: { include: { issues: true }, orderBy: { createdAt: 'asc' } },
+              },
               orderBy: { testCase: { jiraKey: 'asc' } },
             },
           },
@@ -562,11 +611,22 @@ export class ReportsService {
       ex.testCases.forEach((etc) => {
         etc.issues.forEach((issue) => {
           allIssues.push({
-            type:        issue.type === 'BUG' ? 'Bug' : 'Melhoria',
-            key:         issue.jiraKey || 'N/A',
-            title:       issue.title,
-            severity:    SEVERITY_PT[issue.severity ?? ''] || issue.severity || '-',
-            status:      ISSUE_STATUS_PT[issue.status ?? ''] || issue.status || 'Aberto',
+            type:     issue.type === 'BUG' ? 'Bug' : 'Melhoria',
+            key:      issue.jiraKey || 'N/A',
+            title:    issue.title,
+            severity: SEVERITY_PT[issue.severity ?? ''] || issue.severity || '-',
+            status:   ISSUE_STATUS_PT[issue.status ?? ''] || issue.status || 'Aberto',
+          });
+        });
+        (etc as any).scenarios?.forEach((scenario: any) => {
+          scenario.issues.forEach((issue: any) => {
+            allIssues.push({
+              type:     issue.type === 'BUG' ? 'Bug' : 'Melhoria',
+              key:      issue.jiraKey || 'N/A',
+              title:    issue.title,
+              severity: SEVERITY_PT[issue.severity ?? ''] || issue.severity || '-',
+              status:   ISSUE_STATUS_PT[issue.status ?? ''] || issue.status || 'Aberto',
+            });
           });
         });
       });
@@ -663,7 +723,11 @@ export class ReportsService {
         suite: true,
         batch: { select: { suiteIds: true } },
         testCases: {
-          include: { testCase: true, issues: true },
+          include: {
+            testCase: true,
+            issues: true,
+            scenarios: { include: { issues: true }, orderBy: { createdAt: 'asc' } },
+          },
           orderBy: { testCase: { jiraKey: 'asc' } },
         },
       },
@@ -695,11 +759,22 @@ export class ReportsService {
     execution.testCases.forEach((etc) => {
       etc.issues.forEach((issue) => {
         allIssues.push({
-          type:        issue.type === 'BUG' ? 'Bug' : 'Melhoria',
-          key:         issue.jiraKey || 'N/A',
-          title:       issue.title,
-          severity:    SEVERITY_PT[issue.severity ?? ''] || issue.severity || '-',
-          status:      ISSUE_STATUS_PT[issue.status ?? ''] || issue.status || 'Aberto',
+          type:     issue.type === 'BUG' ? 'Bug' : 'Melhoria',
+          key:      issue.jiraKey || 'N/A',
+          title:    issue.title,
+          severity: SEVERITY_PT[issue.severity ?? ''] || issue.severity || '-',
+          status:   ISSUE_STATUS_PT[issue.status ?? ''] || issue.status || 'Aberto',
+        });
+      });
+      (etc as any).scenarios?.forEach((scenario: any) => {
+        scenario.issues.forEach((issue: any) => {
+          allIssues.push({
+            type:     issue.type === 'BUG' ? 'Bug' : 'Melhoria',
+            key:      issue.jiraKey || 'N/A',
+            title:    issue.title,
+            severity: SEVERITY_PT[issue.severity ?? ''] || issue.severity || '-',
+            status:   ISSUE_STATUS_PT[issue.status ?? ''] || issue.status || 'Aberto',
+          });
         });
       });
     });
@@ -788,10 +863,11 @@ export class ReportsService {
                 widths: ['14%', '26%', '14%', '13%', '18%', '15%'],
                 body: [
                   pdfHeaderCells(['ID', 'Caso de Teste', 'Prioridade', 'Status', 'Responsável', 'Issues']),
-                  ...execution.testCases.map((tc, i) => {
+                  ...execution.testCases.flatMap((tc, i) => {
                     const bg = rowBg(i);
                     const issues = tc.issues.map((iss) => iss.jiraKey || iss.title).join(', ') || '-';
-                    return [
+                    const scenarios = (tc as any).scenarios ?? [];
+                    const mainRow = [
                       pdfCell(tc.testCase.jiraKey, bg, { color: '#FF6002', decoration: 'underline', ...(tc.testCase.link ? { link: tc.testCase.link } : {}) }),
                       pdfCell(tc.testCase.title, bg),
                       pdfCell(tc.testCase.priority || '-', bg, { alignment: 'center' }),
@@ -799,6 +875,18 @@ export class ReportsService {
                       pdfCell(tc.responsible || '-', bg),
                       pdfCell(issues, bg),
                     ];
+                    const scenarioRows = scenarios.map((s: any) => {
+                      const sIssues = s.issues.map((iss: any) => iss.jiraKey || iss.title).join(', ') || '-';
+                      return [
+                        pdfCell('↳', bg, { color: '#818B9D' }),
+                        pdfCell(s.name, bg, { italics: true, margin: [10, 3, 3, 3] }),
+                        pdfCell('-', bg, { alignment: 'center' }),
+                        pdfStatusCell(s.status),
+                        pdfCell('-', bg),
+                        pdfCell(sIssues, bg),
+                      ];
+                    });
+                    return [mainRow, ...scenarioRows];
                   }),
                 ],
               },

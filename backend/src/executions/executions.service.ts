@@ -45,6 +45,16 @@ export class UpdateIssueDto {
   status?: string;
 }
 
+export class CreateScenarioDto {
+  name!: string;
+}
+
+export class UpdateScenarioDto {
+  name?: string;
+  status?: string;
+  comments?: string;
+}
+
 @Injectable()
 export class ExecutionsService {
   constructor(private readonly prisma: PrismaService) {}
@@ -58,6 +68,10 @@ export class ExecutionsService {
           include: {
             testCase: true,
             issues: true,
+            scenarios: {
+              include: { issues: true },
+              orderBy: { createdAt: 'asc' },
+            },
           },
           orderBy: {
             testCase: {
@@ -124,6 +138,28 @@ export class ExecutionsService {
     }
 
     return this.findOne(execution.id);
+  }
+
+  private computeAggregatedStatus(statuses: string[]): string {
+    if (statuses.every((s) => s === 'PENDING')) return 'PENDING';
+    if (statuses.every((s) => s === 'PASSED')) return 'PASSED';
+    if (statuses.some((s) => s === 'FAILED')) return 'FAILED';
+    if (statuses.some((s) => s === 'BLOCKED')) return 'BLOCKED';
+    return 'IN_PROGRESS';
+  }
+
+  private async recomputeTestCaseStatus(etcId: string) {
+    const scenarios = await this.prisma.scenario.findMany({
+      where: { executionTestCaseId: etcId },
+      select: { status: true },
+    });
+    if (scenarios.length === 0) return;
+    const aggregated = this.computeAggregatedStatus(scenarios.map((s) => s.status));
+    const updated = await this.prisma.executionTestCase.update({
+      where: { id: etcId },
+      data: { status: aggregated },
+    });
+    await this.recomputeExecutionStatus(updated.executionId);
   }
 
   private async recomputeExecutionStatus(executionId: string) {
@@ -376,7 +412,11 @@ export class ExecutionsService {
           include: {
             suite: true,
             testCases: {
-              include: { testCase: true, issues: true },
+              include: {
+                testCase: true,
+                issues: true,
+                scenarios: { include: { issues: true }, orderBy: { createdAt: 'asc' } },
+              },
             },
           },
         },
@@ -444,6 +484,77 @@ export class ExecutionsService {
         return { ...batch, suites };
       }),
     );
+  }
+
+  async createScenario(etcId: string, dto: CreateScenarioDto) {
+    const etc = await this.prisma.executionTestCase.findUnique({ where: { id: etcId } });
+    if (!etc) throw new HttpException('Item de execução não encontrado.', HttpStatus.NOT_FOUND);
+    const scenario = await this.prisma.scenario.create({
+      data: {
+        executionTestCaseId: etcId,
+        name: dto.name,
+        status: 'PENDING',
+      },
+      include: { issues: true },
+    });
+    await this.recomputeTestCaseStatus(etcId);
+    return scenario;
+  }
+
+  async updateScenario(etcId: string, scenarioId: string, dto: UpdateScenarioDto) {
+    const scenario = await this.prisma.scenario.findUnique({ where: { id: scenarioId } });
+    if (!scenario || scenario.executionTestCaseId !== etcId)
+      throw new HttpException('Cenário não encontrado.', HttpStatus.NOT_FOUND);
+    const updated = await this.prisma.scenario.update({
+      where: { id: scenarioId },
+      data: {
+        name: dto.name,
+        status: dto.status ? dto.status.toUpperCase() : undefined,
+        comments: dto.comments,
+      },
+      include: { issues: true },
+    });
+    await this.recomputeTestCaseStatus(etcId);
+    return updated;
+  }
+
+  async deleteScenario(etcId: string, scenarioId: string) {
+    const scenario = await this.prisma.scenario.findUnique({ where: { id: scenarioId } });
+    if (!scenario || scenario.executionTestCaseId !== etcId)
+      throw new HttpException('Cenário não encontrado.', HttpStatus.NOT_FOUND);
+    await this.prisma.scenario.delete({ where: { id: scenarioId } });
+    await this.recomputeTestCaseStatus(etcId);
+    return { success: true };
+  }
+
+  async addScenarioIssue(scenarioId: string, dto: CreateIssueDto) {
+    const scenario = await this.prisma.scenario.findUnique({ where: { id: scenarioId } });
+    if (!scenario) throw new HttpException('Cenário não encontrado.', HttpStatus.NOT_FOUND);
+    return this.prisma.issue.create({
+      data: {
+        scenarioId,
+        type: dto.type.toUpperCase(),
+        jiraKey: dto.jiraKey || null,
+        title: dto.title,
+        severity: dto.severity || null,
+        status: dto.status || 'Open',
+      },
+    });
+  }
+
+  async updateScenarioIssue(scenarioId: string, issueId: string, dto: UpdateIssueDto) {
+    const issue = await this.prisma.issue.findUnique({ where: { id: issueId } });
+    if (!issue || issue.scenarioId !== scenarioId)
+      throw new HttpException('Issue não encontrada.', HttpStatus.NOT_FOUND);
+    return this.prisma.issue.update({ where: { id: issueId }, data: dto });
+  }
+
+  async removeScenarioIssue(scenarioId: string, issueId: string) {
+    const issue = await this.prisma.issue.findUnique({ where: { id: issueId } });
+    if (!issue || issue.scenarioId !== scenarioId)
+      throw new HttpException('Issue não encontrada.', HttpStatus.NOT_FOUND);
+    await this.prisma.issue.delete({ where: { id: issueId } });
+    return { success: true };
   }
 
   async deleteBatch(id: string) {
