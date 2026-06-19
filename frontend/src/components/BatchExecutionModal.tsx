@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Modal } from './Modal';
 import { executionsApi } from '../api/client';
 import type { Suite } from '../api/client';
-import { ChartBar, Flask } from '@phosphor-icons/react';
+import { Copy, Flask } from '@phosphor-icons/react';
 
 export function BatchExecutionModal({
   open, onClose, suites, onCreated,
@@ -55,7 +55,7 @@ export function BatchExecutionModal({
       {/* Suites Section */}
       <div style={{ padding: '1rem', borderBottom: '1px solid var(--border-subtle)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
-          <ChartBar size={16} />
+          <Copy size={16} />
           <span style={{ fontWeight: 600 }}>Suítes Selecionadas</span>
         </div>
         <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>

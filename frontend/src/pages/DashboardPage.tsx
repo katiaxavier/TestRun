@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, Flask, MagnifyingGlass,
-  WarningCircle, CloudArrowDown, ChartBar,
+  WarningCircle, CloudArrowDown,
   GridFourIcon, FlaskIcon, CopyIcon,
 } from '@phosphor-icons/react';
 import { suitesApi, executionsApi } from '../api/client';
@@ -187,7 +187,7 @@ export default function DashboardPage() {
             </div>
             <Tooltip content={selectedSuites.length < 2 ? 'Selecione pelo menos duas suítes para criar um lote.' : undefined} placement="top">
               <button className={`btn-create-batch ${selectedSuites.length >= 2 ? 'active' : ''}`} onClick={() => setBatchModalOpen(true)} disabled={selectedSuites.length < 2}>
-                <ChartBar size={16} /> Criar Lote de Suítes
+                <CopyIcon size={16} /> Criar Lote de Suítes
               </button>
             </Tooltip>
             <button className="btn btn-primary" style={{ height: 48 }} onClick={() => setImportOpen(true)}>
