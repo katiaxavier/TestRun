@@ -251,7 +251,8 @@ export class ReportsService {
     ws.columns = [
       { key: 'index',       width: 6  },
       { key: 'key',         width: 14 },
-      { key: 'title',       width: 65 },
+      { key: 'title',       width: 55 },
+      { key: 'priority',    width: 14 },
       { key: 'status',      width: 18 },
       { key: 'responsible', width: 18 },
       { key: 'comments',    width: 22 },
@@ -259,26 +260,26 @@ export class ReportsService {
     ];
 
     // Linha 1 – Título
-    xlTitleRow(ws, 'A1:G1', 'Relatório de Execução', 1);
+    xlTitleRow(ws, 'A1:H1', 'Relatório de Execução', 1);
 
     // Linhas 2-6 – Metadados
     ws.getRow(2).height = 22;
     xlMetaLabel(ws.getCell('A2'), 'Sprint');
     xlMetaValue(ws.getCell('C2'), execution.sprint);
     xlMetaLabel(ws.getCell('F2'), 'Total Passou');
-    xlMetaValue(ws.getCell('G2'), { formula: 'COUNTIF(D8:D1000,"Passed")' });
+    xlMetaValue(ws.getCell('G2'), { formula: 'COUNTIF(E8:E1000,"Passed")' });
 
     ws.getRow(3).height = 22;
     xlMetaLabel(ws.getCell('A3'), 'Versão do sistema');
     xlMetaValue(ws.getCell('C3'), execution.version);
     xlMetaLabel(ws.getCell('F3'), 'Total Falhou');
-    xlMetaValue(ws.getCell('G3'), { formula: 'COUNTIF(D8:D1000,"Failed")' });
+    xlMetaValue(ws.getCell('G3'), { formula: 'COUNTIF(E8:E1000,"Failed")' });
 
     ws.getRow(4).height = 22;
     xlMetaLabel(ws.getCell('A4'), 'Data de início');
     xlMetaValue(ws.getCell('C4'), this.formatDate(execution.startDate));
     xlMetaLabel(ws.getCell('F4'), 'Total Bloqueado');
-    xlMetaValue(ws.getCell('G4'), { formula: 'COUNTIF(D8:D1000,"Blocked")' });
+    xlMetaValue(ws.getCell('G4'), { formula: 'COUNTIF(E8:E1000,"Blocked")' });
 
     ws.getRow(5).height = 22;
     xlMetaLabel(ws.getCell('A5'), 'Data de fim');
@@ -296,8 +297,8 @@ export class ReportsService {
 
     // Linha 7 – Cabeçalho da tabela
     const headerRow = ws.getRow(7);
-    headerRow.values = ['', 'ID', 'Título do teste', 'Status', 'Responsável', 'Comentários', 'Issues'];
-    xlHeaderRow(headerRow, 7);
+    headerRow.values = ['', 'ID', 'Título do teste', 'Prioridade', 'Status', 'Responsável', 'Comentários', 'Issues'];
+    xlHeaderRow(headerRow, 8);
 
     // Linhas 8+ – Dados
     execution.testCases.forEach((etc, idx) => {
@@ -318,17 +319,20 @@ export class ReportsService {
       row.getCell(3).value = etc.testCase.title;
       row.getCell(3).alignment = { wrapText: true, vertical: 'middle' };
 
-      row.getCell(4).value = etc.status;
-      row.getCell(4).fill = xlFill(statusArgb);
-      row.getCell(4).font = { name: 'Calibri', size: 11, bold: true };
+      row.getCell(4).value = etc.testCase.priority || '-';
       row.getCell(4).alignment = { horizontal: 'center', vertical: 'middle' };
 
-      row.getCell(5).value = etc.responsible || '';
-      row.getCell(6).value = etc.comments || '';
-      row.getCell(6).alignment = { wrapText: true, vertical: 'middle' };
-      row.getCell(7).value = jiraIssues || '';
+      row.getCell(5).value = etc.status;
+      row.getCell(5).fill = xlFill(statusArgb);
+      row.getCell(5).font = { name: 'Calibri', size: 11, bold: true };
+      row.getCell(5).alignment = { horizontal: 'center', vertical: 'middle' };
 
-      xlDataRow(row, 7, idx % 2 === 0, [4]);
+      row.getCell(6).value = etc.responsible || '';
+      row.getCell(7).value = etc.comments || '';
+      row.getCell(7).alignment = { wrapText: true, vertical: 'middle' };
+      row.getCell(8).value = jiraIssues || '';
+
+      xlDataRow(row, 8, idx % 2 === 0, [5]);
     });
 
     // ── Aba 2: Bugs e Melhorias ──────────────────────────────────────────────
@@ -457,13 +461,14 @@ export class ReportsService {
       { key: 'empty',       width: 4  },
       { key: 'suite',       width: 16 },
       { key: 'key',         width: 14 },
-      { key: 'title',       width: 65 },
+      { key: 'title',       width: 55 },
+      { key: 'priority',    width: 14 },
       { key: 'status',      width: 18 },
       { key: 'responsible', width: 18 },
       { key: 'issue',       width: 18 },
     ];
 
-    xlTitleRow(ws, 'A1:H1', `Relatório Consolidado — ${batch.name || 'Lote ' + batch.id}`, 1);
+    xlTitleRow(ws, 'A1:I1', `Relatório Consolidado — ${batch.name || 'Lote ' + batch.id}`, 1);
 
     ws.getRow(2).height = 22;
     xlMetaLabel(ws.getCell('A2'), 'Total de Testes');
@@ -483,8 +488,8 @@ export class ReportsService {
     xlMetaValue(ws.getCell('G3'), summary.pending);
 
     const headerRow = ws.getRow(4);
-    headerRow.values = ['#', '', 'Suíte', 'ID', 'Título do teste', 'Status', 'Responsável', 'Issues'];
-    xlHeaderRow(headerRow, 8);
+    headerRow.values = ['#', '', 'Suíte', 'ID', 'Título do teste', 'Prioridade', 'Status', 'Responsável', 'Issues'];
+    xlHeaderRow(headerRow, 9);
 
     const allBatchTcs = report.executions.flatMap((ex) => ex.testCases);
     let testIndex = 1;
@@ -506,14 +511,16 @@ export class ReportsService {
         row.getCell(4).font = { name: 'Calibri', size: 11, color: { argb: 'FF6002' }, underline: true };
         row.getCell(5).value = etc.testCase.title;
         row.getCell(5).alignment = { wrapText: true, vertical: 'middle' };
-        row.getCell(6).value = etc.status;
-        row.getCell(6).fill = xlFill(statusArgb);
-        row.getCell(6).font = { name: 'Calibri', size: 11, bold: true };
+        row.getCell(6).value = etc.testCase.priority || '-';
         row.getCell(6).alignment = { horizontal: 'center', vertical: 'middle' };
-        row.getCell(7).value = etc.responsible || '';
-        row.getCell(8).value = jiraIssues || '';
+        row.getCell(7).value = etc.status;
+        row.getCell(7).fill = xlFill(statusArgb);
+        row.getCell(7).font = { name: 'Calibri', size: 11, bold: true };
+        row.getCell(7).alignment = { horizontal: 'center', vertical: 'middle' };
+        row.getCell(8).value = etc.responsible || '';
+        row.getCell(9).value = jiraIssues || '';
 
-        xlDataRow(row, 8, testIndex % 2 !== 0, [6]);
+        xlDataRow(row, 9, testIndex % 2 !== 0, [7]);
         testIndex++;
         rowIdx++;
     });
@@ -600,15 +607,16 @@ export class ReportsService {
               {
                 table: {
                   headerRows: 1,
-                  widths: ['16%', '36%', '15%', '18%', '15%'],
+                  widths: ['14%', '28%', '12%', '13%', '18%', '15%'],
                   body: [
-                    pdfHeaderCells(['ID', 'Caso de Teste', 'Status', 'Responsável', 'Issues']),
+                    pdfHeaderCells(['ID', 'Caso de Teste', 'Prioridade', 'Status', 'Responsável', 'Issues']),
                     ...suiteTcs.map((tc, i) => {
                       const bg = rowBg(i);
                       const issues = tc.issues.map((iss) => iss.jiraKey || iss.title).join(', ') || '-';
                       return [
                         pdfCell(tc.testCase.jiraKey, bg, { color: '#FF6002', decoration: 'underline', ...(tc.testCase.link ? { link: tc.testCase.link } : {}) }),
                         pdfCell(tc.testCase.title, bg),
+                        pdfCell(tc.testCase.priority || '-', bg, { alignment: 'center' }),
                         pdfStatusCell(tc.status),
                         pdfCell(tc.responsible || '-', bg),
                         pdfCell(issues, bg),
@@ -763,15 +771,16 @@ export class ReportsService {
           : [{
               table: {
                 headerRows: 1,
-                widths: ['16%', '36%', '15%', '18%', '15%'],
+                widths: ['14%', '28%', '12%', '13%', '18%', '15%'],
                 body: [
-                  pdfHeaderCells(['ID', 'Caso de Teste', 'Status', 'Responsável', 'Issues']),
+                  pdfHeaderCells(['ID', 'Caso de Teste', 'Prioridade', 'Status', 'Responsável', 'Issues']),
                   ...execution.testCases.map((tc, i) => {
                     const bg = rowBg(i);
                     const issues = tc.issues.map((iss) => iss.jiraKey || iss.title).join(', ') || '-';
                     return [
                       pdfCell(tc.testCase.jiraKey, bg, { color: '#FF6002', decoration: 'underline', ...(tc.testCase.link ? { link: tc.testCase.link } : {}) }),
                       pdfCell(tc.testCase.title, bg),
+                      pdfCell(tc.testCase.priority || '-', bg, { alignment: 'center' }),
                       pdfStatusCell(tc.status),
                       pdfCell(tc.responsible || '-', bg),
                       pdfCell(issues, bg),
