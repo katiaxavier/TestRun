@@ -80,8 +80,8 @@ function priorityLabel(priority?: string | null): string {
 }
 
 // ── Issue helpers ────────────────────────────────────────────────────────────
-const SEVERITY_PT: Record<string, string> = { Low: 'Baixa', Medium: 'Média', High: 'Alta', Critical: 'Crítica' };
-const SEVERITY_EN: Record<string, string> = { Baixa: 'Low', Média: 'Medium', Alta: 'High', Crítica: 'Critical' };
+const SEVERITY_PT: Record<string, string> = { Trivial: 'Trivial', Normal: 'Normal', Low: 'Trivial', Medium: 'Média', High: 'Alta', Critical: 'Crítica', Gravissima: 'Gravíssima' };
+const SEVERITY_EN: Record<string, string> = { Trivial: 'Trivial', Normal: 'Normal', Média: 'Medium', Alta: 'High', Crítica: 'Critical', 'Gravíssima': 'Gravissima' };
 const ISSUE_STATUS_PT: Record<string, string> = { Open: 'Aberto', 'In Progress': 'Em Andamento', Resolved: 'Resolvido' };
 const ISSUE_STATUS_EN: Record<string, string> = { Aberto: 'Open', 'Em Andamento': 'In Progress', Resolvido: 'Resolved' };
 
@@ -109,7 +109,7 @@ function IssueForm({ form, onChange, onSubmit, onCancel, loading, submitLabel }:
         <div>
           <label className="form-label">Severidade</label>
           <select value={form.severity} onChange={e => onChange({ ...form, severity: e.target.value })}>
-            <option>Baixa</option><option>Média</option><option>Alta</option><option>Crítica</option>
+            <option>Trivial</option><option>Normal</option><option>Média</option><option>Alta</option><option>Crítica</option><option>Gravíssima</option>
           </select>
         </div>
       </div>

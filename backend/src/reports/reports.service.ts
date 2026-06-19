@@ -24,7 +24,7 @@ const CREAM      = 'FFFEEE';   // creme — linhas alternadas (calor da marca)
 const ORANGE_ACC = 'FF6002';   // laranja primário — links Jira
 
 const SEVERITY_PT: Record<string, string> = {
-  Low: 'Baixo', Medium: 'Médio', High: 'Alto', Critical: 'Crítico',
+  Trivial: 'Trivial', Normal: 'Normal', Low: 'Trivial', Medium: 'Médio', High: 'Alto', Critical: 'Crítico', Gravissima: 'Gravíssima',
 };
 const ISSUE_STATUS_PT: Record<string, string> = {
   Open: 'Aberto', 'In Progress': 'Em Andamento', Resolved: 'Resolvido',
