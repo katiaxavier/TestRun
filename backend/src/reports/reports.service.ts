@@ -265,24 +265,12 @@ export class ReportsService {
     ws.getRow(2).height = 22;
     xlMetaLabel(ws.getCell('A2'), 'Sprint');
     xlMetaValue(ws.getCell('C2'), execution.sprint);
-    xlMetaLabel(ws.getCell('D2'), '% Aprovação');
-    const e2 = ws.getCell('E2');
-    e2.value = { formula: 'G2/G6' };
-    e2.numFmt = '0.0%';
-    e2.font = { name: 'Arial', size: 11 };
-    e2.border = XL_BORDER_THIN;
     xlMetaLabel(ws.getCell('F2'), 'Total Passou');
     xlMetaValue(ws.getCell('G2'), { formula: 'COUNTIF(D8:D1000,"Passed")' });
 
     ws.getRow(3).height = 22;
     xlMetaLabel(ws.getCell('A3'), 'Versão do sistema');
     xlMetaValue(ws.getCell('C3'), execution.version);
-    xlMetaLabel(ws.getCell('D3'), '% S/ Bloqueios');
-    const e3 = ws.getCell('E3');
-    e3.value = { formula: 'IF((G6-G4)>0, G2/(G6-G4), 0)' };
-    e3.numFmt = '0.0%';
-    e3.font = { name: 'Arial', size: 11 };
-    e3.border = XL_BORDER_THIN;
     xlMetaLabel(ws.getCell('F3'), 'Total Falhou');
     xlMetaValue(ws.getCell('G3'), { formula: 'COUNTIF(D8:D1000,"Failed")' });
 
@@ -540,10 +528,6 @@ export class ReportsService {
     const report = await this.getBatchReport(batchId);
     const { batch, summary } = report;
 
-    const approvalRate = summary.totalTests > 0 ? (summary.passed / summary.totalTests) * 100 : 0;
-    const adjustedRate = summary.totalTests - summary.blocked > 0
-      ? (summary.passed / (summary.totalTests - summary.blocked)) * 100
-      : 0;
     const executedTests = summary.passed + summary.failed + summary.blocked;
 
     const chartSegments = [
@@ -589,7 +573,7 @@ export class ReportsService {
             },
             {
               width: '48%',
-              ...this.pdfSummaryTable(summary.totalTests, executedTests, summary.passed, summary.failed, summary.blocked, approvalRate, adjustedRate),
+              ...this.pdfSummaryTable(summary.totalTests, executedTests, summary.passed, summary.failed, summary.blocked),
             },
           ],
           margin: [0, 0, 0, 20],
@@ -678,10 +662,6 @@ export class ReportsService {
     const executedTests = passedTests + failedTests + blockedTests;
     const pendingTests  = totalTests - executedTests;
 
-    const approvalRate = totalTests > 0 ? (passedTests / totalTests) * 100 : 0;
-    const adjustedRate = totalTests - blockedTests > 0
-      ? (passedTests / (totalTests - blockedTests)) * 100
-      : 0;
 
     const chartSegments = [
       { label: 'Passou',    count: passedTests,  color: '#22c55e' },
@@ -732,7 +712,7 @@ export class ReportsService {
             },
             {
               width: '48%',
-              ...this.pdfSummaryTable(totalTests, executedTests, passedTests, failedTests, blockedTests, approvalRate, adjustedRate),
+              ...this.pdfSummaryTable(totalTests, executedTests, passedTests, failedTests, blockedTests),
             },
           ],
           margin: [0, 0, 0, 20],
@@ -837,7 +817,7 @@ export class ReportsService {
 
   private pdfSummaryTable(
     total: number, executed: number, passed: number, failed: number,
-    blocked: number, approvalRate: number, adjustedRate: number,
+    blocked: number,
   ): any {
     const rows = [
       ['Total de Testes',  `${total}`],
@@ -845,8 +825,6 @@ export class ReportsService {
       ['Total Passou',     `${passed}`],
       ['Total Falhou',     `${failed}`],
       ['Total Bloqueado',  `${blocked}`],
-      ['% Aprovação',      `${approvalRate.toFixed(1)}%`],
-      ['% Sem Bloqueios',  `${adjustedRate.toFixed(1)}%`],
     ];
     return {
       table: {
