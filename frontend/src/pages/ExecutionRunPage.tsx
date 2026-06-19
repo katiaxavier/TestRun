@@ -399,10 +399,10 @@ function TestCaseDrawer({
         <div className="drawer-body">
           {/* Status */}
           <div>
-            <p className="drawer-section-title" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <span className="drawer-section-title" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
               Status
               {savingStatus && <div className="spinner" style={{ width: 10, height: 10 }} />}
-            </p>
+            </span>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
               {STATUS_OPTIONS.map(s => (
                 <button
@@ -441,10 +441,10 @@ function TestCaseDrawer({
           {/* Bugs & Melhorias */}
           <div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-              <p className="drawer-section-title" style={{ marginBottom: 0, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <span className="drawer-section-title" style={{ marginBottom: 0, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                 Bugs & Melhorias
                 {issues.length > 0 && <span className="badge">{issues.length}</span>}
-              </p>
+              </span>
               <button className="btn btn-ghost btn-sm" onClick={() => { setShowIssueForm(s => !s); setEditingIssueId(null); }} style={{ fontSize: '0.75rem' }}>
                 <Plus size={13} /> Adicionar
               </button>
