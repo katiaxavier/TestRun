@@ -23,6 +23,13 @@ const CHUMBO     = '818B9D';   // chumbo — labels e subtítulos de suíte
 const CREAM      = 'FFFEEE';   // creme — linhas alternadas (calor da marca)
 const ORANGE_ACC = 'FF6002';   // laranja primário — links Jira
 
+const SEVERITY_PT: Record<string, string> = {
+  Low: 'Baixo', Medium: 'Médio', High: 'Alto', Critical: 'Crítico',
+};
+const ISSUE_STATUS_PT: Record<string, string> = {
+  Open: 'Aberto', 'In Progress': 'Em Andamento', Resolved: 'Resolvido',
+};
+
 const XL_BORDER_THIN = {
   top:    { style: 'thin' as const, color: { argb: 'C8D0D8' } },
   left:   { style: 'thin' as const, color: { argb: 'C8D0D8' } },
@@ -36,6 +43,14 @@ const STATUS_ARGB: Record<string, string> = {
   BLOCKED:     'FFEB9C',
   IN_PROGRESS: 'BDD7EE',
   PENDING:     'EEEEEE',
+};
+
+const STATUS_PT: Record<string, string> = {
+  PASSED:      'Passou',
+  FAILED:      'Falhou',
+  BLOCKED:     'Bloqueado',
+  IN_PROGRESS: 'Em Andamento',
+  PENDING:     'Pendente',
 };
 
 const STATUS_HEX: Record<string, string> = {
@@ -267,19 +282,19 @@ export class ReportsService {
     xlMetaLabel(ws.getCell('A2'), 'Sprint');
     xlMetaValue(ws.getCell('C2'), execution.sprint);
     xlMetaLabel(ws.getCell('F2'), 'Total Passou');
-    xlMetaValue(ws.getCell('G2'), { formula: 'COUNTIF(E8:E1000,"Passed")' });
+    xlMetaValue(ws.getCell('G2'), { formula: 'COUNTIF(E8:E1000,"Passou")' });
 
     ws.getRow(3).height = 22;
     xlMetaLabel(ws.getCell('A3'), 'Versão do sistema');
     xlMetaValue(ws.getCell('C3'), execution.version);
     xlMetaLabel(ws.getCell('F3'), 'Total Falhou');
-    xlMetaValue(ws.getCell('G3'), { formula: 'COUNTIF(E8:E1000,"Failed")' });
+    xlMetaValue(ws.getCell('G3'), { formula: 'COUNTIF(E8:E1000,"Falhou")' });
 
     ws.getRow(4).height = 22;
     xlMetaLabel(ws.getCell('A4'), 'Data de início');
     xlMetaValue(ws.getCell('C4'), this.formatDate(execution.startDate));
     xlMetaLabel(ws.getCell('F4'), 'Total Bloqueado');
-    xlMetaValue(ws.getCell('G4'), { formula: 'COUNTIF(E8:E1000,"Blocked")' });
+    xlMetaValue(ws.getCell('G4'), { formula: 'COUNTIF(E8:E1000,"Bloqueado")' });
 
     ws.getRow(5).height = 22;
     xlMetaLabel(ws.getCell('A5'), 'Data de fim');
@@ -322,7 +337,7 @@ export class ReportsService {
       row.getCell(4).value = etc.testCase.priority || '-';
       row.getCell(4).alignment = { horizontal: 'center', vertical: 'middle' };
 
-      row.getCell(5).value = etc.status;
+      row.getCell(5).value = STATUS_PT[etc.status] ?? etc.status;
       row.getCell(5).fill = xlFill(statusArgb);
       row.getCell(5).font = { name: 'Calibri', size: 11, bold: true };
       row.getCell(5).alignment = { horizontal: 'center', vertical: 'middle' };
@@ -361,10 +376,10 @@ export class ReportsService {
           type:        issue.type === 'BUG' ? 'Bug' : 'Melhoria',
           jiraKey:     issue.jiraKey || 'N/A',
           title:       issue.title,
-          severity:    issue.severity || '-',
+          severity:    SEVERITY_PT[issue.severity ?? ''] || issue.severity || '-',
           createdAt:   this.formatDate(issue.createdAt),
           updatedAt:   this.formatDate(issue.updatedAt),
-          status:      issue.status || 'Open',
+          status:      ISSUE_STATUS_PT[issue.status ?? ''] || issue.status || 'Aberto',
           responsible: issue.responsible || '-',
         });
       });
@@ -513,7 +528,7 @@ export class ReportsService {
         row.getCell(5).alignment = { wrapText: true, vertical: 'middle' };
         row.getCell(6).value = etc.testCase.priority || '-';
         row.getCell(6).alignment = { horizontal: 'center', vertical: 'middle' };
-        row.getCell(7).value = etc.status;
+        row.getCell(7).value = STATUS_PT[etc.status] ?? etc.status;
         row.getCell(7).fill = xlFill(statusArgb);
         row.getCell(7).font = { name: 'Calibri', size: 11, bold: true };
         row.getCell(7).alignment = { horizontal: 'center', vertical: 'middle' };
@@ -552,8 +567,8 @@ export class ReportsService {
             type:        issue.type === 'BUG' ? 'Bug' : 'Melhoria',
             key:         issue.jiraKey || 'N/A',
             title:       issue.title,
-            severity:    issue.severity || '-',
-            status:      issue.status || 'Open',
+            severity:    SEVERITY_PT[issue.severity ?? ''] || issue.severity || '-',
+            status:      ISSUE_STATUS_PT[issue.status ?? ''] || issue.status || 'Aberto',
           });
         });
       });
@@ -607,7 +622,7 @@ export class ReportsService {
               {
                 table: {
                   headerRows: 1,
-                  widths: ['14%', '28%', '12%', '13%', '18%', '15%'],
+                  widths: ['14%', '26%', '14%', '13%', '18%', '15%'],
                   body: [
                     pdfHeaderCells(['ID', 'Caso de Teste', 'Prioridade', 'Status', 'Responsável', 'Issues']),
                     ...suiteTcs.map((tc, i) => {
@@ -685,8 +700,8 @@ export class ReportsService {
           type:        issue.type === 'BUG' ? 'Bug' : 'Melhoria',
           key:         issue.jiraKey || 'N/A',
           title:       issue.title,
-          severity:    issue.severity || '-',
-          status:      issue.status || 'Open',
+          severity:    SEVERITY_PT[issue.severity ?? ''] || issue.severity || '-',
+          status:      ISSUE_STATUS_PT[issue.status ?? ''] || issue.status || 'Aberto',
         });
       });
     });
@@ -746,15 +761,16 @@ export class ReportsService {
                 {
                   table: {
                     headerRows: 1,
-                    widths: ['16%', '36%', '15%', '18%', '15%'],
+                    widths: ['14%', '26%', '14%', '13%', '18%', '15%'],
                     body: [
-                      pdfHeaderCells(['ID', 'Caso de Teste', 'Status', 'Responsável', 'Issues']),
+                      pdfHeaderCells(['ID', 'Caso de Teste', 'Prioridade', 'Status', 'Responsável', 'Issues']),
                       ...suiteTcs.map((tc, i) => {
                         const bg = rowBg(i);
                         const issues = tc.issues.map((iss) => iss.jiraKey || iss.title).join(', ') || '-';
                         return [
                           pdfCell(tc.testCase.jiraKey, bg, { color: '#FF6002', decoration: 'underline', ...(tc.testCase.link ? { link: tc.testCase.link } : {}) }),
                           pdfCell(tc.testCase.title, bg),
+                          pdfCell(tc.testCase.priority || '-', bg, { alignment: 'center' }),
                           pdfStatusCell(tc.status),
                           pdfCell(tc.responsible || '-', bg),
                           pdfCell(issues, bg),
@@ -771,7 +787,7 @@ export class ReportsService {
           : [{
               table: {
                 headerRows: 1,
-                widths: ['14%', '28%', '12%', '13%', '18%', '15%'],
+                widths: ['14%', '26%', '14%', '13%', '18%', '15%'],
                 body: [
                   pdfHeaderCells(['ID', 'Caso de Teste', 'Prioridade', 'Status', 'Responsável', 'Issues']),
                   ...execution.testCases.map((tc, i) => {
