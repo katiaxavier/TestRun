@@ -35,7 +35,6 @@ export class CreateIssueDto {
   title!: string;
   severity?: string;
   status?: string;
-  responsible?: string;
 }
 
 export class UpdateIssueDto {
@@ -195,7 +194,6 @@ export class ExecutionsService {
         title: dto.title,
         severity: dto.severity || null,
         status: dto.status || 'Open',
-        responsible: dto.responsible || null,
       },
     });
 

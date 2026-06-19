@@ -88,7 +88,6 @@ model Issue {
   title               String
   severity            String? // Low, Medium, High, Critical
   status              String? // Open, In Progress, Resolved
-  responsible         String?
   createdAt           DateTime          @default(now())
   updatedAt           DateTime          @updatedAt
 }

@@ -85,6 +85,22 @@ const SEVERITY_EN: Record<string, string> = { Trivial: 'Trivial', Normal: 'Norma
 const ISSUE_STATUS_PT: Record<string, string> = { Open: 'Aberto', 'In Progress': 'Em Andamento', Resolved: 'Resolvido', Cancelled: 'Cancelado' };
 const ISSUE_STATUS_EN: Record<string, string> = { Aberto: 'Open', 'Em Andamento': 'In Progress', Resolvido: 'Resolved', Cancelado: 'Cancelled' };
 
+const SEVERITY_COLORS: Record<string, { color: string; bg: string }> = {
+  Trivial:    { color: '#9ca3af', bg: 'rgba(156,163,175,0.12)' },
+  Normal:     { color: '#6b7280', bg: 'rgba(107,114,128,0.12)' },
+  Média:      { color: '#d97706', bg: 'rgba(217,119,6,0.12)' },
+  Alta:       { color: '#f97316', bg: 'rgba(249,115,22,0.12)' },
+  Crítica:    { color: '#ef4444', bg: 'rgba(239,68,68,0.12)' },
+  'Gravíssima': { color: '#991b1b', bg: 'rgba(153,27,27,0.12)' },
+};
+
+const ISSUE_STATUS_STYLE: Record<string, { color: string; bg: string }> = {
+  Aberto:        { color: 'var(--status-blocked)',   bg: 'var(--status-blocked-bg)' },
+  'Em Andamento':{ color: 'var(--status-inprogress)', bg: 'var(--status-inprogress-bg)' },
+  Resolvido:     { color: 'var(--status-passed)',    bg: 'var(--status-passed-bg)' },
+  Cancelado:     { color: 'var(--status-pending)',   bg: 'var(--status-pending-bg)' },
+};
+
 type IssueFormState = { type: string; jiraKey: string; title: string; severity: string; status: string };
 const EMPTY_ISSUE_FORM: IssueFormState = { type: 'BUG', jiraKey: '', title: '', severity: 'Média', status: 'Aberto' };
 
@@ -152,6 +168,8 @@ function IssueCard({ issue, jiraUrl, onEdit, onDelete, confirmDelete, onConfirmD
   const severityPt = SEVERITY_PT[issue.severity ?? ''] ?? issue.severity;
   const statusPt = ISSUE_STATUS_PT[issue.status ?? ''] ?? issue.status;
   const jiraHref = issue.jiraKey && jiraUrl ? `${jiraUrl.replace(/\/$/, '')}/browse/${issue.jiraKey}` : null;
+  const severityStyle = severityPt ? SEVERITY_COLORS[severityPt] : undefined;
+  const statusStyle = statusPt ? ISSUE_STATUS_STYLE[statusPt] : undefined;
   return (
     <div style={{ padding: '0.65rem 0.85rem', background: 'var(--bg-elevated)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
@@ -160,8 +178,17 @@ function IssueCard({ issue, jiraUrl, onEdit, onDelete, confirmDelete, onConfirmD
             <span style={{ fontSize: '0.7rem', fontWeight: 700, padding: '0.1rem 0.4rem', borderRadius: 4, background: issue.type === 'BUG' ? 'rgba(239,68,68,0.15)' : 'rgba(59,130,246,0.15)', color: issue.type === 'BUG' ? 'var(--status-failed)' : 'var(--status-inprogress)' }}>
               {issue.type === 'BUG' ? 'Bug' : 'Melhoria'}
             </span>
-            {severityPt && <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{severityPt}</span>}
-            {statusPt && <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>· {statusPt}</span>}
+            {severityPt && severityStyle && (
+              <span style={{ fontSize: '0.7rem', fontWeight: 600, padding: '0.1rem 0.4rem', borderRadius: 4, background: severityStyle.bg, color: severityStyle.color }}>
+                {severityPt}
+              </span>
+            )}
+            {statusPt && statusStyle && (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.7rem', fontWeight: 600, padding: '0.1rem 0.45rem', borderRadius: 99, background: statusStyle.bg, color: statusStyle.color }}>
+                <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'currentColor', display: 'inline-block', flexShrink: 0 }} />
+                {statusPt}
+              </span>
+            )}
             {issue.jiraKey && (
               jiraHref
                 ? <a href={jiraHref} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2rem', fontSize: '0.7rem', fontFamily: 'monospace', color: 'var(--accent)' }}>
@@ -294,7 +321,9 @@ function TestCaseDrawer({
         severity: SEVERITY_EN[issueForm.severity] ?? issueForm.severity,
         status: ISSUE_STATUS_EN[issueForm.status] ?? issueForm.status,
       });
-      setIssues(prev => [...prev, data]);
+      const newIssues = [...issues, data];
+      setIssues(newIssues);
+      onUpdated({ ...etc, issues: newIssues });
       setIssueForm(EMPTY_ISSUE_FORM);
       setShowIssueForm(false);
       addToast(issueForm.type === 'BUG' ? 'Bug adicionado' : 'Melhoria adicionada');
@@ -326,7 +355,9 @@ function TestCaseDrawer({
         severity: SEVERITY_EN[editForm.severity] ?? editForm.severity,
         status: ISSUE_STATUS_EN[editForm.status] ?? editForm.status,
       });
-      setIssues(prev => prev.map(i => i.id === issueId ? data : i));
+      const newIssues = issues.map(i => i.id === issueId ? data : i);
+      setIssues(newIssues);
+      onUpdated({ ...etc, issues: newIssues });
       setEditingIssueId(null);
       addToast(editForm.type === 'BUG' ? 'Bug atualizado' : 'Melhoria atualizada');
     } catch {
@@ -340,7 +371,9 @@ function TestCaseDrawer({
     const label = issueType === 'BUG' ? 'Bug removido' : 'Melhoria removida';
     try {
       await executionsApi.removeIssue(executionId, etc.id, issueId);
-      setIssues(prev => prev.filter(i => i.id !== issueId));
+      const newIssues = issues.filter(i => i.id !== issueId);
+      setIssues(newIssues);
+      onUpdated({ ...etc, issues: newIssues });
       setDeleteConfirmId(null);
       addToast(label);
     } catch {
@@ -463,7 +496,7 @@ function TestCaseDrawer({
               {showIssueForm && (
                 <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
                   style={{ overflow: 'hidden', marginBottom: '0.75rem' }}>
-                  <IssueForm form={issueForm} onChange={setIssueForm} onSubmit={handleAddIssue} onCancel={() => setShowIssueForm(false)} loading={addingIssue} submitLabel="Adicionar Issue" />
+                  <IssueForm form={issueForm} onChange={setIssueForm} onSubmit={handleAddIssue} onCancel={() => setShowIssueForm(false)} loading={addingIssue} submitLabel="Adicionar" />
                 </motion.div>
               )}
             </AnimatePresence>
@@ -476,7 +509,7 @@ function TestCaseDrawer({
                   <div key={issue.id}>
                     {editingIssueId === issue.id ? (
                       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                        <IssueForm form={editForm} onChange={setEditForm} onSubmit={() => handleUpdateIssue(issue.id)} onCancel={() => setEditingIssueId(null)} loading={updatingIssue} submitLabel="Salvar alterações" />
+                        <IssueForm form={editForm} onChange={setEditForm} onSubmit={() => handleUpdateIssue(issue.id)} onCancel={() => setEditingIssueId(null)} loading={updatingIssue} submitLabel="Salvar" />
                       </motion.div>
                     ) : (
                       <IssueCard
@@ -842,7 +875,7 @@ export default function ExecutionRunPage() {
                   <th style={{ width: 120 }}>Prioridade</th>
                   <th style={{ width: 140 }}>Status</th>
                   <th style={{ width: 140 }}>Responsável</th>
-                  <th style={{ width: 60 }}>Issues</th>
+                  <th style={{ width: 72 }}>B&M</th>
                   <th style={{ width: 48 }}></th>
                 </tr>
               </thead>
@@ -880,8 +913,17 @@ export default function ExecutionRunPage() {
                       <td style={{ fontSize: '0.83rem', color: 'var(--text-secondary)' }}>{etc.responsible ?? '—'}</td>
                       <td style={{ textAlign: 'center' }}>
                         {etc.issues.length > 0 ? (
-                          <span style={{ background: 'rgba(239,68,68,0.12)', color: 'var(--status-failed)', borderRadius: 99, padding: '0.15rem 0.5rem', fontSize: '0.72rem', fontWeight: 700 }}>
-                            {etc.issues.length}
+                          <span style={{ display: 'inline-flex', gap: '0.25rem', alignItems: 'center' }}>
+                            {(() => {
+                              const bugs = etc.issues.filter(i => i.type === 'BUG').length;
+                              const improvements = etc.issues.filter(i => i.type === 'IMPROVEMENT').length;
+                              return (
+                                <>
+                                  {bugs > 0 && <span style={{ background: 'rgba(239,68,68,0.12)', color: 'var(--status-failed)', borderRadius: 99, padding: '0.15rem 0.45rem', fontSize: '0.72rem', fontWeight: 700 }}>{bugs}</span>}
+                                  {improvements > 0 && <span style={{ background: 'rgba(59,130,246,0.12)', color: 'var(--status-inprogress)', borderRadius: 99, padding: '0.15rem 0.45rem', fontSize: '0.72rem', fontWeight: 700 }}>{improvements}</span>}
+                                </>
+                              );
+                            })()}
                           </span>
                         ) : <span style={{ color: 'var(--text-muted)' }}>—</span>}
                       </td>

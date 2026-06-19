@@ -353,34 +353,32 @@ export class ReportsService {
     // ── Aba 2: Bugs e Melhorias ──────────────────────────────────────────────
     const wsBugs = workbook.addWorksheet('Bugs e Melhorias');
     wsBugs.columns = [
-      { key: 'type',        width: 12 },
-      { key: 'key',         width: 16 },
-      { key: 'title',       width: 66 },
-      { key: 'severity',    width: 14 },
-      { key: 'createdAt',   width: 16 },
-      { key: 'updatedAt',   width: 16 },
-      { key: 'status',      width: 14 },
-      { key: 'responsible', width: 16 },
+      { key: 'type',      width: 12 },
+      { key: 'key',       width: 16 },
+      { key: 'title',     width: 66 },
+      { key: 'severity',  width: 14 },
+      { key: 'createdAt', width: 16 },
+      { key: 'updatedAt', width: 16 },
+      { key: 'status',    width: 14 },
     ];
 
-    xlTitleRow(wsBugs, 'A1:H1', 'Bugs e Melhorias', 1);
+    xlTitleRow(wsBugs, 'A1:G1', 'Bugs e Melhorias', 1);
 
     const bugsHeader = wsBugs.getRow(2);
-    bugsHeader.values = ['Tipo', 'ID', 'Título', 'Severidade', 'Criado em', 'Atualizado em', 'Status', 'Responsável'];
-    xlHeaderRow(bugsHeader, 8);
+    bugsHeader.values = ['Tipo', 'ID', 'Título', 'Severidade', 'Criado em', 'Atualizado em', 'Status'];
+    xlHeaderRow(bugsHeader, 7);
 
     const allIssues: any[] = [];
     execution.testCases.forEach((etc) => {
       etc.issues.forEach((issue) => {
         allIssues.push({
-          type:        issue.type === 'BUG' ? 'Bug' : 'Melhoria',
-          jiraKey:     issue.jiraKey || 'N/A',
-          title:       issue.title,
-          severity:    SEVERITY_PT[issue.severity ?? ''] || issue.severity || '-',
-          createdAt:   this.formatDate(issue.createdAt),
-          updatedAt:   this.formatDate(issue.updatedAt),
-          status:      ISSUE_STATUS_PT[issue.status ?? ''] || issue.status || 'Aberto',
-          responsible: issue.responsible || '-',
+          type:      issue.type === 'BUG' ? 'Bug' : 'Melhoria',
+          jiraKey:   issue.jiraKey || 'N/A',
+          title:     issue.title,
+          severity:  SEVERITY_PT[issue.severity ?? ''] || issue.severity || '-',
+          createdAt: this.formatDate(issue.createdAt),
+          updatedAt: this.formatDate(issue.updatedAt),
+          status:    ISSUE_STATUS_PT[issue.status ?? ''] || issue.status || 'Aberto',
         });
       });
     });
@@ -389,10 +387,10 @@ export class ReportsService {
       const row = wsBugs.getRow(idx + 3);
       row.values = [
         issue.type, issue.jiraKey, issue.title, issue.severity,
-        issue.createdAt, issue.updatedAt, issue.status, issue.responsible,
+        issue.createdAt, issue.updatedAt, issue.status,
       ];
       row.font = { name: 'Arial', size: 11 };
-      xlDataRow(row, 8, idx % 2 === 0);
+      xlDataRow(row, 7, idx % 2 === 0);
     });
 
     const buffer = await workbook.xlsx.writeBuffer();
