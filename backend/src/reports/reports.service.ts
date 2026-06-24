@@ -371,7 +371,8 @@ export class ReportsService {
           sRow.getCell(3).value = scenario.name;
           sRow.getCell(3).font = { name: 'Calibri', size: 10, italic: true };
           sRow.getCell(3).alignment = { indent: 2, wrapText: true, vertical: 'middle' };
-          sRow.getCell(4).value = '';
+          sRow.getCell(4).value = etc.testCase.priority || '-';
+          sRow.getCell(4).alignment = { horizontal: 'center', vertical: 'middle' };
           sRow.getCell(5).value = STATUS_PT[scenario.status] ?? scenario.status;
           sRow.getCell(5).fill = xlFill(sArgb);
           sRow.getCell(5).font = { name: 'Calibri', size: 10, bold: true };
@@ -875,7 +876,7 @@ export class ReportsService {
                           return [
                             pdfCell('↳', bg, { color: '#818B9D' }),
                             pdfCell(s.name, bg, { italics: true, margin: [10, 3, 3, 3] }),
-                            pdfCell('-', bg, { alignment: 'center' }),
+                            pdfCell(tc.testCase.priority || '-', bg, { alignment: 'center' }),
                             pdfStatusCell(s.status),
                             pdfCell('-', bg),
                             pdfCell(sIssues, bg),
@@ -916,7 +917,7 @@ export class ReportsService {
                       return [
                         pdfCell('↳', bg, { color: '#818B9D' }),
                         pdfCell(s.name, bg, { italics: true, margin: [10, 3, 3, 3] }),
-                        pdfCell('-', bg, { alignment: 'center' }),
+                        pdfCell(tc.testCase.priority || '-', bg, { alignment: 'center' }),
                         pdfStatusCell(s.status),
                         pdfCell('-', bg),
                         pdfCell(sIssues, bg),
@@ -1042,7 +1043,7 @@ export class ReportsService {
     };
   }
 
-  private async resolveBatchSuites(suiteIds: unknown): Promise<Array<{ id: string; jiraKey: string; title: string }>> {
+  private async resolveBatchSuites(suiteIds: unknown): Promise<Array<{ id: string; jiraKey: string | null; title: string }>> {
     const ids = Array.isArray(suiteIds) ? (suiteIds as string[]) : [];
     if (ids.length === 0) return [];
     return this.prisma.suite.findMany({ where: { id: { in: ids } } });
