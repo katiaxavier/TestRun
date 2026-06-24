@@ -940,9 +940,17 @@ function TestCaseDrawer({
                         }} />
                         <span style={{ flex: 1, fontSize: '0.85rem', color: 'var(--text-primary)' }}>{scenario.name}</span>
                         {scenario.issues.length > 0 && (
-                          <span style={{ fontSize: '0.7rem', color: 'var(--status-failed)', fontWeight: 600 }}>
-                            {scenario.issues.filter(i => i.type === 'BUG').length > 0
-                              ? `${scenario.issues.filter(i => i.type === 'BUG').length} bug(s)` : ''}
+                          <span style={{ display: 'inline-flex', gap: '0.2rem' }}>
+                            {scenario.issues.filter(i => i.type === 'BUG').length > 0 && (
+                              <span style={{ fontSize: '0.7rem', color: 'var(--status-failed)', fontWeight: 600 }}>
+                                {scenario.issues.filter(i => i.type === 'BUG').length} bug(s)
+                              </span>
+                            )}
+                            {scenario.issues.filter(i => i.type === 'IMPROVEMENT').length > 0 && (
+                              <span style={{ fontSize: '0.7rem', color: 'var(--status-inprogress)', fontWeight: 600 }}>
+                                {scenario.issues.filter(i => i.type === 'IMPROVEMENT').length} melhoria(s)
+                              </span>
+                            )}
                           </span>
                         )}
                         <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600 }}>
@@ -1473,20 +1481,19 @@ export default function ExecutionRunPage() {
                       </td>
                       <td style={{ fontSize: '0.83rem', color: 'var(--text-secondary)' }}>{etc.responsible ?? '—'}</td>
                       <td style={{ textAlign: 'center' }}>
-                        {etc.issues.length > 0 ? (
-                          <span style={{ display: 'inline-flex', gap: '0.25rem', alignItems: 'center' }}>
-                            {(() => {
-                              const bugs = etc.issues.filter(i => i.type === 'BUG').length;
-                              const improvements = etc.issues.filter(i => i.type === 'IMPROVEMENT').length;
-                              return (
-                                <>
-                                  {bugs > 0 && <span style={{ background: 'rgba(239,68,68,0.12)', color: 'var(--status-failed)', borderRadius: 99, padding: '0.15rem 0.45rem', fontSize: '0.72rem', fontWeight: 700 }}>{bugs}</span>}
-                                  {improvements > 0 && <span style={{ background: 'rgba(59,130,246,0.12)', color: 'var(--status-inprogress)', borderRadius: 99, padding: '0.15rem 0.45rem', fontSize: '0.72rem', fontWeight: 700 }}>{improvements}</span>}
-                                </>
-                              );
-                            })()}
-                          </span>
-                        ) : <span style={{ color: 'var(--text-muted)' }}>—</span>}
+                        {(() => {
+                          const allIssues = (etc.scenarios?.length ?? 0) > 0
+                            ? (etc.scenarios ?? []).flatMap(s => s.issues)
+                            : etc.issues;
+                          const bugs = allIssues.filter(i => i.type === 'BUG').length;
+                          const improvements = allIssues.filter(i => i.type === 'IMPROVEMENT').length;
+                          return bugs > 0 || improvements > 0 ? (
+                            <span style={{ display: 'inline-flex', gap: '0.25rem', alignItems: 'center' }}>
+                              {bugs > 0 && <span style={{ background: 'rgba(239,68,68,0.12)', color: 'var(--status-failed)', borderRadius: 99, padding: '0.15rem 0.45rem', fontSize: '0.72rem', fontWeight: 700 }}>{bugs}</span>}
+                              {improvements > 0 && <span style={{ background: 'rgba(59,130,246,0.12)', color: 'var(--status-inprogress)', borderRadius: 99, padding: '0.15rem 0.45rem', fontSize: '0.72rem', fontWeight: 700 }}>{improvements}</span>}
+                            </span>
+                          ) : <span style={{ color: 'var(--text-muted)' }}>—</span>;
+                        })()}
                       </td>
                       <td>
                         <CaretRight size={14} style={{ color: 'var(--text-muted)' }} />
