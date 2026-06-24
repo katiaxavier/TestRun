@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Play } from '@phosphor-icons/react';
+import { Play, ListBullets } from '@phosphor-icons/react';
 import { executionsApi, suitesApi } from '../api/client';
 import type { Suite, Execution } from '../api/client';
 import { PageHeader } from '../components/PageHeader';
@@ -83,7 +83,7 @@ export default function BatchExecutionPage() {
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
             {suites.map(s => (
               <span key={s.id} style={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>
-                {s.jiraKey} — {s.title}
+                {s.jiraKey ? `${s.jiraKey} — ` : ''}{s.title}
               </span>
             ))}
           </div>
@@ -114,7 +114,25 @@ export default function BatchExecutionPage() {
             <h2 style={{ fontSize: '1rem', fontWeight: 700 }}>Casos de Teste</h2>
             <span className="badge">{allTestCases.length}</span>
           </div>
-          <TestCaseList testCases={allTestCases} suiteMap={suiteMap} onDelete={handleRemoveTestCase} />
+          <TestCaseList
+            testCases={allTestCases}
+            suiteMap={suiteMap}
+            onDelete={handleRemoveTestCase}
+            renderExtra={tc => {
+              const templates = tc.scenarioTemplates ?? [];
+              if (templates.length === 0) return null;
+              return (
+                <div style={{ marginTop: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
+                  <ListBullets size={13} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+                  {templates.map(t => (
+                    <span key={t.id} style={{ fontSize: '0.75rem', color: 'var(--text-muted)', background: 'var(--bg-elevated)', borderRadius: 'var(--radius-sm)', padding: '0.1rem 0.4rem', border: '1px solid var(--border-subtle)' }}>
+                      {t.name}
+                    </span>
+                  ))}
+                </div>
+              );
+            }}
+          />
         </div>
       </motion.div>
 
