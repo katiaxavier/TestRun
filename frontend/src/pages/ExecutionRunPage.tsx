@@ -707,10 +707,8 @@ function TestCaseDrawer({
     try {
       const { data } = await executionsApi.createScenario(executionId, etc.id, scenarioName.trim());
       const newScenarios = [...scenarios, data];
-      const newStatus = aggregateScenarioStatus(newScenarios);
       setScenarios(newScenarios);
-      setStatus(newStatus);
-      onUpdated({ ...etc, status: newStatus, scenarios: newScenarios, issues: [] });
+      onUpdated({ ...etc, scenarios: newScenarios, issues: [] });
       setScenarioName('');
       setShowScenarioForm(false);
       addToast('Cenário adicionado');
@@ -726,11 +724,9 @@ function TestCaseDrawer({
     try {
       const { data } = await executionsApi.createScenario(executionId, etc.id, wizardScenarioName.trim());
       const newScenarios = [...scenarios, data];
-      const newStatus = aggregateScenarioStatus(newScenarios);
       setScenarios(newScenarios);
-      setStatus(newStatus);
       setIssues([]);
-      onUpdated({ ...etc, status: newStatus, scenarios: newScenarios, issues: [] });
+      onUpdated({ ...etc, scenarios: newScenarios, issues: [] });
       setShowWizardModal(false);
       setWizardScenarioName('');
       addToast('Cenário adicionado');
@@ -747,12 +743,10 @@ function TestCaseDrawer({
     try {
       const { data } = await executionsApi.createScenarioBatch(executionId, etc.id, names);
       const newScenarios = [...scenarios, ...data];
-      const newStatus = aggregateScenarioStatus(newScenarios);
       setScenarios(newScenarios);
-      setStatus(newStatus);
       const newIssues = scenarios.length === 0 && issues.length > 0 ? [] : issues;
       setIssues(newIssues);
-      onUpdated({ ...etc, status: newStatus, scenarios: newScenarios, issues: newIssues });
+      onUpdated({ ...etc, scenarios: newScenarios, issues: newIssues });
       setBatchText('');
       setShowBatchModal(false);
       addToast(`${data.length} cenários adicionados`);
@@ -762,36 +756,22 @@ function TestCaseDrawer({
     setAddingBatch(false);
   };
 
-  const aggregateScenarioStatus = (ss: Scenario[]): string => {
-    if (ss.length === 0) return status;
-    const statuses = ss.map(s => s.status);
-    if (statuses.every(s => s === 'PENDING')) return 'PENDING';
-    if (statuses.every(s => s === 'PASSED')) return 'PASSED';
-    if (statuses.some(s => s === 'FAILED')) return 'FAILED';
-    if (statuses.some(s => s === 'BLOCKED')) return 'BLOCKED';
-    return 'IN_PROGRESS';
-  };
-
   const handleScenarioUpdated = (updated: Scenario) => {
     const newScenarios = scenarios.map(s => s.id === updated.id ? updated : s);
-    const newStatus = aggregateScenarioStatus(newScenarios);
     setScenarios(newScenarios);
-    setStatus(newStatus);
     setActiveScenario(updated);
-    onUpdated({ ...etc, status: newStatus, scenarios: newScenarios });
+    onUpdated({ ...etc, scenarios: newScenarios });
   };
 
   const handleScenarioDeleted = (deletedScenarioIssues?: Issue[]) => {
     if (!activeScenario) return;
     const newScenarios = scenarios.filter(s => s.id !== activeScenario.id);
     const isLast = newScenarios.length === 0;
-    const newStatus = isLast ? (etc.originalStatus ?? 'PENDING') : aggregateScenarioStatus(newScenarios);
     const restoredIssues = isLast ? (deletedScenarioIssues ?? []) : issues;
     setScenarios(newScenarios);
-    setStatus(newStatus);
     setIssues(restoredIssues);
     setActiveScenario(null);
-    onUpdated({ ...etc, status: newStatus, scenarios: newScenarios, issues: restoredIssues });
+    onUpdated({ ...etc, scenarios: newScenarios, issues: restoredIssues });
     addToast('Cenário excluído');
   };
 
@@ -869,43 +849,26 @@ function TestCaseDrawer({
                 <span className="drawer-section-title" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                   Status
                   {savingStatus && <div className="spinner" style={{ width: 10, height: 10 }} />}
-                  {hasScenarios && (
-                    <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontWeight: 400 }}>
-                      (calculado pelos cenários)
-                    </span>
-                  )}
                 </span>
-                {hasScenarios ? (
-                  <div style={{ display: 'inline-flex' }}>
-                    <span style={{
-                      padding: '0.4rem 0.9rem', borderRadius: 99, fontSize: '0.8rem', fontWeight: 600,
-                      background: STATUS_COLORS[status] ?? 'var(--bg-elevated)',
-                      color: '#fff',
-                    }}>
-                      {STATUS_LABELS[status] ?? status}
-                    </span>
-                  </div>
-                ) : (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                    {STATUS_OPTIONS.map(s => (
-                      <button
-                        key={s}
-                        onClick={() => handleStatusChange(s)}
-                        disabled={savingStatus}
-                        style={{
-                          padding: '0.4rem 0.9rem', borderRadius: 99, fontSize: '0.8rem', fontWeight: 600,
-                          cursor: 'pointer', transition: 'all 0.15s',
-                          background: status === s ? STATUS_COLORS[s] : 'var(--bg-elevated)',
-                          color: status === s ? '#fff' : 'var(--text-secondary)',
-                          border: `1px solid ${status === s ? STATUS_COLORS[s] : 'var(--border)'}`,
-                          opacity: savingStatus ? 0.65 : 1,
-                        }}
-                      >
-                        {STATUS_LABELS[s] ?? s}
-                      </button>
-                    ))}
-                  </div>
-                )}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  {STATUS_OPTIONS.map(s => (
+                    <button
+                      key={s}
+                      onClick={() => handleStatusChange(s)}
+                      disabled={savingStatus}
+                      style={{
+                        padding: '0.4rem 0.9rem', borderRadius: 99, fontSize: '0.8rem', fontWeight: 600,
+                        cursor: 'pointer', transition: 'all 0.15s',
+                        background: status === s ? STATUS_COLORS[s] : 'var(--bg-elevated)',
+                        color: status === s ? '#fff' : 'var(--text-secondary)',
+                        border: `1px solid ${status === s ? STATUS_COLORS[s] : 'var(--border)'}`,
+                        opacity: savingStatus ? 0.65 : 1,
+                      }}
+                    >
+                      {STATUS_LABELS[s] ?? s}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               {/* Cenários */}

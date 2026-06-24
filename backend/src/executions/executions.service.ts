@@ -140,28 +140,6 @@ export class ExecutionsService {
     return this.findOne(execution.id);
   }
 
-  private computeAggregatedStatus(statuses: string[]): string {
-    if (statuses.every((s) => s === 'PENDING')) return 'PENDING';
-    if (statuses.every((s) => s === 'PASSED')) return 'PASSED';
-    if (statuses.some((s) => s === 'FAILED')) return 'FAILED';
-    if (statuses.some((s) => s === 'BLOCKED')) return 'BLOCKED';
-    return 'IN_PROGRESS';
-  }
-
-  private async recomputeTestCaseStatus(etcId: string) {
-    const scenarios = await this.prisma.scenario.findMany({
-      where: { executionTestCaseId: etcId },
-      select: { status: true },
-    });
-    if (scenarios.length === 0) return;
-    const aggregated = this.computeAggregatedStatus(scenarios.map((s) => s.status));
-    const updated = await this.prisma.executionTestCase.update({
-      where: { id: etcId },
-      data: { status: aggregated },
-    });
-    await this.recomputeExecutionStatus(updated.executionId);
-  }
-
   private async recomputeExecutionStatus(executionId: string) {
     const testCases = await this.prisma.executionTestCase.findMany({
       where: { executionId },
@@ -495,13 +473,6 @@ export class ExecutionsService {
 
     const isFirst = etc.scenarios.length === 0;
 
-    if (isFirst) {
-      await this.prisma.executionTestCase.update({
-        where: { id: etcId },
-        data: { originalStatus: etc.status },
-      });
-    }
-
     const scenario = await this.prisma.scenario.create({
       data: {
         executionTestCaseId: etcId,
@@ -518,7 +489,6 @@ export class ExecutionsService {
       });
     }
 
-    await this.recomputeTestCaseStatus(etcId);
     return this.prisma.scenario.findUnique({
       where: { id: scenario.id },
       include: { issues: true },
@@ -533,13 +503,6 @@ export class ExecutionsService {
     if (!etc) throw new HttpException('Item de execução não encontrado.', HttpStatus.NOT_FOUND);
 
     const isFirst = etc.scenarios.length === 0;
-
-    if (isFirst) {
-      await this.prisma.executionTestCase.update({
-        where: { id: etcId },
-        data: { originalStatus: etc.status },
-      });
-    }
 
     const created: any[] = [];
     for (const name of names) {
@@ -561,7 +524,6 @@ export class ExecutionsService {
       });
     }
 
-    await this.recomputeTestCaseStatus(etcId);
     return created;
   }
 
@@ -569,7 +531,7 @@ export class ExecutionsService {
     const scenario = await this.prisma.scenario.findUnique({ where: { id: scenarioId } });
     if (!scenario || scenario.executionTestCaseId !== etcId)
       throw new HttpException('Cenário não encontrado.', HttpStatus.NOT_FOUND);
-    const updated = await this.prisma.scenario.update({
+    return this.prisma.scenario.update({
       where: { id: scenarioId },
       data: {
         name: dto.name,
@@ -578,8 +540,6 @@ export class ExecutionsService {
       },
       include: { issues: true },
     });
-    await this.recomputeTestCaseStatus(etcId);
-    return updated;
   }
 
   async deleteScenario(etcId: string, scenarioId: string) {
@@ -595,32 +555,14 @@ export class ExecutionsService {
     });
     const isLast = remainingScenarios === 0;
 
-    if (isLast) {
-      const etc = await this.prisma.executionTestCase.findUnique({ where: { id: etcId } });
-
-      if (scenario.issues.length > 0) {
-        await this.prisma.issue.updateMany({
-          where: { scenarioId },
-          data: { scenarioId: null, executionTestCaseId: etcId },
-        });
-      }
-
-      await this.prisma.scenario.delete({ where: { id: scenarioId } });
-
-      await this.prisma.executionTestCase.update({
-        where: { id: etcId },
-        data: {
-          status: etc?.originalStatus ?? 'PENDING',
-          originalStatus: null,
-        },
+    if (isLast && scenario.issues.length > 0) {
+      await this.prisma.issue.updateMany({
+        where: { scenarioId },
+        data: { scenarioId: null, executionTestCaseId: etcId },
       });
-
-      const updated = await this.prisma.executionTestCase.findUnique({ where: { id: etcId } });
-      if (updated) await this.recomputeExecutionStatus(updated.executionId);
-    } else {
-      await this.prisma.scenario.delete({ where: { id: scenarioId } });
-      await this.recomputeTestCaseStatus(etcId);
     }
+
+    await this.prisma.scenario.delete({ where: { id: scenarioId } });
 
     return { success: true };
   }
