@@ -42,7 +42,7 @@ export function SuiteCard({ suite, selected, onSelect, onDelete }: SuiteCardProp
             {suite.jiraKey}
           </span>
         ) : suite.isManual ? (
-          <span className="tag" style={{ fontSize: '0.7rem', flexShrink: 0, background: 'var(--bg-elevated)', color: 'var(--text-muted)' }}>
+          <span className="tag" style={{ fontSize: '0.7rem', flexShrink: 0 }}>
             Manual
           </span>
         ) : null}
