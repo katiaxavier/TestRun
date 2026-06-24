@@ -890,7 +890,9 @@ export class ReportsService {
                       pdfCell(tc.testCase.jiraKey, bg, { color: '#FF6002', decoration: 'underline', ...(tc.testCase.link ? { link: tc.testCase.link } : {}) }),
                       pdfCell(tc.testCase.title, bg),
                       pdfCell(tc.testCase.priority || '-', bg, { alignment: 'center' }),
-                      pdfStatusCell(tc.status),
+                      scenarios.length > 0
+                        ? { text: '', fontSize: 8, alignment: 'center', fillColor: '#EEEEEE', margin: [2, 4, 2, 4] }
+                        : pdfStatusCell(tc.status),
                       pdfCell(tc.responsible || '-', bg),
                       pdfCell(issues, bg),
                     ];

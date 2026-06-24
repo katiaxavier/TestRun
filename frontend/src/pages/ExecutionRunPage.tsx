@@ -1462,7 +1462,15 @@ export default function ExecutionRunPage() {
                           <span className="tag" style={{ background: `${PRIORITY_COLORS[priority]}20`, color: PRIORITY_COLORS[priority] }}>{priority}</span>
                         )}
                       </td>
-                      <td><StatusBadge status={etc.status} /></td>
+                      <td>
+                        {(etc.scenarios?.length ?? 0) > 0 ? (
+                          <span className="tag">
+                            {etc.scenarios.length} cenário{etc.scenarios.length !== 1 ? 's' : ''}
+                          </span>
+                        ) : (
+                          <StatusBadge status={etc.status} />
+                        )}
+                      </td>
                       <td style={{ fontSize: '0.83rem', color: 'var(--text-secondary)' }}>{etc.responsible ?? '—'}</td>
                       <td style={{ textAlign: 'center' }}>
                         {etc.issues.length > 0 ? (
