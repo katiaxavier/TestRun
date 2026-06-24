@@ -339,7 +339,7 @@ function ScenarioView({
   scenario: Scenario;
   onBack: () => void;
   onUpdated: (s: Scenario) => void;
-  onDeleted: () => void;
+  onDeleted: (issues?: Issue[]) => void;
 }) {
   const [status, setStatus] = useState(scenario.status);
   const [comments, setComments] = useState(scenario.comments ?? '');
@@ -408,7 +408,7 @@ function ScenarioView({
     setDeleting(true);
     try {
       await executionsApi.deleteScenario(executionId, etcId, scenario.id);
-      onDeleted();
+      onDeleted(issues);
     } catch {
       addToast('Erro ao excluir cenário', 'error');
       setDeleting(false);
@@ -583,6 +583,11 @@ function TestCaseDrawer({
   const [scenarioName, setScenarioName] = useState('');
   const [addingScenario, setAddingScenario] = useState(false);
   const [activeScenario, setActiveScenario] = useState<Scenario | null>(null);
+  const [showWizardModal, setShowWizardModal] = useState(false);
+  const [wizardScenarioName, setWizardScenarioName] = useState('');
+  const [showBatchModal, setShowBatchModal] = useState(false);
+  const [batchText, setBatchText] = useState('');
+  const [addingBatch, setAddingBatch] = useState(false);
 
   useEffect(() => {
     configApi.get().then(({ data }) => setJiraUrl(data.url ?? '')).catch(() => {});
@@ -641,6 +646,15 @@ function TestCaseDrawer({
     setSaving(false);
   };
 
+  const handleAddScenarioClick = () => {
+    if (scenarios.length === 0 && issues.length > 0) {
+      setWizardScenarioName('');
+      setShowWizardModal(true);
+    } else {
+      setShowScenarioForm(s => !s);
+    }
+  };
+
   const handleAddScenario = async () => {
     if (!scenarioName.trim()) return;
     setAddingScenario(true);
@@ -650,7 +664,7 @@ function TestCaseDrawer({
       const newStatus = aggregateScenarioStatus(newScenarios);
       setScenarios(newScenarios);
       setStatus(newStatus);
-      onUpdated({ ...etc, status: newStatus, scenarios: newScenarios });
+      onUpdated({ ...etc, status: newStatus, scenarios: newScenarios, issues: [] });
       setScenarioName('');
       setShowScenarioForm(false);
       addToast('Cenário adicionado');
@@ -658,6 +672,48 @@ function TestCaseDrawer({
       addToast('Erro ao adicionar cenário', 'error');
     }
     setAddingScenario(false);
+  };
+
+  const handleWizardConfirm = async () => {
+    if (!wizardScenarioName.trim()) return;
+    setAddingScenario(true);
+    try {
+      const { data } = await executionsApi.createScenario(executionId, etc.id, wizardScenarioName.trim());
+      const newScenarios = [...scenarios, data];
+      const newStatus = aggregateScenarioStatus(newScenarios);
+      setScenarios(newScenarios);
+      setStatus(newStatus);
+      setIssues([]);
+      onUpdated({ ...etc, status: newStatus, scenarios: newScenarios, issues: [] });
+      setShowWizardModal(false);
+      setWizardScenarioName('');
+      addToast('Cenário adicionado');
+    } catch {
+      addToast('Erro ao adicionar cenário', 'error');
+    }
+    setAddingScenario(false);
+  };
+
+  const handleAddBatch = async () => {
+    const names = batchText.split('\n').map(l => l.trim()).filter(Boolean);
+    if (names.length === 0) return;
+    setAddingBatch(true);
+    try {
+      const { data } = await executionsApi.createScenarioBatch(executionId, etc.id, names);
+      const newScenarios = [...scenarios, ...data];
+      const newStatus = aggregateScenarioStatus(newScenarios);
+      setScenarios(newScenarios);
+      setStatus(newStatus);
+      const newIssues = scenarios.length === 0 && issues.length > 0 ? [] : issues;
+      setIssues(newIssues);
+      onUpdated({ ...etc, status: newStatus, scenarios: newScenarios, issues: newIssues });
+      setBatchText('');
+      setShowBatchModal(false);
+      addToast(`${data.length} cenários adicionados`);
+    } catch {
+      addToast('Erro ao adicionar cenários', 'error');
+    }
+    setAddingBatch(false);
   };
 
   const aggregateScenarioStatus = (ss: Scenario[]): string => {
@@ -679,14 +735,17 @@ function TestCaseDrawer({
     onUpdated({ ...etc, status: newStatus, scenarios: newScenarios });
   };
 
-  const handleScenarioDeleted = () => {
+  const handleScenarioDeleted = (deletedScenarioIssues?: Issue[]) => {
     if (!activeScenario) return;
     const newScenarios = scenarios.filter(s => s.id !== activeScenario.id);
-    const newStatus = aggregateScenarioStatus(newScenarios);
+    const isLast = newScenarios.length === 0;
+    const newStatus = isLast ? (etc.originalStatus ?? 'PENDING') : aggregateScenarioStatus(newScenarios);
+    const restoredIssues = isLast ? (deletedScenarioIssues ?? []) : issues;
     setScenarios(newScenarios);
     setStatus(newStatus);
+    setIssues(restoredIssues);
     setActiveScenario(null);
-    onUpdated({ ...etc, status: newStatus, scenarios: newScenarios });
+    onUpdated({ ...etc, status: newStatus, scenarios: newScenarios, issues: restoredIssues });
     addToast('Cenário excluído');
   };
 
@@ -810,13 +869,22 @@ function TestCaseDrawer({
                     Cenários
                     {scenarios.length > 0 && <span className="badge">{scenarios.length}</span>}
                   </span>
-                  <button
-                    className="btn btn-ghost btn-sm"
-                    onClick={() => setShowScenarioForm(s => !s)}
-                    style={{ fontSize: '0.75rem' }}
-                  >
-                    <Plus size={13} /> Adicionar Cenário
-                  </button>
+                  <div style={{ display: 'flex', gap: '0.4rem' }}>
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      onClick={handleAddScenarioClick}
+                      style={{ fontSize: '0.75rem' }}
+                    >
+                      <Plus size={13} /> Adicionar Cenário
+                    </button>
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      onClick={() => setShowBatchModal(true)}
+                      style={{ fontSize: '0.75rem' }}
+                    >
+                      <Plus size={13} /> Em Lote
+                    </button>
+                  </div>
                 </div>
 
                 <AnimatePresence>
@@ -985,6 +1053,119 @@ function TestCaseDrawer({
           </>
         )}
       </motion.div>
+
+      {/* Wizard modal — primeiro cenário com issues */}
+      <AnimatePresence>
+        {showWizardModal && (
+          <>
+            <motion.div
+              key="wizard-overlay"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1100 }}
+              onClick={() => !addingScenario && setShowWizardModal(false)}
+            />
+            <motion.div
+              key="wizard-modal"
+              initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
+              style={{
+                position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+                background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12,
+                padding: '1.5rem', width: 400, zIndex: 1101, display: 'flex', flexDirection: 'column', gap: '1rem',
+              }}
+            >
+              <div>
+                <p style={{ fontWeight: 700, fontSize: '0.95rem', marginBottom: '0.4rem' }}>Criando modo Cenários</p>
+                <p style={{ fontSize: '0.83rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                  Este caso possui <strong>{issues.length} {issues.length === 1 ? 'issue' : 'issues'}</strong> que {issues.length === 1 ? 'será movida' : 'serão movidas'} automaticamente para o primeiro cenário criado.
+                </p>
+              </div>
+              <div>
+                <label className="form-label">Nome do primeiro cenário</label>
+                <input
+                  placeholder="Ex: Processamento A"
+                  value={wizardScenarioName}
+                  onChange={e => setWizardScenarioName(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleWizardConfirm()}
+                  autoFocus
+                />
+              </div>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button
+                  className="btn btn-primary"
+                  onClick={handleWizardConfirm}
+                  disabled={addingScenario || !wizardScenarioName.trim()}
+                  style={{ flex: 1, justifyContent: 'center' }}
+                >
+                  {addingScenario ? <div className="spinner" style={{ width: 14, height: 14 }} /> : <CheckCircle size={14} />}
+                  Criar Cenário
+                </button>
+                <button className="btn btn-secondary" onClick={() => setShowWizardModal(false)} disabled={addingScenario}>
+                  Cancelar
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Modal de criação em lote */}
+      <AnimatePresence>
+        {showBatchModal && (
+          <>
+            <motion.div
+              key="batch-overlay"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1100 }}
+              onClick={() => !addingBatch && setShowBatchModal(false)}
+            />
+            <motion.div
+              key="batch-modal"
+              initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
+              style={{
+                position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+                background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12,
+                padding: '1.5rem', width: 420, zIndex: 1101, display: 'flex', flexDirection: 'column', gap: '1rem',
+              }}
+            >
+              <div>
+                <p style={{ fontWeight: 700, fontSize: '0.95rem', marginBottom: '0.4rem' }}>Adicionar Cenários em Lote</p>
+                <p style={{ fontSize: '0.83rem', color: 'var(--text-secondary)' }}>Cole os nomes, um por linha.</p>
+              </div>
+              <div>
+                <textarea
+                  placeholder={'Processamento A\nProcessamento B\nProcessamento C'}
+                  value={batchText}
+                  onChange={e => setBatchText(e.target.value)}
+                  rows={6}
+                  style={{ resize: 'vertical', fontFamily: 'inherit' }}
+                  autoFocus
+                />
+                {batchText.trim() && (
+                  <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
+                    Preview: {batchText.split('\n').map(l => l.trim()).filter(Boolean).length} cenários serão criados
+                  </p>
+                )}
+              </div>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button
+                  className="btn btn-primary"
+                  onClick={handleAddBatch}
+                  disabled={addingBatch || !batchText.trim()}
+                  style={{ flex: 1, justifyContent: 'center' }}
+                >
+                  {addingBatch ? <div className="spinner" style={{ width: 14, height: 14 }} /> : <CheckCircle size={14} />}
+                  {batchText.trim()
+                    ? `Criar ${batchText.split('\n').map(l => l.trim()).filter(Boolean).length} Cenários`
+                    : 'Criar Cenários'}
+                </button>
+                <button className="btn btn-secondary" onClick={() => setShowBatchModal(false)} disabled={addingBatch}>
+                  Cancelar
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </>
   );
 }
@@ -1092,13 +1273,16 @@ export default function ExecutionRunPage() {
   if (!execution) return null;
 
   const tcs = execution.testCases;
+  const effectiveItems = tcs.flatMap(tc =>
+    (tc.scenarios ?? []).length > 0 ? (tc.scenarios ?? []) : [tc]
+  );
   const counts = {
-    total: tcs.length,
-    passed: tcs.filter(t => t.status === 'PASSED').length,
-    failed: tcs.filter(t => t.status === 'FAILED').length,
-    blocked: tcs.filter(t => t.status === 'BLOCKED').length,
-    inProgress: tcs.filter(t => t.status === 'IN_PROGRESS').length,
-    pending: tcs.filter(t => t.status === 'PENDING').length,
+    total: effectiveItems.length,
+    passed: effectiveItems.filter(t => t.status === 'PASSED').length,
+    failed: effectiveItems.filter(t => t.status === 'FAILED').length,
+    blocked: effectiveItems.filter(t => t.status === 'BLOCKED').length,
+    inProgress: effectiveItems.filter(t => t.status === 'IN_PROGRESS').length,
+    pending: effectiveItems.filter(t => t.status === 'PENDING').length,
   };
   const statusCounts: Record<string, number> = {
     all: counts.total,

@@ -311,8 +311,12 @@ export class ReportsService {
     xlMetaValue(ws.getCell('C6'), isBatch
       ? batchSuites.map((s) => `${s.jiraKey} — ${s.title}`).join(' | ')
       : (execution.suite ? `${execution.suite.jiraKey} — ${execution.suite.title}` : '-'));
+    const effectiveTotal = execution.testCases.reduce((sum, tc) => {
+      const s = (tc as any).scenarios ?? [];
+      return sum + (s.length > 0 ? s.length : 1);
+    }, 0);
     xlMetaLabel(ws.getCell('F6'), 'Total de Testes');
-    xlMetaValue(ws.getCell('G6'), execution.testCases.length);
+    xlMetaValue(ws.getCell('G6'), effectiveTotal);
 
     // Linha 7 – Cabeçalho da tabela
     const headerRow = ws.getRow(7);
@@ -343,9 +347,9 @@ export class ReportsService {
       row.getCell(4).value = etc.testCase.priority || '-';
       row.getCell(4).alignment = { horizontal: 'center', vertical: 'middle' };
 
-      row.getCell(5).value = STATUS_PT[etc.status] ?? etc.status;
-      row.getCell(5).fill = xlFill(statusArgb);
-      row.getCell(5).font = { name: 'Calibri', size: 11, bold: hasScenarios, italic: hasScenarios };
+      row.getCell(5).value = hasScenarios ? '' : (STATUS_PT[etc.status] ?? etc.status);
+      row.getCell(5).fill = xlFill(hasScenarios ? 'EEEEEE' : statusArgb);
+      row.getCell(5).font = { name: 'Calibri', size: 11 };
       row.getCell(5).alignment = { horizontal: 'center', vertical: 'middle' };
 
       row.getCell(6).value = etc.responsible || '';
@@ -740,10 +744,25 @@ export class ReportsService {
     const batchSuites = await this.resolveBatchSuites(execution.batch?.suiteIds);
     const isBatch = batchSuites.length > 0;
 
-    const totalTests    = execution.testCases.length;
-    const passedTests   = execution.testCases.filter((tc) => tc.status === 'PASSED').length;
-    const failedTests   = execution.testCases.filter((tc) => tc.status === 'FAILED').length;
-    const blockedTests  = execution.testCases.filter((tc) => tc.status === 'BLOCKED').length;
+    const totalTests = execution.testCases.reduce((sum, tc) => {
+      const scenarios = (tc as any).scenarios ?? [];
+      return sum + (scenarios.length > 0 ? scenarios.length : 1);
+    }, 0);
+    const passedTests = execution.testCases.reduce((sum, tc) => {
+      const scenarios = (tc as any).scenarios ?? [];
+      if (scenarios.length > 0) return sum + scenarios.filter((s: any) => s.status === 'PASSED').length;
+      return sum + (tc.status === 'PASSED' ? 1 : 0);
+    }, 0);
+    const failedTests = execution.testCases.reduce((sum, tc) => {
+      const scenarios = (tc as any).scenarios ?? [];
+      if (scenarios.length > 0) return sum + scenarios.filter((s: any) => s.status === 'FAILED').length;
+      return sum + (tc.status === 'FAILED' ? 1 : 0);
+    }, 0);
+    const blockedTests = execution.testCases.reduce((sum, tc) => {
+      const scenarios = (tc as any).scenarios ?? [];
+      if (scenarios.length > 0) return sum + scenarios.filter((s: any) => s.status === 'BLOCKED').length;
+      return sum + (tc.status === 'BLOCKED' ? 1 : 0);
+    }, 0);
     const executedTests = passedTests + failedTests + blockedTests;
     const pendingTests  = totalTests - executedTests;
 

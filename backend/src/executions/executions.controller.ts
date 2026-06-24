@@ -82,6 +82,14 @@ export class ExecutionsController {
     return this.executionsService.createScenario(etcId, dto);
   }
 
+  @Post(':executionId/test-cases/:etcId/scenarios/batch')
+  async createScenarioBatch(
+    @Param('etcId') etcId: string,
+    @Body('names') names: string[],
+  ) {
+    return this.executionsService.createScenarioBatch(etcId, names);
+  }
+
   @Patch(':executionId/test-cases/:etcId/scenarios/:scenarioId')
   async updateScenario(
     @Param('etcId') etcId: string,

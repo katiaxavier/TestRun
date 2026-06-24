@@ -487,8 +487,21 @@ export class ExecutionsService {
   }
 
   async createScenario(etcId: string, dto: CreateScenarioDto) {
-    const etc = await this.prisma.executionTestCase.findUnique({ where: { id: etcId } });
+    const etc = await this.prisma.executionTestCase.findUnique({
+      where: { id: etcId },
+      include: { issues: true, scenarios: true },
+    });
     if (!etc) throw new HttpException('Item de execução não encontrado.', HttpStatus.NOT_FOUND);
+
+    const isFirst = etc.scenarios.length === 0;
+
+    if (isFirst) {
+      await this.prisma.executionTestCase.update({
+        where: { id: etcId },
+        data: { originalStatus: etc.status },
+      });
+    }
+
     const scenario = await this.prisma.scenario.create({
       data: {
         executionTestCaseId: etcId,
@@ -497,8 +510,52 @@ export class ExecutionsService {
       },
       include: { issues: true },
     });
+
+    if (isFirst && etc.issues.length > 0) {
+      await this.prisma.issue.updateMany({
+        where: { executionTestCaseId: etcId },
+        data: { executionTestCaseId: null, scenarioId: scenario.id },
+      });
+    }
+
     await this.recomputeTestCaseStatus(etcId);
     return scenario;
+  }
+
+  async createScenarioBatch(etcId: string, names: string[]) {
+    const etc = await this.prisma.executionTestCase.findUnique({
+      where: { id: etcId },
+      include: { issues: true, scenarios: true },
+    });
+    if (!etc) throw new HttpException('Item de execução não encontrado.', HttpStatus.NOT_FOUND);
+
+    const isFirst = etc.scenarios.length === 0;
+
+    if (isFirst) {
+      await this.prisma.executionTestCase.update({
+        where: { id: etcId },
+        data: { originalStatus: etc.status },
+      });
+    }
+
+    const created: any[] = [];
+    for (const name of names) {
+      const scenario = await this.prisma.scenario.create({
+        data: { executionTestCaseId: etcId, name, status: 'PENDING' },
+        include: { issues: true },
+      });
+      created.push(scenario);
+    }
+
+    if (isFirst && etc.issues.length > 0 && created.length > 0) {
+      await this.prisma.issue.updateMany({
+        where: { executionTestCaseId: etcId },
+        data: { executionTestCaseId: null, scenarioId: created[0].id },
+      });
+    }
+
+    await this.recomputeTestCaseStatus(etcId);
+    return created;
   }
 
   async updateScenario(etcId: string, scenarioId: string, dto: UpdateScenarioDto) {
@@ -519,11 +576,45 @@ export class ExecutionsService {
   }
 
   async deleteScenario(etcId: string, scenarioId: string) {
-    const scenario = await this.prisma.scenario.findUnique({ where: { id: scenarioId } });
+    const scenario = await this.prisma.scenario.findUnique({
+      where: { id: scenarioId },
+      include: { issues: true },
+    });
     if (!scenario || scenario.executionTestCaseId !== etcId)
       throw new HttpException('Cenário não encontrado.', HttpStatus.NOT_FOUND);
-    await this.prisma.scenario.delete({ where: { id: scenarioId } });
-    await this.recomputeTestCaseStatus(etcId);
+
+    const remainingScenarios = await this.prisma.scenario.count({
+      where: { executionTestCaseId: etcId, id: { not: scenarioId } },
+    });
+    const isLast = remainingScenarios === 0;
+
+    if (isLast) {
+      const etc = await this.prisma.executionTestCase.findUnique({ where: { id: etcId } });
+
+      if (scenario.issues.length > 0) {
+        await this.prisma.issue.updateMany({
+          where: { scenarioId },
+          data: { scenarioId: null, executionTestCaseId: etcId },
+        });
+      }
+
+      await this.prisma.scenario.delete({ where: { id: scenarioId } });
+
+      await this.prisma.executionTestCase.update({
+        where: { id: etcId },
+        data: {
+          status: etc?.originalStatus ?? 'PENDING',
+          originalStatus: null,
+        },
+      });
+
+      const updated = await this.prisma.executionTestCase.findUnique({ where: { id: etcId } });
+      if (updated) await this.recomputeExecutionStatus(updated.executionId);
+    } else {
+      await this.prisma.scenario.delete({ where: { id: scenarioId } });
+      await this.recomputeTestCaseStatus(etcId);
+    }
+
     return { success: true };
   }
 

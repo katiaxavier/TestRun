@@ -65,6 +65,7 @@ export interface ExecutionTestCase {
   testCaseId: string;
   testCase: TestCase;
   status: string;
+  originalStatus?: string;
   responsible?: string;
   comments?: string;
   issues: Issue[];
@@ -139,6 +140,8 @@ export const executionsApi = {
 
   createScenario: (executionId: string, etcId: string, name: string) =>
     api.post<Scenario>(`/executions/${executionId}/test-cases/${etcId}/scenarios`, { name }),
+  createScenarioBatch: (executionId: string, etcId: string, names: string[]) =>
+    api.post<Scenario[]>(`/executions/${executionId}/test-cases/${etcId}/scenarios/batch`, { names }),
   updateScenario: (executionId: string, etcId: string, scenarioId: string, data: { name?: string; status?: string; comments?: string }) =>
     api.patch<Scenario>(`/executions/${executionId}/test-cases/${etcId}/scenarios/${scenarioId}`, data),
   deleteScenario: (executionId: string, etcId: string, scenarioId: string) =>

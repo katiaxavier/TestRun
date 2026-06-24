@@ -66,18 +66,19 @@ model ExecutionBatch {
 }
 
 model ExecutionTestCase {
-  id          String    @id @default(uuid())
-  executionId String
-  execution   Execution @relation(fields: [executionId], references: [id], onDelete: Cascade)
-  testCaseId  String
-  testCase    TestCase  @relation(fields: [testCaseId], references: [id], onDelete: Cascade)
-  status      String    @default("PENDING") // PENDING, PASSED, FAILED, IN_PROGRESS, BLOCKED
-  responsible String?
-  comments    String?
-  issues      Issue[]
-  scenarios   Scenario[]
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id             String    @id @default(uuid())
+  executionId    String
+  execution      Execution @relation(fields: [executionId], references: [id], onDelete: Cascade)
+  testCaseId     String
+  testCase       TestCase  @relation(fields: [testCaseId], references: [id], onDelete: Cascade)
+  status         String    @default("PENDING") // PENDING, PASSED, FAILED, IN_PROGRESS, BLOCKED
+  originalStatus String?   // status antes do modo cenários; restaurado ao deletar o último cenário
+  responsible    String?
+  comments       String?
+  issues         Issue[]
+  scenarios      Scenario[]
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 }
 
 model Scenario {
