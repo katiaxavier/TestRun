@@ -856,17 +856,32 @@ export class ReportsService {
                     widths: ['14%', '26%', '14%', '13%', '18%', '15%'],
                     body: [
                       pdfHeaderCells(['ID', 'Caso de Teste', 'Prioridade', 'Status', 'Responsável', 'Issues']),
-                      ...suiteTcs.map((tc, i) => {
+                      ...suiteTcs.flatMap((tc, i) => {
                         const bg = rowBg(i);
                         const issues = tc.issues.map((iss) => iss.jiraKey || iss.title).join(', ') || '-';
-                        return [
+                        const scenarios = (tc as any).scenarios ?? [];
+                        const mainRow = [
                           pdfCell(tc.testCase.jiraKey, bg, { color: '#FF6002', decoration: 'underline', ...(tc.testCase.link ? { link: tc.testCase.link } : {}) }),
                           pdfCell(tc.testCase.title, bg),
                           pdfCell(tc.testCase.priority || '-', bg, { alignment: 'center' }),
-                          pdfStatusCell(tc.status),
+                          scenarios.length > 0
+                            ? { text: '', fontSize: 8, alignment: 'center', fillColor: '#EEEEEE', margin: [2, 4, 2, 4] }
+                            : pdfStatusCell(tc.status),
                           pdfCell(tc.responsible || '-', bg),
                           pdfCell(issues, bg),
                         ];
+                        const scenarioRows = scenarios.map((s: any) => {
+                          const sIssues = s.issues.map((iss: any) => iss.jiraKey || iss.title).join(', ') || '-';
+                          return [
+                            pdfCell('↳', bg, { color: '#818B9D' }),
+                            pdfCell(s.name, bg, { italics: true, margin: [10, 3, 3, 3] }),
+                            pdfCell('-', bg, { alignment: 'center' }),
+                            pdfStatusCell(s.status),
+                            pdfCell('-', bg),
+                            pdfCell(sIssues, bg),
+                          ];
+                        });
+                        return [mainRow, ...scenarioRows];
                       }),
                     ],
                   },
