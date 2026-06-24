@@ -1,13 +1,52 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Play, ListBullets } from '@phosphor-icons/react';
 import { executionsApi, suitesApi } from '../api/client';
-import type { Suite, Execution } from '../api/client';
+import type { Suite, Execution, TestCase } from '../api/client';
 import { PageHeader } from '../components/PageHeader';
 import { ExecutionList } from '../components/ExecutionList';
 import { TestCaseList } from '../components/TestCaseList';
 import { ExecutionFormModal } from '../components/ExecutionFormModal';
+
+function ScenarioPreview({ tc }: { tc: TestCase }) {
+  const [expanded, setExpanded] = useState(false);
+  const templates = tc.scenarioTemplates ?? [];
+  if (templates.length === 0) return null;
+
+  return (
+    <div style={{ marginTop: '0.5rem' }}>
+      <button
+        className="btn btn-ghost btn-sm"
+        style={{ color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.78rem' }}
+        onClick={() => setExpanded(e => !e)}
+      >
+        <ListBullets size={14} />
+        {templates.length} cenário{templates.length !== 1 ? 's' : ''}
+        <span style={{ fontSize: '0.7rem', transform: expanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', display: 'inline-block' }}>▾</span>
+      </button>
+
+      <AnimatePresence>
+        {expanded && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            style={{ overflow: 'hidden' }}
+          >
+            <div style={{ paddingTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+              {templates.map(t => (
+                <div key={t.id} style={{ padding: '0.3rem 0.5rem', background: 'var(--bg-elevated)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{t.name}</span>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
 
 export default function BatchExecutionPage() {
   const { id } = useParams<{ id: string }>();
@@ -118,20 +157,7 @@ export default function BatchExecutionPage() {
             testCases={allTestCases}
             suiteMap={suiteMap}
             onDelete={handleRemoveTestCase}
-            renderExtra={tc => {
-              const templates = tc.scenarioTemplates ?? [];
-              if (templates.length === 0) return null;
-              return (
-                <div style={{ marginTop: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
-                  <ListBullets size={13} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
-                  {templates.map(t => (
-                    <span key={t.id} style={{ fontSize: '0.75rem', color: 'var(--text-muted)', background: 'var(--bg-elevated)', borderRadius: 'var(--radius-sm)', padding: '0.1rem 0.4rem', border: '1px solid var(--border-subtle)' }}>
-                      {t.name}
-                    </span>
-                  ))}
-                </div>
-              );
-            }}
+            renderExtra={tc => <ScenarioPreview tc={tc} />}
           />
         </div>
       </motion.div>
