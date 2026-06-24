@@ -32,7 +32,7 @@ export function SuiteCard({ suite, selected, onSelect, onDelete }: SuiteCardProp
   };
 
   return (
-    <>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.75rem' }}>
         <span className="tag" style={{ fontFamily: 'monospace', fontSize: '0.7rem', background: 'var(--accent-subtle)', color: 'var(--accent)', flexShrink: 0 }}>
           SUITE
@@ -63,7 +63,7 @@ export function SuiteCard({ suite, selected, onSelect, onDelete }: SuiteCardProp
         </h3>
       </Tooltip>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', marginTop: '1rem', paddingTop: '0.85rem', borderTop: '1px solid var(--border-subtle)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', marginTop: 'auto', paddingTop: '0.85rem', borderTop: '1px solid var(--border-subtle)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
           <Flask size={14} style={{ color: 'var(--accent)' }} />
           <strong style={{ color: 'var(--text-primary)' }}>{suite._count?.testCases ?? 0}</strong> casos
@@ -76,6 +76,6 @@ export function SuiteCard({ suite, selected, onSelect, onDelete }: SuiteCardProp
           Criado em {formatDate(suite.createdAt)}
         </div>
       </div>
-    </>
+    </div>
   );
 }

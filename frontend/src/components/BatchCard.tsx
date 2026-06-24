@@ -28,7 +28,7 @@ export function BatchCard({ batch, onDelete }: BatchCardProps) {
   };
 
   return (
-    <>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
         <span className="tag" style={{ fontFamily: 'monospace', fontSize: '0.7rem', background: 'rgba(255, 209, 90, 0.18)', color: 'var(--tertiary)', flexShrink: 0 }}>
           LOTE
@@ -57,7 +57,7 @@ export function BatchCard({ batch, onDelete }: BatchCardProps) {
         </div>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', marginTop: '1rem', paddingTop: '0.85rem', borderTop: '1px solid var(--border-subtle)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', marginTop: 'auto', paddingTop: '0.85rem', borderTop: '1px solid var(--border-subtle)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
           <Flask size={14} style={{ color: 'var(--accent)' }} />
           <strong style={{ color: 'var(--text-primary)' }}>{totalCases}</strong> casos
@@ -70,6 +70,6 @@ export function BatchCard({ batch, onDelete }: BatchCardProps) {
           Criado em {formatDate(batch.createdAt)}
         </div>
       </div>
-    </>
+    </div>
   );
 }
