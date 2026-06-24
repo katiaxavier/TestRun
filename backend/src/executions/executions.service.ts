@@ -519,7 +519,10 @@ export class ExecutionsService {
     }
 
     await this.recomputeTestCaseStatus(etcId);
-    return scenario;
+    return this.prisma.scenario.findUnique({
+      where: { id: scenario.id },
+      include: { issues: true },
+    });
   }
 
   async createScenarioBatch(etcId: string, names: string[]) {
@@ -551,6 +554,10 @@ export class ExecutionsService {
       await this.prisma.issue.updateMany({
         where: { executionTestCaseId: etcId },
         data: { executionTestCaseId: null, scenarioId: created[0].id },
+      });
+      created[0] = await this.prisma.scenario.findUnique({
+        where: { id: created[0].id },
+        include: { issues: true },
       });
     }
 

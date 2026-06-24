@@ -1055,117 +1055,81 @@ function TestCaseDrawer({
       </motion.div>
 
       {/* Wizard modal — primeiro cenário com issues */}
-      <AnimatePresence>
-        {showWizardModal && (
+      <Modal
+        open={showWizardModal}
+        onClose={() => { if (!addingScenario) setShowWizardModal(false); }}
+        title="Criando modo Cenários"
+        maxWidth={440}
+        footer={
           <>
-            <motion.div
-              key="wizard-overlay"
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1100 }}
-              onClick={() => !addingScenario && setShowWizardModal(false)}
-            />
-            <motion.div
-              key="wizard-modal"
-              initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
-              style={{
-                position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
-                background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12,
-                padding: '1.5rem', width: 400, zIndex: 1101, display: 'flex', flexDirection: 'column', gap: '1rem',
-              }}
+            <button className="btn btn-secondary" onClick={() => setShowWizardModal(false)} disabled={addingScenario}>
+              Cancelar
+            </button>
+            <button
+              className="btn btn-primary"
+              onClick={handleWizardConfirm}
+              disabled={addingScenario || !wizardScenarioName.trim()}
             >
-              <div>
-                <p style={{ fontWeight: 700, fontSize: '0.95rem', marginBottom: '0.4rem' }}>Criando modo Cenários</p>
-                <p style={{ fontSize: '0.83rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                  Este caso possui <strong>{issues.length} {issues.length === 1 ? 'issue' : 'issues'}</strong> que {issues.length === 1 ? 'será movida' : 'serão movidas'} automaticamente para o primeiro cenário criado.
-                </p>
-              </div>
-              <div>
-                <label className="form-label">Nome do primeiro cenário</label>
-                <input
-                  placeholder="Ex: Processamento A"
-                  value={wizardScenarioName}
-                  onChange={e => setWizardScenarioName(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && handleWizardConfirm()}
-                  autoFocus
-                />
-              </div>
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <button
-                  className="btn btn-primary"
-                  onClick={handleWizardConfirm}
-                  disabled={addingScenario || !wizardScenarioName.trim()}
-                  style={{ flex: 1, justifyContent: 'center' }}
-                >
-                  {addingScenario ? <div className="spinner" style={{ width: 14, height: 14 }} /> : <CheckCircle size={14} />}
-                  Criar Cenário
-                </button>
-                <button className="btn btn-secondary" onClick={() => setShowWizardModal(false)} disabled={addingScenario}>
-                  Cancelar
-                </button>
-              </div>
-            </motion.div>
+              {addingScenario ? <div className="spinner" style={{ width: 14, height: 14 }} /> : <CheckCircle size={14} />}
+              Criar Cenário
+            </button>
           </>
-        )}
-      </AnimatePresence>
+        }
+      >
+        <p style={{ fontSize: '0.87rem', color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: '1rem' }}>
+          Este caso possui <strong>{issues.length} {issues.length === 1 ? 'issue' : 'issues'}</strong> que {issues.length === 1 ? 'será movida' : 'serão movidas'} automaticamente para o primeiro cenário criado.
+        </p>
+        <div className="form-group">
+          <label className="form-label">Nome do primeiro cenário</label>
+          <input
+            placeholder="Ex: Processamento A"
+            value={wizardScenarioName}
+            onChange={e => setWizardScenarioName(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleWizardConfirm()}
+            autoFocus
+          />
+        </div>
+      </Modal>
 
       {/* Modal de criação em lote */}
-      <AnimatePresence>
-        {showBatchModal && (
+      <Modal
+        open={showBatchModal}
+        onClose={() => { if (!addingBatch) setShowBatchModal(false); }}
+        title="Adicionar Cenários em Lote"
+        maxWidth={460}
+        footer={
           <>
-            <motion.div
-              key="batch-overlay"
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1100 }}
-              onClick={() => !addingBatch && setShowBatchModal(false)}
-            />
-            <motion.div
-              key="batch-modal"
-              initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
-              style={{
-                position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
-                background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12,
-                padding: '1.5rem', width: 420, zIndex: 1101, display: 'flex', flexDirection: 'column', gap: '1rem',
-              }}
+            <button className="btn btn-secondary" onClick={() => setShowBatchModal(false)} disabled={addingBatch}>
+              Cancelar
+            </button>
+            <button
+              className="btn btn-primary"
+              onClick={handleAddBatch}
+              disabled={addingBatch || !batchText.trim()}
             >
-              <div>
-                <p style={{ fontWeight: 700, fontSize: '0.95rem', marginBottom: '0.4rem' }}>Adicionar Cenários em Lote</p>
-                <p style={{ fontSize: '0.83rem', color: 'var(--text-secondary)' }}>Cole os nomes, um por linha.</p>
-              </div>
-              <div>
-                <textarea
-                  placeholder={'Processamento A\nProcessamento B\nProcessamento C'}
-                  value={batchText}
-                  onChange={e => setBatchText(e.target.value)}
-                  rows={6}
-                  style={{ resize: 'vertical', fontFamily: 'inherit' }}
-                  autoFocus
-                />
-                {batchText.trim() && (
-                  <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
-                    Preview: {batchText.split('\n').map(l => l.trim()).filter(Boolean).length} cenários serão criados
-                  </p>
-                )}
-              </div>
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <button
-                  className="btn btn-primary"
-                  onClick={handleAddBatch}
-                  disabled={addingBatch || !batchText.trim()}
-                  style={{ flex: 1, justifyContent: 'center' }}
-                >
-                  {addingBatch ? <div className="spinner" style={{ width: 14, height: 14 }} /> : <CheckCircle size={14} />}
-                  {batchText.trim()
-                    ? `Criar ${batchText.split('\n').map(l => l.trim()).filter(Boolean).length} Cenários`
-                    : 'Criar Cenários'}
-                </button>
-                <button className="btn btn-secondary" onClick={() => setShowBatchModal(false)} disabled={addingBatch}>
-                  Cancelar
-                </button>
-              </div>
-            </motion.div>
+              {addingBatch ? <div className="spinner" style={{ width: 14, height: 14 }} /> : <CheckCircle size={14} />}
+              {batchText.trim()
+                ? `Criar ${batchText.split('\n').map(l => l.trim()).filter(Boolean).length} Cenários`
+                : 'Criar Cenários'}
+            </button>
           </>
+        }
+      >
+        <p style={{ fontSize: '0.87rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>Cole os nomes, um por linha.</p>
+        <textarea
+          placeholder={'Processamento A\nProcessamento B\nProcessamento C'}
+          value={batchText}
+          onChange={e => setBatchText(e.target.value)}
+          rows={6}
+          style={{ resize: 'vertical', fontFamily: 'inherit' }}
+          autoFocus
+        />
+        {batchText.trim() && (
+          <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
+            Preview: {batchText.split('\n').map(l => l.trim()).filter(Boolean).length} cenários serão criados
+          </p>
         )}
-      </AnimatePresence>
+      </Modal>
     </>
   );
 }
