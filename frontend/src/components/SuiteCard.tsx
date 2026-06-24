@@ -1,4 +1,4 @@
-import { Flask, ChartBar, Check, DotsThreeVertical, Trash } from '@phosphor-icons/react';
+import { Flask, Play, Check, DotsThreeVertical, Trash } from '@phosphor-icons/react';
 import { DropdownMenu } from './DropdownMenu';
 import { Tooltip } from './Tooltip';
 import type { Suite } from '../api/client';
@@ -37,9 +37,15 @@ export function SuiteCard({ suite, selected, onSelect, onDelete }: SuiteCardProp
         <span className="tag" style={{ fontFamily: 'monospace', fontSize: '0.7rem', background: 'var(--accent-subtle)', color: 'var(--accent)', flexShrink: 0 }}>
           SUITE
         </span>
-        <span className="tag" style={{ fontFamily: 'monospace', fontSize: '0.7rem', flexShrink: 0 }}>
-          {suite.jiraKey}
-        </span>
+        {suite.jiraKey ? (
+          <span className="tag" style={{ fontFamily: 'monospace', fontSize: '0.7rem', flexShrink: 0 }}>
+            {suite.jiraKey}
+          </span>
+        ) : suite.isManual ? (
+          <span className="tag" style={{ fontSize: '0.7rem', flexShrink: 0, background: 'var(--bg-elevated)', color: 'var(--text-muted)' }}>
+            Manual
+          </span>
+        ) : null}
         <div style={{ marginLeft: 'auto', display: 'flex', gap: '0.4rem', alignItems: 'center' }} onClick={e => e.stopPropagation()}>
           {onSelect && (
             <CustomCheckbox checked={!!selected} onChange={checked => onSelect(suite.id, checked)} />
@@ -63,7 +69,7 @@ export function SuiteCard({ suite, selected, onSelect, onDelete }: SuiteCardProp
           <strong style={{ color: 'var(--text-primary)' }}>{suite._count?.testCases ?? 0}</strong> casos
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-          <ChartBar size={14} style={{ color: 'var(--status-inprogress)' }} />
+          <Play size={14} style={{ color: 'var(--status-inprogress)' }} />
           <strong style={{ color: 'var(--text-primary)' }}>{suite._count?.executions ?? 0}</strong> execuções
         </div>
         <div style={{ marginLeft: 'auto', fontSize: '0.75rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>

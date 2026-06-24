@@ -1,4 +1,4 @@
-import { Flask, ChartBar, DotsThreeVertical, Trash } from '@phosphor-icons/react';
+import { Flask, Play, DotsThreeVertical, Trash } from '@phosphor-icons/react';
 import { DropdownMenu } from './DropdownMenu';
 import { Tooltip } from './Tooltip';
 
@@ -63,7 +63,7 @@ export function BatchCard({ batch, onDelete }: BatchCardProps) {
           <strong style={{ color: 'var(--text-primary)' }}>{totalCases}</strong> casos
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-          <ChartBar size={14} style={{ color: 'var(--status-inprogress)' }} />
+          <Play size={14} style={{ color: 'var(--status-inprogress)' }} />
           <strong style={{ color: 'var(--text-primary)' }}>{batch.executions.length}</strong> execuções
         </div>
         <div style={{ marginLeft: 'auto', fontSize: '0.75rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
