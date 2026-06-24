@@ -42,8 +42,8 @@ export function SuiteCard({ suite, selected, onSelect, onDelete }: SuiteCardProp
             {suite.jiraKey}
           </span>
         ) : suite.isManual ? (
-          <span className="tag" style={{ fontSize: '0.7rem', flexShrink: 0 }}>
-            Manual
+          <span className="tag" style={{ fontFamily: 'monospace', fontSize: '0.7rem', flexShrink: 0 }}>
+            {suite.manualKey ?? 'Manual'}
           </span>
         ) : null}
         <div style={{ marginLeft: 'auto', display: 'flex', gap: '0.4rem', alignItems: 'center' }} onClick={e => e.stopPropagation()}>

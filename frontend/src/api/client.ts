@@ -17,13 +17,22 @@ export interface JiraConfig {
 
 export interface Suite {
   id: string;
-  jiraKey: string;
+  jiraKey?: string;
+  manualKey?: string;
   title: string;
+  isManual?: boolean;
   createdAt: string;
   updatedAt: string;
   _count?: { testCases: number; executions: number };
   testCases?: TestCase[];
   executions?: Execution[];
+}
+
+export interface TestCaseScenario {
+  id: string;
+  testCaseId: string;
+  name: string;
+  createdAt: string;
 }
 
 export interface TestCase {
@@ -33,6 +42,7 @@ export interface TestCase {
   link?: string;
   priority?: string;
   suiteId: string;
+  scenarioTemplates?: TestCaseScenario[];
 }
 
 export interface Execution {
@@ -53,6 +63,7 @@ export interface Execution {
 export interface Scenario {
   id: string;
   executionTestCaseId: string;
+  templateId?: string;
   name: string;
   status: string;
   comments?: string;
@@ -92,9 +103,18 @@ export const configApi = {
 export const suitesApi = {
   list: () => api.get<Suite[]>('/suites'),
   get: (id: string) => api.get<Suite>(`/suites/${id}`),
+  create: (title: string) => api.post<Suite>('/suites', { title }),
   importFromJira: (jiraKey: string) => api.post<Suite>('/suites/import', { jiraKey }),
   delete: (id: string) => api.delete(`/suites/${id}`),
+  addTestCase: (suiteId: string, jiraKey: string) =>
+    api.post<TestCase>(`/suites/${suiteId}/test-cases`, { jiraKey }),
   deleteTestCase: (id: string) => api.delete(`/suites/test-cases/${id}`),
+  addScenarioTemplate: (tcId: string, name: string) =>
+    api.post<TestCaseScenario>(`/suites/test-cases/${tcId}/scenarios`, { name }),
+  addScenarioTemplateBatch: (tcId: string, names: string[]) =>
+    api.post<TestCaseScenario[]>(`/suites/test-cases/${tcId}/scenarios/batch`, { names }),
+  deleteScenarioTemplate: (templateId: string) =>
+    api.delete(`/suites/test-cases/scenarios/${templateId}`),
 };
 
 export const executionsApi = {

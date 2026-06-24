@@ -9,8 +9,10 @@ generator client {
 
 model Suite {
   id         String      @id @default(uuid())
-  jiraKey    String      @unique // ex: PD-2105
+  jiraKey    String?     @unique
+  manualKey  String?     @unique
   title      String
+  isManual   Boolean     @default(false)
   testCases  TestCase[]
   executions Execution[]
   createdAt  DateTime    @default(now())
@@ -19,74 +21,82 @@ model Suite {
 
 model TestCase {
   id                 String              @id @default(uuid())
-  jiraKey            String // ex: PD-2105
+  jiraKey            String
   title              String
   link               String?
-  priority           String? // High, Medium, Low, Critical
+  priority           String?
   suiteId            String
   suite              Suite               @relation(fields: [suiteId], references: [id], onDelete: Cascade)
   executionTestCases ExecutionTestCase[]
+  scenarioTemplates  TestCaseScenario[]
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
 }
 
+model TestCaseScenario {
+  id         String     @id @default(uuid())
+  testCaseId String
+  testCase   TestCase   @relation(fields: [testCaseId], references: [id], onDelete: Cascade)
+  name       String
+  scenarios  Scenario[]
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+}
+
 model Execution {
-  id            String   @id @default(uuid())
+  id            String              @id @default(uuid())
   suiteId       String?
-  suite         Suite?   @relation(fields: [suiteId], references: [id])
-
+  suite         Suite?              @relation(fields: [suiteId], references: [id])
   batchId       String?
-  batch         ExecutionBatch? @relation(fields: [batchId], references: [id])
-
+  batch         ExecutionBatch?     @relation(fields: [batchId], references: [id])
   sprint        String
   version       String
   startDate     DateTime
   endDate       DateTime
   testedFeature String?
   responsible   String
-  status        String              @default("IN_PROGRESS") // IN_PROGRESS, COMPLETED
+  status        String              @default("IN_PROGRESS")
   testCases     ExecutionTestCase[]
-
   createdAt     DateTime            @default(now())
   updatedAt     DateTime            @updatedAt
 }
 
 model ExecutionBatch {
-  id                  String  @id @default(uuid())
+  id                  String      @id @default(uuid())
   name                String?
   suiteIds            Json
   testedFeature       String?
-  status              String  @default("IN_PROGRESS")
-  excludedTestCaseIds Json    @default("[]")
-
-  executions Execution[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  status              String      @default("IN_PROGRESS")
+  excludedTestCaseIds Json        @default("[]")
+  executions          Execution[]
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
 }
 
 model ExecutionTestCase {
-  id             String    @id @default(uuid())
+  id             String     @id @default(uuid())
   executionId    String
-  execution      Execution @relation(fields: [executionId], references: [id], onDelete: Cascade)
+  execution      Execution  @relation(fields: [executionId], references: [id], onDelete: Cascade)
   testCaseId     String
-  testCase       TestCase  @relation(fields: [testCaseId], references: [id], onDelete: Cascade)
-  status         String    @default("PENDING") // PENDING, PASSED, FAILED, IN_PROGRESS, BLOCKED
-  originalStatus String?   // status antes do modo cenários; restaurado ao deletar o último cenário
+  testCase       TestCase   @relation(fields: [testCaseId], references: [id], onDelete: Cascade)
+  status         String     @default("PENDING")
+  originalStatus String?
   responsible    String?
   comments       String?
   issues         Issue[]
   scenarios      Scenario[]
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
 }
 
 model Scenario {
   id                  String            @id @default(uuid())
   executionTestCaseId String
-  executionTestCase   ExecutionTestCase @relation(fields: [executionTestCaseId], references: [id], onDelete: Cascade)
+  executionTestCase   ExecutionTestCase  @relation(fields: [executionTestCaseId], references: [id], onDelete: Cascade)
+  templateId          String?
+  template            TestCaseScenario? @relation(fields: [templateId], references: [id])
   name                String
-  status              String            @default("PENDING") // PENDING, PASSED, FAILED, IN_PROGRESS, BLOCKED
+  status              String            @default("PENDING")
   comments            String?
   issues              Issue[]
   createdAt           DateTime          @default(now())
@@ -96,14 +106,14 @@ model Scenario {
 model Issue {
   id                  String             @id @default(uuid())
   executionTestCaseId String?
-  executionTestCase   ExecutionTestCase? @relation(fields: [executionTestCaseId], references: [id], onDelete: Cascade)
+  executionTestCase   ExecutionTestCase?  @relation(fields: [executionTestCaseId], references: [id], onDelete: Cascade)
   scenarioId          String?
   scenario            Scenario?          @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
-  type                String // BUG, IMPROVEMENT
-  jiraKey             String? // ex: PD-2110 (opcional)
+  type                String
+  jiraKey             String?
   title               String
-  severity            String? // Low, Medium, High, Critical
-  status              String? // Open, In Progress, Resolved
+  severity            String?
+  status              String?
   createdAt           DateTime           @default(now())
   updatedAt           DateTime           @updatedAt
 }
