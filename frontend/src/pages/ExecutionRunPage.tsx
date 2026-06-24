@@ -352,6 +352,9 @@ function ScenarioView({
   const [deleting, setDeleting] = useState(false);
   const [jiraUrl, setJiraUrl] = useState('');
   const [toasts, setToasts] = useState<{ id: number; message: string; type: 'success' | 'error' }[]>([]);
+  const [editingName, setEditingName] = useState(false);
+  const [nameInput, setNameInput] = useState(scenario.name);
+  const [savingName, setSavingName] = useState(false);
 
   useEffect(() => {
     configApi.get().then(({ data }) => setJiraUrl(data.url ?? '')).catch(() => {});
@@ -363,6 +366,8 @@ function ScenarioView({
     initialComments.current = scenario.comments ?? '';
     setIssues(scenario.issues);
     setSavedFeedback(false);
+    setEditingName(false);
+    setNameInput(scenario.name);
   }, [scenario.id]);
 
   const isDirty = comments !== initialComments.current;
@@ -387,6 +392,21 @@ function ScenarioView({
       addToast('Erro ao atualizar status', 'error');
     }
     setSavingStatus(false);
+  };
+
+  const handleRename = async () => {
+    const trimmed = nameInput.trim();
+    if (!trimmed || trimmed === scenario.name) { setEditingName(false); return; }
+    setSavingName(true);
+    try {
+      const { data } = await executionsApi.updateScenario(executionId, etcId, scenario.id, { name: trimmed });
+      onUpdated({ ...data, issues });
+      setEditingName(false);
+      addToast('Nome atualizado');
+    } catch {
+      addToast('Erro ao renomear cenário', 'error');
+    }
+    setSavingName(false);
   };
 
   const handleSave = async () => {
@@ -427,11 +447,37 @@ function ScenarioView({
           >
             <CaretLeft size={13} /> Voltar ao caso de teste
           </button>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-            <FolderOpen size={14} style={{ color: 'var(--accent)', flexShrink: 0 }} />
-            <p style={{ fontSize: '0.9rem', fontWeight: 600, lineHeight: 1.4, color: 'var(--text-primary)' }}>
-              {scenario.name}
-            </p>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.4rem' }}>
+            <FolderOpen size={14} style={{ color: 'var(--accent)', flexShrink: 0, marginTop: 3 }} />
+            {editingName ? (
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                <input
+                  value={nameInput}
+                  onChange={e => setNameInput(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') handleRename(); if (e.key === 'Escape') { setEditingName(false); setNameInput(scenario.name); } }}
+                  autoFocus
+                  style={{ fontSize: '0.9rem', fontWeight: 600 }}
+                />
+                <div style={{ display: 'flex', gap: '0.4rem' }}>
+                  <button className="btn btn-primary btn-sm" onClick={handleRename} disabled={savingName || !nameInput.trim()} style={{ flex: 1, justifyContent: 'center' }}>
+                    {savingName ? <div className="spinner" style={{ width: 12, height: 12 }} /> : <CheckCircle size={13} />}
+                    Salvar
+                  </button>
+                  <button className="btn btn-secondary btn-sm" onClick={() => { setEditingName(false); setNameInput(scenario.name); }} disabled={savingName}>Cancelar</button>
+                </div>
+              </div>
+            ) : (
+              <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.4rem', minWidth: 0 }}>
+                <p style={{ fontSize: '0.9rem', fontWeight: 600, lineHeight: 1.4, color: 'var(--text-primary)', flex: 1 }}>
+                  {scenario.name}
+                </p>
+                <Tooltip content="Renomear" placement="top">
+                  <button className="btn btn-ghost btn-icon btn-sm" onClick={() => { setNameInput(scenario.name); setEditingName(true); }} style={{ color: 'var(--text-muted)', flexShrink: 0 }}>
+                    <Pencil size={13} />
+                  </button>
+                </Tooltip>
+              </div>
+            )}
           </div>
         </div>
       </div>
