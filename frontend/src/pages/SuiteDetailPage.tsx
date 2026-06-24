@@ -210,7 +210,9 @@ function ScenarioTemplatePanel({ tc, onUpdate }: {
         onConfirm={handleDelete}
       >
         <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-          Tem certeza que deseja remover este cenário?
+          Tem certeza que deseja remover este cenário da suíte?
+          <br /><br />
+          Execuções já criadas não serão afetadas — o cenário permanecerá nelas como registro histórico. Para removê-lo de uma execução específica, acesse o caso de teste dentro da execução e exclua o cenário por lá.
           <br /><br />
           <span style={{ color: 'var(--status-failed)', fontSize: '0.85rem' }}>
             Esta ação não pode ser desfeita.
