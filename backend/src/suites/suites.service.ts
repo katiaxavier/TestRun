@@ -34,7 +34,7 @@ export class SuitesService {
           orderBy: { createdAt: 'desc' },
           include: {
             testCases: {
-              select: { status: true },
+              select: { status: true, scenarios: { select: { status: true } } },
             },
           },
         },
