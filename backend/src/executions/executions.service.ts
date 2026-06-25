@@ -95,7 +95,7 @@ export class ExecutionsService {
     // 1. Validar suite
     const suite = await this.prisma.suite.findUnique({
       where: { id: dto.suiteId },
-      include: { testCases: true },
+      include: { testCases: { include: { scenarioTemplates: true } } },
     });
 
     if (!suite) {
@@ -125,16 +125,26 @@ export class ExecutionsService {
       },
     });
 
-    // 3. Vincular casos de teste da suite na execução
+    // 3. Vincular casos de teste da suite na execução, copiando cenários template
     for (const tc of suite.testCases) {
-      await this.prisma.executionTestCase.create({
+      const etc = await this.prisma.executionTestCase.create({
         data: {
           executionId: execution.id,
           testCaseId: tc.id,
           status: 'PENDING',
-          responsible: dto.responsible, // pré-define o responsável geral da execução
+          responsible: dto.responsible,
         },
       });
+      for (const template of (tc as any).scenarioTemplates ?? []) {
+        await this.prisma.scenario.create({
+          data: {
+            executionTestCaseId: etc.id,
+            templateId: template.id,
+            name: template.name,
+            status: 'PENDING',
+          },
+        });
+      }
     }
 
     return this.findOne(execution.id);
@@ -345,7 +355,7 @@ export class ExecutionsService {
     const excluded = (batch.excludedTestCaseIds as string[]) ?? [];
     const suites = await this.prisma.suite.findMany({
       where: { id: { in: suiteIds } },
-      include: { testCases: { orderBy: { jiraKey: 'asc' } } },
+      include: { testCases: { include: { scenarioTemplates: true }, orderBy: { jiraKey: 'asc' } } },
     });
 
     const execution = await this.prisma.execution.create({
@@ -363,7 +373,7 @@ export class ExecutionsService {
     for (const suite of suites) {
       for (const tc of suite.testCases) {
         if (excluded.includes(tc.id)) continue;
-        await this.prisma.executionTestCase.create({
+        const etc = await this.prisma.executionTestCase.create({
           data: {
             executionId: execution.id,
             testCaseId: tc.id,
@@ -371,6 +381,16 @@ export class ExecutionsService {
             responsible: dto.responsible,
           },
         });
+        for (const template of (tc as any).scenarioTemplates ?? []) {
+          await this.prisma.scenario.create({
+            data: {
+              executionTestCaseId: etc.id,
+              templateId: template.id,
+              name: template.name,
+              status: 'PENDING',
+            },
+          });
+        }
       }
     }
 
@@ -473,9 +493,21 @@ export class ExecutionsService {
 
     const isFirst = etc.scenarios.length === 0;
 
+    if (isFirst) {
+      await this.prisma.executionTestCase.update({
+        where: { id: etcId },
+        data: { originalStatus: etc.status },
+      });
+    }
+
+    const template = await this.prisma.testCaseScenario.create({
+      data: { testCaseId: etc.testCaseId, name: dto.name },
+    });
+
     const scenario = await this.prisma.scenario.create({
       data: {
         executionTestCaseId: etcId,
+        templateId: template.id,
         name: dto.name,
         status: 'PENDING',
       },
@@ -504,10 +536,20 @@ export class ExecutionsService {
 
     const isFirst = etc.scenarios.length === 0;
 
+    if (isFirst) {
+      await this.prisma.executionTestCase.update({
+        where: { id: etcId },
+        data: { originalStatus: etc.status },
+      });
+    }
+
     const created: any[] = [];
     for (const name of names) {
+      const template = await this.prisma.testCaseScenario.create({
+        data: { testCaseId: etc.testCaseId, name },
+      });
       const scenario = await this.prisma.scenario.create({
-        data: { executionTestCaseId: etcId, name, status: 'PENDING' },
+        data: { executionTestCaseId: etcId, templateId: template.id, name, status: 'PENDING' },
         include: { issues: true },
       });
       created.push(scenario);
@@ -560,6 +602,16 @@ export class ExecutionsService {
         where: { scenarioId },
         data: { scenarioId: null, executionTestCaseId: etcId },
       });
+    }
+
+    if (isLast) {
+      const etc = await this.prisma.executionTestCase.findUnique({ where: { id: etcId } });
+      if (etc?.originalStatus) {
+        await this.prisma.executionTestCase.update({
+          where: { id: etcId },
+          data: { status: etc.originalStatus, originalStatus: null },
+        });
+      }
     }
 
     await this.prisma.scenario.delete({ where: { id: scenarioId } });

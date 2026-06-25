@@ -51,7 +51,7 @@ export function ExecutionCard({ execution, title, onClick }: ExecutionCardProps)
   const cardTitle =
     title ??
     (execution.suite
-      ? `${execution.suite.jiraKey} — ${execution.suite.title}`
+      ? `${execution.suite.jiraKey ? `${execution.suite.jiraKey} — ` : ''}${execution.suite.title}`
       : `Execução ${formatDate(execution.startDate)}`);
 
   const dateRange = `${formatDate(execution.startDate)} - ${formatDate(execution.endDate)}`;

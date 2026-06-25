@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, Flask, MagnifyingGlass,
   WarningCircle, CloudArrowDown,
-  GridFourIcon, FlaskIcon, CopyIcon,
+  GridFourIcon, FlaskIcon, CopyIcon, PencilSimple,
 } from '@phosphor-icons/react';
 import { suitesApi, executionsApi } from '../api/client';
 import BatchExecutionModal from '../components/BatchExecutionModal';
@@ -15,65 +15,109 @@ import { SuiteCard } from '../components/SuiteCard';
 import { BatchCard } from '../components/BatchCard';
 import { Tooltip } from '../components/Tooltip';
 
-function ImportModal({ open, onClose, onSuccess }: { open: boolean; onClose: () => void; onSuccess: (s: Suite) => void }) {
+type CreateMode = 'jira' | 'manual';
+
+function CreateSuiteModal({ open, onClose, onSuccess }: { open: boolean; onClose: () => void; onSuccess: (s: Suite) => void }) {
+  const [mode, setMode] = useState<CreateMode>('jira');
   const [jiraKey, setJiraKey] = useState('');
+  const [title, setTitle] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (!open) {
-      setJiraKey('');
-      setError('');
-    }
+    if (!open) { setJiraKey(''); setTitle(''); setError(''); setMode('jira'); }
   }, [open]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!jiraKey.trim()) return;
     setLoading(true);
     setError('');
     try {
-      const { data } = await suitesApi.importFromJira(jiraKey.trim());
-      onSuccess(data);
-      setJiraKey('');
+      if (mode === 'jira') {
+        if (!jiraKey.trim()) return;
+        const { data } = await suitesApi.importFromJira(jiraKey.trim());
+        onSuccess(data);
+      } else {
+        if (!title.trim()) return;
+        const { data } = await suitesApi.create(title.trim());
+        onSuccess(data);
+      }
       onClose();
     } catch (err: any) {
-      const msg = err?.response?.data?.message ?? 'Erro ao importar suíte. Verifique a key e as credenciais Jira.';
+      const msg = err?.response?.data?.message ?? 'Erro ao criar suíte.';
       setError(Array.isArray(msg) ? msg.join(' ') : msg);
     } finally {
       setLoading(false);
     }
   };
 
+  const canSubmit = mode === 'jira' ? !!jiraKey.trim() : !!title.trim();
+
   return (
     <Modal
       open={open}
       onClose={onClose}
-      title="Importar Suíte do Jira"
+      title="Nova Suíte de Teste"
       footer={
         <>
           <button className="btn btn-secondary" onClick={onClose}>Cancelar</button>
-          <button className="btn btn-primary" onClick={handleSubmit as any} disabled={loading || !jiraKey.trim()}>
-            {loading ? <><div className="spinner" style={{ width: 14, height: 14 }} /> Importando...</> : <><CloudArrowDown size={16} /> Importar</>}
+          <button className="btn btn-primary" onClick={handleSubmit as any} disabled={loading || !canSubmit}>
+            {loading ? <><div className="spinner" style={{ width: 14, height: 14 }} /> {mode === 'jira' ? 'Importando...' : 'Criando...'}</> : mode === 'jira' ? <><CloudArrowDown size={16} /> Importar</> : <><Plus size={16} /> Criar</>}
           </button>
         </>
       }
     >
       <form onSubmit={handleSubmit}>
         <button type="submit" style={{ display: 'none' }} aria-hidden />
-        <div className="form-group">
-          <label className="form-label">Key da suíte no Jira</label>
-          <input
-            autoFocus
-            type="text"
-            placeholder="Ex: PROJ-1234"
-            value={jiraKey}
-            onChange={e => setJiraKey(e.target.value.toUpperCase())}
-          />
-          <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
-            Informe o ID da task pai (suíte) no Jira. Os casos de teste filhos serão importados automaticamente.
-          </p>
+        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.25rem' }}>
+          <button
+            type="button"
+            className={`btn btn-sm ${mode === 'jira' ? 'btn-primary' : 'btn-secondary'}`}
+            style={{ flex: 1 }}
+            onClick={() => { setMode('jira'); setError(''); }}
+          >
+            <CloudArrowDown size={15} /> Importar do Jira
+          </button>
+          <button
+            type="button"
+            className={`btn btn-sm ${mode === 'manual' ? 'btn-primary' : 'btn-secondary'}`}
+            style={{ flex: 1 }}
+            onClick={() => { setMode('manual'); setError(''); }}
+          >
+            <PencilSimple size={15} /> Criar Manualmente
+          </button>
         </div>
+
+        {mode === 'jira' ? (
+          <div className="form-group">
+            <label className="form-label">Key da suíte no Jira</label>
+            <input
+              autoFocus
+              type="text"
+              placeholder="Ex: PROJ-1234"
+              value={jiraKey}
+              onChange={e => setJiraKey(e.target.value.toUpperCase())}
+            />
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
+              Informe o ID da task pai (suíte) no Jira. Os casos de teste filhos serão importados automaticamente.
+            </p>
+          </div>
+        ) : (
+          <div className="form-group">
+            <label className="form-label">Nome da suíte</label>
+            <input
+              autoFocus
+              type="text"
+              placeholder="Ex: Suíte Sprint 42"
+              value={title}
+              onChange={e => setTitle(e.target.value)}
+            />
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
+              Você poderá adicionar casos de teste manualmente pelo ID do Jira após criar a suíte.
+            </p>
+          </div>
+        )}
+
         {error && (
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', padding: '0.75rem', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 'var(--radius-sm)', fontSize: '0.83rem', color: 'var(--status-failed)' }}>
             <WarningCircle size={16} style={{ flexShrink: 0, marginTop: 2 }} /> {error}
@@ -91,7 +135,7 @@ export default function DashboardPage() {
   const [batches, setBatches] = useState<any[]>([]);
   const [selectedSuites, setSelectedSuites] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
-  const [importOpen, setImportOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
   const [deleteTargetSuite, setDeleteTargetSuite] = useState<Suite | null>(null);
   const [deleteSuiteError, setDeleteSuiteError] = useState<string | null>(null);
   const [deleteTargetBatch, setDeleteTargetBatch] = useState<any | null>(null);
@@ -147,7 +191,7 @@ export default function DashboardPage() {
   };
 
   const filteredSuites = suites.filter(s =>
-    s.jiraKey.toLowerCase().includes(search.toLowerCase()) ||
+    (s.jiraKey ?? '').toLowerCase().includes(search.toLowerCase()) ||
     s.title.toLowerCase().includes(search.toLowerCase())
   );
 
@@ -190,8 +234,8 @@ export default function DashboardPage() {
                 <CopyIcon size={16} /> Criar Lote de Suítes
               </button>
             </Tooltip>
-            <button className="btn btn-primary" style={{ height: 48 }} onClick={() => setImportOpen(true)}>
-              <Plus size={16} /> Importar Suíte do Jira
+            <button className="btn btn-primary" style={{ height: 48 }} onClick={() => setCreateOpen(true)}>
+              <Plus size={16} /> Nova Suíte
             </button>
           </div>
         </div>
@@ -214,11 +258,11 @@ export default function DashboardPage() {
         ) : combinedItems.length === 0 ? (
           <div className="empty-state" style={{ marginTop: '3rem' }}>
             <Flask size={56} />
-            <h3>{search ? 'Nenhum item encontrado' : 'Nenhuma suíte ou lote importado'}</h3>
-            <p>{search ? 'Tente outro termo de busca.' : 'Clique em "Importar Suíte do Jira" para começar. Informe o ID da suíte de testes no Jira.'}</p>
+            <h3>{search ? 'Nenhum item encontrado' : 'Nenhuma suíte ou lote cadastrado'}</h3>
+            <p>{search ? 'Tente outro termo de busca.' : 'Crie uma suíte importando do Jira ou manualmente.'}</p>
             {!search && (
-              <button className="btn btn-primary" onClick={() => setImportOpen(true)} style={{ marginTop: '0.5rem' }}>
-                <Plus size={16} /> Importar Suíte do Jira
+              <button className="btn btn-primary" onClick={() => setCreateOpen(true)} style={{ marginTop: '0.5rem' }}>
+                <Plus size={16} /> Nova Suíte
               </button>
             )}
           </div>
@@ -254,7 +298,7 @@ export default function DashboardPage() {
         )}
       </motion.div>
 
-      <ImportModal open={importOpen} onClose={() => setImportOpen(false)} onSuccess={handleImportSuccess} />
+      <CreateSuiteModal open={createOpen} onClose={() => setCreateOpen(false)} onSuccess={handleImportSuccess} />
       <ConfirmModal
         open={!!deleteTargetSuite}
         title="Excluir Suíte"
@@ -265,7 +309,7 @@ export default function DashboardPage() {
       >
         <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
           Tem certeza que deseja excluir a suíte{' '}
-          <strong style={{ color: 'var(--text-primary)' }}>{deleteTargetSuite?.jiraKey} — {deleteTargetSuite?.title}</strong>?
+          <strong style={{ color: 'var(--text-primary)' }}>{deleteTargetSuite?.jiraKey ? `${deleteTargetSuite.jiraKey} — ` : ''}{deleteTargetSuite?.title}</strong>?
           <br /><br />
           <span style={{ color: 'var(--status-failed)', fontSize: '0.85rem' }}>
             Esta ação excluirá também todos os casos de teste e execuções vinculadas. Esta operação não pode ser desfeita.

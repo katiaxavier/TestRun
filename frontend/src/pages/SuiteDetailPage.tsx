@@ -309,6 +309,7 @@ export default function SuiteDetailPage() {
             testCases={testCases}
             onDelete={handleDeleteTestCase}
             renderExtra={tc => <ScenarioTemplatePanel tc={tc} onUpdate={handleTcUpdate} />}
+            isManual={suite.isManual}
           />
         </div>
       </motion.div>
