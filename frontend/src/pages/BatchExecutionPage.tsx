@@ -122,7 +122,7 @@ export default function BatchExecutionPage() {
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
             {suites.map(s => (
               <span key={s.id} style={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>
-                {s.jiraKey ? `${s.jiraKey} — ` : ''}{s.title}
+                {s.jiraKey ?? s.manualKey ?? s.title}
               </span>
             ))}
           </div>

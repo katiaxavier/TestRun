@@ -70,7 +70,7 @@ export function BatchExecutionModal({
           {suites.map(s => (
             <div key={s.id} className="card" style={{ padding: '0.75rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
-                <span className="tag" style={{ fontFamily: 'monospace', fontSize: '0.75rem', background: 'var(--accent-subtle)', color: 'var(--accent)' }}>{s.jiraKey}</span>
+                <span className="tag" style={{ fontFamily: 'monospace', fontSize: '0.75rem', background: 'var(--accent-subtle)', color: 'var(--accent)' }}>{s.jiraKey ?? s.manualKey}</span>
                 <div style={{ fontSize: '0.9rem', fontWeight: 500, marginTop: '0.25rem' }}>{s.title}</div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>

@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowSquareOut, CaretLeft, CaretRight, Flask, MagnifyingGlass, Trash } from '@phosphor-icons/react';
 import type { Suite, TestCase } from '../api/client';
@@ -9,13 +9,15 @@ interface TestCaseListProps {
   testCases: TestCase[];
   onDelete?: (id: string) => Promise<void>;
   suiteMap?: Record<string, Suite>;
+  renderExtra?: (tc: TestCase) => React.ReactNode;
+  isManual?: boolean;
 }
 
 type PriorityFilter = 'all' | 'Gravíssima' | 'Crítica' | 'Alta' | 'Média' | 'Normal' | 'Trivial';
 
 const PAGE_SIZES = [10, 25, 50, 100] as const;
 
-export function TestCaseList({ testCases, onDelete, suiteMap }: TestCaseListProps) {
+export function TestCaseList({ testCases, onDelete, suiteMap, renderExtra, isManual }: TestCaseListProps) {
   const [search, setSearch] = useState('');
   const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>('all');
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -56,7 +58,10 @@ export function TestCaseList({ testCases, onDelete, suiteMap }: TestCaseListProp
       <div className="empty-state" style={{ padding: '2.5rem' }}>
         <Flask size={40} />
         <h3>Sem casos de teste</h3>
-        <p>Re-importe a suíte para sincronizar os casos do Jira.</p>
+        {isManual
+          ? <p>Adicione casos de teste manualmente usando o botão acima.</p>
+          : <p>Re-importe a suíte para sincronizar os casos do Jira.</p>
+        }
       </div>
     );
   }
@@ -126,7 +131,7 @@ export function TestCaseList({ testCases, onDelete, suiteMap }: TestCaseListProp
                           onClick={e => e.stopPropagation()}
                           style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--accent)', fontSize: '0.85rem', fontFamily: 'monospace' }}
                         >
-                          {suite.jiraKey}
+                          {suite.jiraKey ?? suite.manualKey ?? suite.title}
                         </Link>
                       ) : (
                         <code>—</code>
@@ -148,7 +153,10 @@ export function TestCaseList({ testCases, onDelete, suiteMap }: TestCaseListProp
                       <code>{tc.jiraKey}</code>
                     )}
                   </td>
-                  <td style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>{tc.title}</td>
+                  <td style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
+                    {tc.title}
+                    {renderExtra && renderExtra(tc)}
+                  </td>
                   <td>
                     {priority === '—' ? (
                       <span style={{ color: 'var(--text-muted)' }}>—</span>
