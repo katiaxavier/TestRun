@@ -119,8 +119,6 @@ Se quiser importar suites do Jira, acesse a página **Configurações** no app e
 - E-mail da conta Atlassian
 - API Token ([gere aqui](https://id.atlassian.com/manage-profile/security/api-tokens))
 
-> Sem configuração do Jira o app funciona normalmente com suites manuais.
-
 **5. Parar os containers**
 
 ```bash
@@ -298,7 +296,5 @@ Verifique se o backend está rodando em `http://localhost:3000`. O frontend assu
 ## Roadmap
 
 - [ ] Autenticação de usuários
-- [ ] Dashboard com KPIs e histórico
 - [ ] Múltiplos projetos Jira
-- [ ] Integração com Azure DevOps / TestRail
-- [ ] Notificações em tempo real
+- [ ] Criação de suites/casos de teste integrados ao Jira
