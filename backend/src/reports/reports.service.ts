@@ -246,7 +246,11 @@ export class ReportsService {
         suite: true,
         batch: { select: { suiteIds: true } },
         testCases: {
-          include: { testCase: true, issues: true },
+          include: {
+            testCase: true,
+            issues: true,
+            scenarios: { include: { issues: true }, orderBy: { createdAt: 'asc' } },
+          },
           orderBy: { testCase: { jiraKey: 'asc' } },
         },
       },
@@ -307,8 +311,12 @@ export class ReportsService {
     xlMetaValue(ws.getCell('C6'), isBatch
       ? batchSuites.map((s) => `${s.jiraKey} — ${s.title}`).join(' | ')
       : (execution.suite ? `${execution.suite.jiraKey} — ${execution.suite.title}` : '-'));
+    const effectiveTotal = execution.testCases.reduce((sum, tc) => {
+      const s = (tc as any).scenarios ?? [];
+      return sum + (s.length > 0 ? s.length : 1);
+    }, 0);
     xlMetaLabel(ws.getCell('F6'), 'Total de Testes');
-    xlMetaValue(ws.getCell('G6'), execution.testCases.length);
+    xlMetaValue(ws.getCell('G6'), effectiveTotal);
 
     // Linha 7 – Cabeçalho da tabela
     const headerRow = ws.getRow(7);
@@ -316,11 +324,13 @@ export class ReportsService {
     xlHeaderRow(headerRow, 8);
 
     // Linhas 8+ – Dados
+    let xlRowIdx = 8;
     execution.testCases.forEach((etc, idx) => {
-      const row = ws.getRow(idx + 8);
+      const hasScenarios = (etc as any).scenarios?.length > 0;
       const jiraIssues = etc.issues.map((i) => i.jiraKey || i.title).join(', ');
       const statusArgb = STATUS_ARGB[etc.status] ?? 'EEEEEE';
 
+      const row = ws.getRow(xlRowIdx++);
       row.getCell(1).value = idx + 1;
       row.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
 
@@ -337,17 +347,44 @@ export class ReportsService {
       row.getCell(4).value = etc.testCase.priority || '-';
       row.getCell(4).alignment = { horizontal: 'center', vertical: 'middle' };
 
-      row.getCell(5).value = STATUS_PT[etc.status] ?? etc.status;
-      row.getCell(5).fill = xlFill(statusArgb);
-      row.getCell(5).font = { name: 'Calibri', size: 11, bold: true };
+      row.getCell(5).value = hasScenarios ? '' : (STATUS_PT[etc.status] ?? etc.status);
+      row.getCell(5).fill = xlFill(hasScenarios ? 'EEEEEE' : statusArgb);
+      row.getCell(5).font = { name: 'Calibri', size: 11 };
       row.getCell(5).alignment = { horizontal: 'center', vertical: 'middle' };
 
       row.getCell(6).value = etc.responsible || '';
-      row.getCell(7).value = etc.comments || '';
+      row.getCell(7).value = hasScenarios ? '(ver cenários)' : (etc.comments || '');
       row.getCell(7).alignment = { wrapText: true, vertical: 'middle' };
       row.getCell(8).value = jiraIssues || '';
 
       xlDataRow(row, 8, idx % 2 === 0, [5]);
+
+      if (hasScenarios) {
+        for (const scenario of (etc as any).scenarios) {
+          const sRow = ws.getRow(xlRowIdx++);
+          const sArgb = STATUS_ARGB[scenario.status] ?? 'EEEEEE';
+          const sIssues = scenario.issues.map((i: any) => i.jiraKey || i.title).join(', ');
+
+          sRow.getCell(1).value = '';
+          sRow.getCell(2).value = '↳';
+          sRow.getCell(2).font = { name: 'Calibri', size: 11, color: { argb: '818B9D' } };
+          sRow.getCell(3).value = scenario.name;
+          sRow.getCell(3).font = { name: 'Calibri', size: 10, italic: true };
+          sRow.getCell(3).alignment = { indent: 2, wrapText: true, vertical: 'middle' };
+          sRow.getCell(4).value = etc.testCase.priority || '-';
+          sRow.getCell(4).alignment = { horizontal: 'center', vertical: 'middle' };
+          sRow.getCell(5).value = STATUS_PT[scenario.status] ?? scenario.status;
+          sRow.getCell(5).fill = xlFill(sArgb);
+          sRow.getCell(5).font = { name: 'Calibri', size: 10, bold: true };
+          sRow.getCell(5).alignment = { horizontal: 'center', vertical: 'middle' };
+          sRow.getCell(6).value = '';
+          sRow.getCell(7).value = scenario.comments || '';
+          sRow.getCell(7).alignment = { wrapText: true, vertical: 'middle' };
+          sRow.getCell(8).value = sIssues || '';
+
+          xlDataRow(sRow, 8, idx % 2 === 0, [5]);
+        }
+      }
     });
 
     // ── Aba 2: Bugs e Melhorias ──────────────────────────────────────────────
@@ -381,6 +418,19 @@ export class ReportsService {
           status:    ISSUE_STATUS_PT[issue.status ?? ''] || issue.status || 'Aberto',
         });
       });
+      (etc as any).scenarios?.forEach((scenario: any) => {
+        scenario.issues.forEach((issue: any) => {
+          allIssues.push({
+            type:      issue.type === 'BUG' ? 'Bug' : 'Melhoria',
+            jiraKey:   issue.jiraKey || 'N/A',
+            title:     issue.title,
+            severity:  SEVERITY_PT[issue.severity ?? ''] || issue.severity || '-',
+            createdAt: this.formatDate(issue.createdAt),
+            updatedAt: this.formatDate(issue.updatedAt),
+            status:    ISSUE_STATUS_PT[issue.status ?? ''] || issue.status || 'Aberto',
+          });
+        });
+      });
     });
 
     allIssues.forEach((issue, idx) => {
@@ -407,7 +457,11 @@ export class ReportsService {
           include: {
             suite: true,
             testCases: {
-              include: { testCase: true, issues: true },
+              include: {
+                testCase: true,
+                issues: true,
+                scenarios: { include: { issues: true }, orderBy: { createdAt: 'asc' } },
+              },
               orderBy: { testCase: { jiraKey: 'asc' } },
             },
           },
@@ -562,11 +616,22 @@ export class ReportsService {
       ex.testCases.forEach((etc) => {
         etc.issues.forEach((issue) => {
           allIssues.push({
-            type:        issue.type === 'BUG' ? 'Bug' : 'Melhoria',
-            key:         issue.jiraKey || 'N/A',
-            title:       issue.title,
-            severity:    SEVERITY_PT[issue.severity ?? ''] || issue.severity || '-',
-            status:      ISSUE_STATUS_PT[issue.status ?? ''] || issue.status || 'Aberto',
+            type:     issue.type === 'BUG' ? 'Bug' : 'Melhoria',
+            key:      issue.jiraKey || 'N/A',
+            title:    issue.title,
+            severity: SEVERITY_PT[issue.severity ?? ''] || issue.severity || '-',
+            status:   ISSUE_STATUS_PT[issue.status ?? ''] || issue.status || 'Aberto',
+          });
+        });
+        (etc as any).scenarios?.forEach((scenario: any) => {
+          scenario.issues.forEach((issue: any) => {
+            allIssues.push({
+              type:     issue.type === 'BUG' ? 'Bug' : 'Melhoria',
+              key:      issue.jiraKey || 'N/A',
+              title:    issue.title,
+              severity: SEVERITY_PT[issue.severity ?? ''] || issue.severity || '-',
+              status:   ISSUE_STATUS_PT[issue.status ?? ''] || issue.status || 'Aberto',
+            });
           });
         });
       });
@@ -663,7 +728,11 @@ export class ReportsService {
         suite: true,
         batch: { select: { suiteIds: true } },
         testCases: {
-          include: { testCase: true, issues: true },
+          include: {
+            testCase: true,
+            issues: true,
+            scenarios: { include: { issues: true }, orderBy: { createdAt: 'asc' } },
+          },
           orderBy: { testCase: { jiraKey: 'asc' } },
         },
       },
@@ -676,10 +745,25 @@ export class ReportsService {
     const batchSuites = await this.resolveBatchSuites(execution.batch?.suiteIds);
     const isBatch = batchSuites.length > 0;
 
-    const totalTests    = execution.testCases.length;
-    const passedTests   = execution.testCases.filter((tc) => tc.status === 'PASSED').length;
-    const failedTests   = execution.testCases.filter((tc) => tc.status === 'FAILED').length;
-    const blockedTests  = execution.testCases.filter((tc) => tc.status === 'BLOCKED').length;
+    const totalTests = execution.testCases.reduce((sum, tc) => {
+      const scenarios = (tc as any).scenarios ?? [];
+      return sum + (scenarios.length > 0 ? scenarios.length : 1);
+    }, 0);
+    const passedTests = execution.testCases.reduce((sum, tc) => {
+      const scenarios = (tc as any).scenarios ?? [];
+      if (scenarios.length > 0) return sum + scenarios.filter((s: any) => s.status === 'PASSED').length;
+      return sum + (tc.status === 'PASSED' ? 1 : 0);
+    }, 0);
+    const failedTests = execution.testCases.reduce((sum, tc) => {
+      const scenarios = (tc as any).scenarios ?? [];
+      if (scenarios.length > 0) return sum + scenarios.filter((s: any) => s.status === 'FAILED').length;
+      return sum + (tc.status === 'FAILED' ? 1 : 0);
+    }, 0);
+    const blockedTests = execution.testCases.reduce((sum, tc) => {
+      const scenarios = (tc as any).scenarios ?? [];
+      if (scenarios.length > 0) return sum + scenarios.filter((s: any) => s.status === 'BLOCKED').length;
+      return sum + (tc.status === 'BLOCKED' ? 1 : 0);
+    }, 0);
     const executedTests = passedTests + failedTests + blockedTests;
     const pendingTests  = totalTests - executedTests;
 
@@ -695,11 +779,22 @@ export class ReportsService {
     execution.testCases.forEach((etc) => {
       etc.issues.forEach((issue) => {
         allIssues.push({
-          type:        issue.type === 'BUG' ? 'Bug' : 'Melhoria',
-          key:         issue.jiraKey || 'N/A',
-          title:       issue.title,
-          severity:    SEVERITY_PT[issue.severity ?? ''] || issue.severity || '-',
-          status:      ISSUE_STATUS_PT[issue.status ?? ''] || issue.status || 'Aberto',
+          type:     issue.type === 'BUG' ? 'Bug' : 'Melhoria',
+          key:      issue.jiraKey || 'N/A',
+          title:    issue.title,
+          severity: SEVERITY_PT[issue.severity ?? ''] || issue.severity || '-',
+          status:   ISSUE_STATUS_PT[issue.status ?? ''] || issue.status || 'Aberto',
+        });
+      });
+      (etc as any).scenarios?.forEach((scenario: any) => {
+        scenario.issues.forEach((issue: any) => {
+          allIssues.push({
+            type:     issue.type === 'BUG' ? 'Bug' : 'Melhoria',
+            key:      issue.jiraKey || 'N/A',
+            title:    issue.title,
+            severity: SEVERITY_PT[issue.severity ?? ''] || issue.severity || '-',
+            status:   ISSUE_STATUS_PT[issue.status ?? ''] || issue.status || 'Aberto',
+          });
         });
       });
     });
@@ -762,17 +857,32 @@ export class ReportsService {
                     widths: ['14%', '26%', '14%', '13%', '18%', '15%'],
                     body: [
                       pdfHeaderCells(['ID', 'Caso de Teste', 'Prioridade', 'Status', 'Responsável', 'Issues']),
-                      ...suiteTcs.map((tc, i) => {
+                      ...suiteTcs.flatMap((tc, i) => {
                         const bg = rowBg(i);
                         const issues = tc.issues.map((iss) => iss.jiraKey || iss.title).join(', ') || '-';
-                        return [
+                        const scenarios = (tc as any).scenarios ?? [];
+                        const mainRow = [
                           pdfCell(tc.testCase.jiraKey, bg, { color: '#FF6002', decoration: 'underline', ...(tc.testCase.link ? { link: tc.testCase.link } : {}) }),
                           pdfCell(tc.testCase.title, bg),
                           pdfCell(tc.testCase.priority || '-', bg, { alignment: 'center' }),
-                          pdfStatusCell(tc.status),
+                          scenarios.length > 0
+                            ? { text: '', fontSize: 8, alignment: 'center', fillColor: '#EEEEEE', margin: [2, 4, 2, 4] }
+                            : pdfStatusCell(tc.status),
                           pdfCell(tc.responsible || '-', bg),
                           pdfCell(issues, bg),
                         ];
+                        const scenarioRows = scenarios.map((s: any) => {
+                          const sIssues = s.issues.map((iss: any) => iss.jiraKey || iss.title).join(', ') || '-';
+                          return [
+                            pdfCell('↳', bg, { color: '#818B9D' }),
+                            pdfCell(s.name, bg, { italics: true, margin: [10, 3, 3, 3] }),
+                            pdfCell(tc.testCase.priority || '-', bg, { alignment: 'center' }),
+                            pdfStatusCell(s.status),
+                            pdfCell('-', bg),
+                            pdfCell(sIssues, bg),
+                          ];
+                        });
+                        return [mainRow, ...scenarioRows];
                       }),
                     ],
                   },
@@ -788,17 +898,32 @@ export class ReportsService {
                 widths: ['14%', '26%', '14%', '13%', '18%', '15%'],
                 body: [
                   pdfHeaderCells(['ID', 'Caso de Teste', 'Prioridade', 'Status', 'Responsável', 'Issues']),
-                  ...execution.testCases.map((tc, i) => {
+                  ...execution.testCases.flatMap((tc, i) => {
                     const bg = rowBg(i);
                     const issues = tc.issues.map((iss) => iss.jiraKey || iss.title).join(', ') || '-';
-                    return [
+                    const scenarios = (tc as any).scenarios ?? [];
+                    const mainRow = [
                       pdfCell(tc.testCase.jiraKey, bg, { color: '#FF6002', decoration: 'underline', ...(tc.testCase.link ? { link: tc.testCase.link } : {}) }),
                       pdfCell(tc.testCase.title, bg),
                       pdfCell(tc.testCase.priority || '-', bg, { alignment: 'center' }),
-                      pdfStatusCell(tc.status),
+                      scenarios.length > 0
+                        ? { text: '', fontSize: 8, alignment: 'center', fillColor: '#EEEEEE', margin: [2, 4, 2, 4] }
+                        : pdfStatusCell(tc.status),
                       pdfCell(tc.responsible || '-', bg),
                       pdfCell(issues, bg),
                     ];
+                    const scenarioRows = scenarios.map((s: any) => {
+                      const sIssues = s.issues.map((iss: any) => iss.jiraKey || iss.title).join(', ') || '-';
+                      return [
+                        pdfCell('↳', bg, { color: '#818B9D' }),
+                        pdfCell(s.name, bg, { italics: true, margin: [10, 3, 3, 3] }),
+                        pdfCell(tc.testCase.priority || '-', bg, { alignment: 'center' }),
+                        pdfStatusCell(s.status),
+                        pdfCell('-', bg),
+                        pdfCell(sIssues, bg),
+                      ];
+                    });
+                    return [mainRow, ...scenarioRows];
                   }),
                 ],
               },
@@ -918,7 +1043,7 @@ export class ReportsService {
     };
   }
 
-  private async resolveBatchSuites(suiteIds: unknown): Promise<Array<{ id: string; jiraKey: string; title: string }>> {
+  private async resolveBatchSuites(suiteIds: unknown): Promise<Array<{ id: string; jiraKey: string | null; title: string }>> {
     const ids = Array.isArray(suiteIds) ? (suiteIds as string[]) : [];
     if (ids.length === 0) return [];
     return this.prisma.suite.findMany({ where: { id: { in: ids } } });

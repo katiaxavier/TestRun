@@ -1,17 +1,33 @@
 version: '3.8'
+
 services:
-  postgres:
-    image: postgres:15-alpine
-    container_name: testrun-postgres
-    restart: always
+  backend:
+    build:
+      context: ./backend
+    container_name: testrun-backend
+    restart: unless-stopped
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgrespassword
-      POSTGRES_DB: testrun
+      PORT: 3000
     ports:
-      - "5432:5432"
+      - "3000:3000"
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - ./backend/src:/app/src
+      - sqlite-data:/app/prisma
+    depends_on: []
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: testrun-frontend
+    restart: unless-stopped
+    environment:
+      BACKEND_URL: http://backend:3000
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend/src:/app/src
+    depends_on:
+      - backend
 
 volumes:
-  pgdata:
+  sqlite-data:

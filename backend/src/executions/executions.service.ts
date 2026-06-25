@@ -45,6 +45,16 @@ export class UpdateIssueDto {
   status?: string;
 }
 
+export class CreateScenarioDto {
+  name!: string;
+}
+
+export class UpdateScenarioDto {
+  name?: string;
+  status?: string;
+  comments?: string;
+}
+
 @Injectable()
 export class ExecutionsService {
   constructor(private readonly prisma: PrismaService) {}
@@ -58,6 +68,10 @@ export class ExecutionsService {
           include: {
             testCase: true,
             issues: true,
+            scenarios: {
+              include: { issues: true },
+              orderBy: { createdAt: 'asc' },
+            },
           },
           orderBy: {
             testCase: {
@@ -81,7 +95,7 @@ export class ExecutionsService {
     // 1. Validar suite
     const suite = await this.prisma.suite.findUnique({
       where: { id: dto.suiteId },
-      include: { testCases: true },
+      include: { testCases: { include: { scenarioTemplates: true } } },
     });
 
     if (!suite) {
@@ -111,16 +125,26 @@ export class ExecutionsService {
       },
     });
 
-    // 3. Vincular casos de teste da suite na execução
+    // 3. Vincular casos de teste da suite na execução, copiando cenários template
     for (const tc of suite.testCases) {
-      await this.prisma.executionTestCase.create({
+      const etc = await this.prisma.executionTestCase.create({
         data: {
           executionId: execution.id,
           testCaseId: tc.id,
           status: 'PENDING',
-          responsible: dto.responsible, // pré-define o responsável geral da execução
+          responsible: dto.responsible,
         },
       });
+      for (const template of (tc as any).scenarioTemplates ?? []) {
+        await this.prisma.scenario.create({
+          data: {
+            executionTestCaseId: etc.id,
+            templateId: template.id,
+            name: template.name,
+            status: 'PENDING',
+          },
+        });
+      }
     }
 
     return this.findOne(execution.id);
@@ -331,7 +355,7 @@ export class ExecutionsService {
     const excluded = (batch.excludedTestCaseIds as string[]) ?? [];
     const suites = await this.prisma.suite.findMany({
       where: { id: { in: suiteIds } },
-      include: { testCases: { orderBy: { jiraKey: 'asc' } } },
+      include: { testCases: { include: { scenarioTemplates: true }, orderBy: { jiraKey: 'asc' } } },
     });
 
     const execution = await this.prisma.execution.create({
@@ -349,7 +373,7 @@ export class ExecutionsService {
     for (const suite of suites) {
       for (const tc of suite.testCases) {
         if (excluded.includes(tc.id)) continue;
-        await this.prisma.executionTestCase.create({
+        const etc = await this.prisma.executionTestCase.create({
           data: {
             executionId: execution.id,
             testCaseId: tc.id,
@@ -357,6 +381,16 @@ export class ExecutionsService {
             responsible: dto.responsible,
           },
         });
+        for (const template of (tc as any).scenarioTemplates ?? []) {
+          await this.prisma.scenario.create({
+            data: {
+              executionTestCaseId: etc.id,
+              templateId: template.id,
+              name: template.name,
+              status: 'PENDING',
+            },
+          });
+        }
       }
     }
 
@@ -376,7 +410,11 @@ export class ExecutionsService {
           include: {
             suite: true,
             testCases: {
-              include: { testCase: true, issues: true },
+              include: {
+                testCase: true,
+                issues: true,
+                scenarios: { include: { issues: true }, orderBy: { createdAt: 'asc' } },
+              },
             },
           },
         },
@@ -444,6 +482,171 @@ export class ExecutionsService {
         return { ...batch, suites };
       }),
     );
+  }
+
+  async createScenario(etcId: string, dto: CreateScenarioDto) {
+    const etc = await this.prisma.executionTestCase.findUnique({
+      where: { id: etcId },
+      include: { issues: true, scenarios: true },
+    });
+    if (!etc) throw new HttpException('Item de execução não encontrado.', HttpStatus.NOT_FOUND);
+
+    const isFirst = etc.scenarios.length === 0;
+
+    if (isFirst) {
+      await this.prisma.executionTestCase.update({
+        where: { id: etcId },
+        data: { originalStatus: etc.status },
+      });
+    }
+
+    const template = await this.prisma.testCaseScenario.create({
+      data: { testCaseId: etc.testCaseId, name: dto.name },
+    });
+
+    const scenario = await this.prisma.scenario.create({
+      data: {
+        executionTestCaseId: etcId,
+        templateId: template.id,
+        name: dto.name,
+        status: 'PENDING',
+      },
+      include: { issues: true },
+    });
+
+    if (isFirst && etc.issues.length > 0) {
+      await this.prisma.issue.updateMany({
+        where: { executionTestCaseId: etcId },
+        data: { executionTestCaseId: null, scenarioId: scenario.id },
+      });
+    }
+
+    return this.prisma.scenario.findUnique({
+      where: { id: scenario.id },
+      include: { issues: true },
+    });
+  }
+
+  async createScenarioBatch(etcId: string, names: string[]) {
+    const etc = await this.prisma.executionTestCase.findUnique({
+      where: { id: etcId },
+      include: { issues: true, scenarios: true },
+    });
+    if (!etc) throw new HttpException('Item de execução não encontrado.', HttpStatus.NOT_FOUND);
+
+    const isFirst = etc.scenarios.length === 0;
+
+    if (isFirst) {
+      await this.prisma.executionTestCase.update({
+        where: { id: etcId },
+        data: { originalStatus: etc.status },
+      });
+    }
+
+    const created: any[] = [];
+    for (const name of names) {
+      const template = await this.prisma.testCaseScenario.create({
+        data: { testCaseId: etc.testCaseId, name },
+      });
+      const scenario = await this.prisma.scenario.create({
+        data: { executionTestCaseId: etcId, templateId: template.id, name, status: 'PENDING' },
+        include: { issues: true },
+      });
+      created.push(scenario);
+    }
+
+    if (isFirst && etc.issues.length > 0 && created.length > 0) {
+      await this.prisma.issue.updateMany({
+        where: { executionTestCaseId: etcId },
+        data: { executionTestCaseId: null, scenarioId: created[0].id },
+      });
+      created[0] = await this.prisma.scenario.findUnique({
+        where: { id: created[0].id },
+        include: { issues: true },
+      });
+    }
+
+    return created;
+  }
+
+  async updateScenario(etcId: string, scenarioId: string, dto: UpdateScenarioDto) {
+    const scenario = await this.prisma.scenario.findUnique({ where: { id: scenarioId } });
+    if (!scenario || scenario.executionTestCaseId !== etcId)
+      throw new HttpException('Cenário não encontrado.', HttpStatus.NOT_FOUND);
+    return this.prisma.scenario.update({
+      where: { id: scenarioId },
+      data: {
+        name: dto.name,
+        status: dto.status ? dto.status.toUpperCase() : undefined,
+        comments: dto.comments,
+      },
+      include: { issues: true },
+    });
+  }
+
+  async deleteScenario(etcId: string, scenarioId: string) {
+    const scenario = await this.prisma.scenario.findUnique({
+      where: { id: scenarioId },
+      include: { issues: true },
+    });
+    if (!scenario || scenario.executionTestCaseId !== etcId)
+      throw new HttpException('Cenário não encontrado.', HttpStatus.NOT_FOUND);
+
+    const remainingScenarios = await this.prisma.scenario.count({
+      where: { executionTestCaseId: etcId, id: { not: scenarioId } },
+    });
+    const isLast = remainingScenarios === 0;
+
+    if (isLast && scenario.issues.length > 0) {
+      await this.prisma.issue.updateMany({
+        where: { scenarioId },
+        data: { scenarioId: null, executionTestCaseId: etcId },
+      });
+    }
+
+    if (isLast) {
+      const etc = await this.prisma.executionTestCase.findUnique({ where: { id: etcId } });
+      if (etc?.originalStatus) {
+        await this.prisma.executionTestCase.update({
+          where: { id: etcId },
+          data: { status: etc.originalStatus, originalStatus: null },
+        });
+      }
+    }
+
+    await this.prisma.scenario.delete({ where: { id: scenarioId } });
+
+    return { success: true };
+  }
+
+  async addScenarioIssue(scenarioId: string, dto: CreateIssueDto) {
+    const scenario = await this.prisma.scenario.findUnique({ where: { id: scenarioId } });
+    if (!scenario) throw new HttpException('Cenário não encontrado.', HttpStatus.NOT_FOUND);
+    return this.prisma.issue.create({
+      data: {
+        scenarioId,
+        type: dto.type.toUpperCase(),
+        jiraKey: dto.jiraKey || null,
+        title: dto.title,
+        severity: dto.severity || null,
+        status: dto.status || 'Open',
+      },
+    });
+  }
+
+  async updateScenarioIssue(scenarioId: string, issueId: string, dto: UpdateIssueDto) {
+    const issue = await this.prisma.issue.findUnique({ where: { id: issueId } });
+    if (!issue || issue.scenarioId !== scenarioId)
+      throw new HttpException('Issue não encontrada.', HttpStatus.NOT_FOUND);
+    return this.prisma.issue.update({ where: { id: issueId }, data: dto });
+  }
+
+  async removeScenarioIssue(scenarioId: string, issueId: string) {
+    const issue = await this.prisma.issue.findUnique({ where: { id: issueId } });
+    if (!issue || issue.scenarioId !== scenarioId)
+      throw new HttpException('Issue não encontrada.', HttpStatus.NOT_FOUND);
+    await this.prisma.issue.delete({ where: { id: issueId } });
+    return { success: true };
   }
 
   async deleteBatch(id: string) {

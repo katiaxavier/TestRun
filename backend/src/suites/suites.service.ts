@@ -29,12 +29,13 @@ export class SuitesService {
         },
         testCases: {
           orderBy: { jiraKey: 'asc' },
+          include: { scenarioTemplates: { orderBy: { createdAt: 'asc' } } },
         },
         executions: {
           orderBy: { createdAt: 'desc' },
           include: {
             testCases: {
-              select: { status: true },
+              select: { status: true, scenarios: { select: { status: true } } },
             },
           },
         },
@@ -45,6 +46,66 @@ export class SuitesService {
       throw new HttpException('Suíte não encontrada.', HttpStatus.NOT_FOUND);
     }
     return suite;
+  }
+
+  async createManual(title: string) {
+    const count = await this.prisma.suite.count({ where: { isManual: true } });
+    const manualKey = `SUITE-${String(count + 1).padStart(3, '0')}`;
+    const suite = await this.prisma.suite.create({
+      data: { title, isManual: true, manualKey },
+    });
+    return this.findOne(suite.id);
+  }
+
+  async addTestCase(suiteId: string, jiraKey: string) {
+    await this.findOne(suiteId);
+
+    const key = jiraKey.trim().toUpperCase();
+
+    const existing = await this.prisma.testCase.findFirst({
+      where: { suiteId, jiraKey: key },
+    });
+    if (existing) {
+      throw new HttpException(
+        `O caso de teste '${key}' já existe nesta suíte.`,
+        HttpStatus.CONFLICT,
+      );
+    }
+
+    const issue = await this.jiraService.fetchIssue(key);
+
+    return this.prisma.testCase.create({
+      data: {
+        jiraKey: issue.key,
+        title: issue.title,
+        link: issue.link,
+        priority: issue.priority,
+        suiteId,
+      },
+    });
+  }
+
+  async addScenarioTemplate(tcId: string, name: string) {
+    const tc = await this.prisma.testCase.findUnique({ where: { id: tcId } });
+    if (!tc) throw new HttpException('Caso de teste não encontrado.', HttpStatus.NOT_FOUND);
+    return this.prisma.testCaseScenario.create({ data: { testCaseId: tcId, name } });
+  }
+
+  async addScenarioTemplateBatch(tcId: string, names: string[]) {
+    const tc = await this.prisma.testCase.findUnique({ where: { id: tcId } });
+    if (!tc) throw new HttpException('Caso de teste não encontrado.', HttpStatus.NOT_FOUND);
+    const created = [];
+    for (const name of names) {
+      created.push(await this.prisma.testCaseScenario.create({ data: { testCaseId: tcId, name } }));
+    }
+    return created;
+  }
+
+  async deleteScenarioTemplate(templateId: string) {
+    const t = await this.prisma.testCaseScenario.findUnique({ where: { id: templateId } });
+    if (!t) throw new HttpException('Template de cenário não encontrado.', HttpStatus.NOT_FOUND);
+    await this.prisma.testCaseScenario.delete({ where: { id: templateId } });
+    return { success: true };
   }
 
   async importFromJira(jiraKey: string) {

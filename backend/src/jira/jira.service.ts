@@ -51,6 +51,48 @@ export class JiraService {
     }
   }
 
+  async fetchIssue(key: string): Promise<{ key: string; title: string; link: string; priority?: string }> {
+    const config = this.configService.getJiraConfig();
+    if (!config.url || !config.email || !config.token) {
+      throw new HttpException(
+        'Configurações do Jira incompletas. Por favor, configure a URL, e-mail e API Token.',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    const auth = this.getAuthHeader(config.email, config.token);
+    let response: Response;
+    try {
+      response = await fetch(`${config.url}/rest/api/3/issue/${key}`, {
+        method: 'GET',
+        headers: { Authorization: auth, Accept: 'application/json' },
+      });
+    } catch (error) {
+      throw new HttpException(
+        `Falha ao conectar com o Jira: ${error instanceof Error ? error.message : String(error)}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        throw new HttpException(`Issue '${key}' não encontrada no Jira.`, HttpStatus.NOT_FOUND);
+      }
+      throw new HttpException(
+        `Erro ao consultar Jira (${response.statusText}). Verifique as credenciais.`,
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    const data = await response.json();
+    return {
+      key,
+      title: data.fields?.summary || key,
+      link: `${config.url}/browse/${key}`,
+      priority: data.fields?.priority?.name,
+    };
+  }
+
   async importSuite(suiteKey: string): Promise<JiraImportResult> {
     const config = this.configService.getJiraConfig();
     if (!config.url || !config.email || !config.token) {

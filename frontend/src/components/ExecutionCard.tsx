@@ -35,10 +35,13 @@ function formatDate(value?: string) {
 
 export function ExecutionCard({ execution, title, onClick }: ExecutionCardProps) {
   const tcs = execution.testCases ?? [];
-  const total = tcs.length;
-  const passed = tcs.filter(t => t.status === 'PASSED').length;
-  const failed = tcs.filter(t => t.status === 'FAILED').length;
-  const blocked = tcs.filter(t => t.status === 'BLOCKED').length;
+  const effectiveItems = tcs.flatMap(tc =>
+    (tc.scenarios ?? []).length > 0 ? (tc.scenarios ?? []) : [tc]
+  );
+  const total = effectiveItems.length;
+  const passed = effectiveItems.filter(t => t.status === 'PASSED').length;
+  const failed = effectiveItems.filter(t => t.status === 'FAILED').length;
+  const blocked = effectiveItems.filter(t => t.status === 'BLOCKED').length;
   const executed = passed + failed + blocked;
   const progressPct = total > 0 ? Math.round((executed / total) * 100) : 0;
 
@@ -48,7 +51,7 @@ export function ExecutionCard({ execution, title, onClick }: ExecutionCardProps)
   const cardTitle =
     title ??
     (execution.suite
-      ? `${execution.suite.jiraKey} — ${execution.suite.title}`
+      ? `${execution.suite.jiraKey ? `${execution.suite.jiraKey} — ` : ''}${execution.suite.title}`
       : `Execução ${formatDate(execution.startDate)}`);
 
   const dateRange = `${formatDate(execution.startDate)} - ${formatDate(execution.endDate)}`;

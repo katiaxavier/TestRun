@@ -2,7 +2,6 @@ import {
   Controller,
   Get,
   Post,
-  Put,
   Delete,
   Body,
   Param,
@@ -14,6 +13,8 @@ import {
   UpdateTestCaseDto,
   CreateIssueDto,
   UpdateIssueDto,
+  CreateScenarioDto,
+  UpdateScenarioDto,
 } from './executions.service';
 
 @Controller('executions')
@@ -69,5 +70,65 @@ export class ExecutionsController {
   @Delete(':executionId/test-cases/:etcId/issues/:id')
   async removeIssue(@Param('id') id: string) {
     return this.executionsService.removeIssue(id);
+  }
+
+  // ── Scenarios ────────────────────────────────────────────────────────────────
+
+  @Post(':executionId/test-cases/:etcId/scenarios')
+  async createScenario(
+    @Param('etcId') etcId: string,
+    @Body() dto: CreateScenarioDto,
+  ) {
+    return this.executionsService.createScenario(etcId, dto);
+  }
+
+  @Post(':executionId/test-cases/:etcId/scenarios/batch')
+  async createScenarioBatch(
+    @Param('etcId') etcId: string,
+    @Body('names') names: string[],
+  ) {
+    return this.executionsService.createScenarioBatch(etcId, names);
+  }
+
+  @Patch(':executionId/test-cases/:etcId/scenarios/:scenarioId')
+  async updateScenario(
+    @Param('etcId') etcId: string,
+    @Param('scenarioId') scenarioId: string,
+    @Body() dto: UpdateScenarioDto,
+  ) {
+    return this.executionsService.updateScenario(etcId, scenarioId, dto);
+  }
+
+  @Delete(':executionId/test-cases/:etcId/scenarios/:scenarioId')
+  async deleteScenario(
+    @Param('etcId') etcId: string,
+    @Param('scenarioId') scenarioId: string,
+  ) {
+    return this.executionsService.deleteScenario(etcId, scenarioId);
+  }
+
+  @Post(':executionId/test-cases/:etcId/scenarios/:scenarioId/issues')
+  async addScenarioIssue(
+    @Param('scenarioId') scenarioId: string,
+    @Body() dto: CreateIssueDto,
+  ) {
+    return this.executionsService.addScenarioIssue(scenarioId, dto);
+  }
+
+  @Patch(':executionId/test-cases/:etcId/scenarios/:scenarioId/issues/:issueId')
+  async updateScenarioIssue(
+    @Param('scenarioId') scenarioId: string,
+    @Param('issueId') issueId: string,
+    @Body() dto: UpdateIssueDto,
+  ) {
+    return this.executionsService.updateScenarioIssue(scenarioId, issueId, dto);
+  }
+
+  @Delete(':executionId/test-cases/:etcId/scenarios/:scenarioId/issues/:issueId')
+  async removeScenarioIssue(
+    @Param('scenarioId') scenarioId: string,
+    @Param('issueId') issueId: string,
+  ) {
+    return this.executionsService.removeScenarioIssue(scenarioId, issueId);
   }
 }
