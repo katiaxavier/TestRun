@@ -564,7 +564,10 @@ function ScenarioView({
         <AnimatePresence>
           {deleteConfirm ? (
             <motion.div key="confirm" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} style={{ overflow: 'hidden' }}>
-              <div style={{ display: 'flex', gap: '0.5rem', paddingTop: '0.25rem' }}>
+              <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', paddingTop: '0.25rem', marginBottom: '0.4rem' }}>
+                O cenário será removido apenas desta execução.
+              </p>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
                 <button className="btn btn-danger" onClick={handleDelete} disabled={deleting} style={{ flex: 1, justifyContent: 'center' }}>
                   {deleting ? <div className="spinner" style={{ width: 14, height: 14 }} /> : <Trash size={14} />}
                   Confirmar exclusão
