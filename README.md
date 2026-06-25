@@ -1,428 +1,304 @@
-# 🧪 Testrun - Plataforma de Execução de Ciclos de Teste
+# TestRun — Plataforma de Execução de Ciclos de Teste
 
-> Automatize a gestão de suites de teste do Jira e gere relatórios profissionais em .xlsx e .pdf
+> Gerencie suites de teste, execute ciclos e gere relatórios profissionais em .xlsx e .pdf
 
 ![Badge Status](https://img.shields.io/badge/status-em%20desenvolvimento-yellow)
 ![License](https://img.shields.io/badge/license-UNLICENSED-blue)
-![Node](https://img.shields.io/badge/node-18%2B-green)
-
-## 📋 Sobre o Projeto
-
-O **Testrun** é uma aplicação desktop de QA que automatiza o fluxo de execução de testes integrado ao Jira. Ele elimina tarefas manuais repetitivas, centralizando a gestão de ciclos de teste, coleta de resultados e geração de relatórios profissionais.
-
-### 🎯 Problema Resolvido
-
-O fluxo atual de QA envolve várias etapas manuais:
-- ✖️ Criação manual de suites e casos de teste no Jira
-- ✖️ Cópia e preenchimento manual em planilhas
-- ✖️ Atualização descentralizada de status e métricas
-- ✖️ Consolidação manual de relatórios
-
-### ✨ Solução
-
-Com o Testrun:
-- ✅ **Importação automática** de suites do Jira
-- ✅ **Interface intuitiva** para execução de testes
-- ✅ **Rastreamento centralizado** de resultados
-- ✅ **Geração automática** de relatórios em .xlsx e .pdf
-- ✅ **Integração bidirecional** com Jira
+![Node](https://img.shields.io/badge/node-20%2B-green)
 
 ---
 
-## 👥 Público-Alvo
+## Sobre o Projeto
 
-- 🧑‍💼 Analistas de QA
-- 🔬 Engenheiros de Teste
-- 📊 Coordenadores de Qualidade
-- 👨‍💻 Squads de desenvolvimento ágil
+O **TestRun** é uma aplicação web de QA que centraliza a gestão de ciclos de teste com integração ao Jira. Elimina tarefas manuais repetitivas no fluxo de testes, oferecendo importação automática de suites, execução guiada e geração de relatórios.
+
+### Problema Resolvido
+
+- Criação manual de suites e casos de teste no Jira
+- Cópia e preenchimento manual em planilhas
+- Atualização descentralizada de status e métricas
+- Consolidação manual de relatórios
+
+### Solução
+
+- **Importação automática** de suites do Jira via ID da task
+- **Suites manuais** criadas diretamente no TestRun (sem Jira)
+- **Lotes de execução** que agrupam múltiplas suites num único ciclo
+- **Cenários por caso de teste** com templates reutilizáveis
+- **Interface guiada** para execução de testes (Pass / Fail / Blocked)
+- **Rastreamento de issues** (bugs e melhorias) por caso de teste e por cenário
+- **Geração automática** de relatórios em .xlsx e .pdf
 
 ---
 
-## 🏗️ Arquitetura & Stack Técnico
+## Stack
 
-### Backend (NestJS + Prisma)
+### Backend
 ```
-Node.js + Express | NestJS Framework | TypeScript | Prisma ORM | PostgreSQL
-```
-
-**Dependências principais:**
-- `@nestjs/common` - Framework NestJS
-- `@prisma/client` - ORM para banco de dados
-- `exceljs` - Geração de relatórios Excel
-- `pdfmake` - Geração de relatórios PDF
-- `class-validator` - Validação de DTOs
-
-### Frontend (React + Vite + Tailwind)
-```
-React 19 | TypeScript | Vite | Tailwind CSS | Recharts | React Router
+NestJS 11 | TypeScript | Prisma ORM | SQLite | Node.js 20
 ```
 
-**Dependências principais:**
-- `react` - UI library
-- `react-router-dom` - Roteamento
-- `axios` - Cliente HTTP
-- `recharts` - Gráficos e visualizações
-- `framer-motion` - Animações
-- `@phosphor-icons/react` - Ícones
-
-### Banco de Dados
+### Frontend
 ```
-PostgreSQL 15 (Docker)
+React 19 | TypeScript | Vite 8 | Tailwind CSS 4 | Recharts | Framer Motion
 ```
 
 ---
 
-## 📊 Modelo de Dados
+## Modelo de Dados
 
 ```
-┌─────────────────────┐
-│   Suite de Teste    │
-│   (Importada Jira)  │
-└──────────┬──────────┘
-           │
-    ┌──────┴──────┐
-    │             │
-    ▼             ▼
-┌─────────┐  ┌───────────────┐
-│Execução │  │ Caso de Teste │
-│de Teste │  │               │
-└─────────┘  └───────┬───────┘
-                     │
-                     ▼
-              ┌──────────────┐
-              │ Issue/Bug    │
-              │ (Jira Link)  │
-              └──────────────┘
+Suite
+├── TestCase[]
+│   └── TestCaseScenario[]   (templates de cenários)
+└── Execution[]
+    └── ExecutionTestCase[]
+        ├── Scenario[]        (execução dos cenários)
+        │   └── Issue[]
+        └── Issue[]
+
+ExecutionBatch
+└── Execution[]              (lote de múltiplas suites)
 ```
 
 ### Entidades
 
 | Entidade | Descrição |
-|----------|-----------|
-| **Suite de Teste** | Entidade principal - agrupa casos de teste |
-| **Execução de Teste** | Representa um ciclo de execução da suite |
-| **Caso de Teste** | Itens vinculados à suite (importados do Jira) |
-| **Issue** | Bugs ou melhorias associadas a casos de teste |
-
-### Relacionamentos
-
-- Uma suite possui **N execuções**
-- Uma suite possui **N casos de teste**
-- Um caso de teste pode possuir **N issues** (bugs/melhorias)
+|---|---|
+| **Suite** | Agrupa casos de teste — importada do Jira ou criada manualmente |
+| **TestCase** | Caso de teste com chave Jira, título e prioridade |
+| **TestCaseScenario** | Template de cenário reutilizável vinculado a um caso de teste |
+| **Execution** | Ciclo de execução de uma suite (sprint, versão, responsável, datas) |
+| **ExecutionBatch** | Lote que agrupa múltiplas suites numa execução unificada |
+| **ExecutionTestCase** | Resultado de um caso de teste numa execução (Pass/Fail/Blocked) |
+| **Scenario** | Execução de um cenário específico dentro de um caso de teste |
+| **Issue** | Bug ou melhoria vinculado a um caso de teste ou cenário |
 
 ---
 
-## 🚀 Quick Start
+## Executando com Docker (recomendado)
+
+Esta é a forma mais simples de rodar o projeto. Docker cuida do backend, frontend e banco de dados.
 
 ### Pré-requisitos
 
-- **Node.js** >= 18.x
-- **npm** ou **yarn**
-- **Docker** e **Docker Compose**
-- **Git**
+- [Docker](https://docs.docker.com/get-docker/) >= 24
+- [Docker Compose](https://docs.docker.com/compose/) (já incluso no Docker Desktop)
 
-### 1️⃣ Clonar o Repositório
+### Passo a passo
+
+**1. Clone o repositório**
 
 ```bash
-git clone <seu-repositorio>
+git clone <url-do-repositorio>
 cd TestRun
 ```
 
-### 2️⃣ Configurar Variáveis de Ambiente
-
-Crie um arquivo `.env` na raiz do projeto:
-
-```env
-# Database
-DATABASE_URL="postgresql://postgres:postgrespassword@localhost:5432/testrun"
-
-# Jira Integration
-JIRA_URL=https://seu-dominio.atlassian.net
-JIRA_USER_EMAIL=seu-email@empresa.com
-JIRA_API_TOKEN=seu-token-api-jira
-```
-
-### 3️⃣ Iniciar Banco de Dados
+**2. Suba os containers**
 
 ```bash
-docker compose up -d
+docker compose up --build
 ```
 
-Isso iniciará:
-- **PostgreSQL 15** na porta `5432`
+Na primeira execução o Docker vai:
+- Fazer build das imagens do backend e frontend
+- Rodar as migrations do banco de dados automaticamente
+- Iniciar os servidores
 
-### 4️⃣ Instalar Dependências
+**3. Acesse a aplicação**
 
-**Backend:**
+| Serviço | URL |
+|---|---|
+| Frontend | http://localhost:5173 |
+| Backend (API) | http://localhost:3000 |
+
+**4. Configure o Jira (opcional)**
+
+Se quiser importar suites do Jira, acesse a página **Configurações** no app e preencha:
+- URL do Jira (ex: `https://sua-empresa.atlassian.net`)
+- E-mail da conta Atlassian
+- API Token ([gere aqui](https://id.atlassian.com/manage-profile/security/api-tokens))
+
+> Sem configuração do Jira o app funciona normalmente com suites manuais.
+
+**5. Parar os containers**
+
+```bash
+docker compose down
+```
+
+> Os dados do banco são persistidos em um volume Docker (`sqlite-data`). Para apagar os dados junto com os containers use `docker compose down -v`.
+
+---
+
+## Executando sem Docker (desenvolvimento local)
+
+### Pré-requisitos
+
+- **Node.js** >= 20
+- **npm**
+
+### Passo a passo
+
+**1. Clone o repositório**
+
+```bash
+git clone <url-do-repositorio>
+cd TestRun
+```
+
+**2. Configure e inicie o backend**
+
 ```bash
 cd backend
 npm install
 npx prisma migrate dev
-```
-
-**Frontend:**
-```bash
-cd frontend
-npm install
-```
-
-### 5️⃣ Executar em Desenvolvimento
-
-**Terminal 1 - Backend:**
-```bash
-cd backend
 npm run start:dev
 ```
 
-Backend rodará em: `http://localhost:3000`
+Backend estará em: `http://localhost:3000`
 
-**Terminal 2 - Frontend:**
+**3. Inicie o frontend** (outro terminal)
+
 ```bash
 cd frontend
+npm install
 npm run dev
 ```
 
-Frontend rodará em: `http://localhost:5173`
+Frontend estará em: `http://localhost:5173`
 
 ---
 
-## 📁 Estrutura do Projeto
+## Estrutura do Projeto
 
 ```
 TestRun/
 ├── backend/
 │   ├── src/
-│   │   ├── config/              # Módulo de configuração Jira
-│   │   ├── executions/          # Módulo de execuções de teste
-│   │   ├── jira/                # Integração com API Jira
-│   │   ├── reports/             # Geração de relatórios
-│   │   ├── suites/              # Gestão de suites de teste
-│   │   ├── prisma/              # Serviço do Prisma ORM
-│   │   ├── app.controller.ts    # Controller principal
-│   │   ├── app.module.ts        # Módulo raiz
-│   │   └── main.ts              # Entry point
+│   │   ├── config/          # Configuração do Jira (salva em config.json)
+│   │   ├── executions/      # Execuções individuais e lotes (batch)
+│   │   ├── jira/            # Integração com a API do Jira
+│   │   ├── reports/         # Geração de relatórios .xlsx e .pdf
+│   │   ├── suites/          # Suites, casos de teste e cenários
+│   │   └── prisma/          # Serviço do Prisma ORM
 │   ├── prisma/
-│   │   └── schema.prisma        # Schema do banco de dados
-│   ├── test/
-│   │   └── app.e2e-spec.ts      # Testes E2E
-│   └── package.json
+│   │   ├── schema.prisma    # Schema do banco de dados
+│   │   ├── migrations/      # Histórico de migrations
+│   │   └── dev.db           # Banco SQLite (criado automaticamente)
+│   └── Dockerfile
 │
 ├── frontend/
 │   ├── src/
-│   │   ├── components/          # Componentes reutilizáveis
-│   │   │   ├── Modal.tsx
-│   │   │   ├── Sidebar.tsx
-│   │   │   └── StatusBadge.tsx
-│   │   ├── pages/               # Páginas da aplicação
-│   │   │   ├── ConfigPage.tsx       # Configuração Jira
-│   │   │   ├── DashboardPage.tsx    # Dashboard principal
-│   │   │   ├── ExecutionRunPage.tsx # Execução de testes
-│   │   │   └── SuiteDetailPage.tsx  # Detalhes da suite
-│   │   ├── api/
-│   │   │   └── client.ts        # Cliente HTTP (Axios)
-│   │   ├── assets/              # Imagens e recursos
-│   │   ├── App.tsx              # Componente raiz
-│   │   └── main.tsx             # Entry point
-│   ├── public/
-│   └── package.json
+│   │   ├── components/      # Componentes reutilizáveis
+│   │   ├── pages/
+│   │   │   ├── DashboardPage.tsx       # Lista de suites
+│   │   │   ├── SuiteDetailPage.tsx     # Detalhes e execuções de uma suite
+│   │   │   ├── ExecutionRunPage.tsx    # Execução guiada de testes
+│   │   │   ├── BatchExecutionPage.tsx  # Execução em lote (múltiplas suites)
+│   │   │   └── ConfigPage.tsx          # Configuração do Jira
+│   │   └── api/
+│   │       └── client.ts    # Cliente HTTP (Axios)
+│   └── Dockerfile
 │
-├── docker-compose.yml           # Configuração dos serviços Docker
-├── especificacoes.md            # Especificações detalhadas
-└── README.md                    # Este arquivo
+└── docker-compose.yml
 ```
 
 ---
 
-## 🔌 Integração com Jira
+## Funcionalidades Principais
 
-### Configuração Inicial
+### Suites de Teste
 
-1. **Obtenha suas credenciais Jira:**
-   - URL: `https://seu-dominio.atlassian.net`
-   - E-mail: Seu e-mail da conta Jira
-   - Token: Gere em [Atlassian Account Settings](https://id.atlassian.com/manage-profile/security/api-tokens)
+- **Importar do Jira**: informa o ID de uma task pai no Jira e o sistema importa automaticamente todos os subtasks como casos de teste
+- **Criar manualmente**: cria uma suite diretamente no TestRun sem depender do Jira (chave gerada automaticamente como `SUITE-001`, `SUITE-002`, etc.)
+- **Adicionar casos manualmente a suites manuais**: busca um caso pelo ID do Jira e adiciona à suite
 
-2. **Configure no Testrun:**
-   - Abra a página de **Configuração**
-   - Preencha URL, E-mail e Token
-   - Teste a conexão
+### Casos de Teste
 
-### Capacidades de Integração
+- Cada caso tem chave (ID), título, link e prioridade
+- Suporte a **templates de cenários**: pré-cadastre os cenários que serão executados em cada ciclo
 
-✅ Autenticar no Jira via API  
-✅ Buscar suite de teste pelo ID da task  
-✅ Importar automaticamente casos de teste filhos  
-✅ Armazenar links, títulos, status e comentários  
-✅ Associar bugs e melhorias aos casos  
+### Execuções
 
----
+- **Execução individual**: vinculada a uma suite, com sprint, versão, datas, responsável
+- **Lote de execução (Batch)**: agrupa múltiplas suites em um único ciclo de teste
+  - Permite excluir casos de teste específicos do lote
+  - Gera uma execução por suite dentro do lote
 
-## 📊 Fluxo Principal da Aplicação
+### Registro de Resultados
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│ 1. CONFIGURAÇÃO DO JIRA                                     │
-│    • Informar URL, E-mail e Token da API                    │
-└──────────────────┬──────────────────────────────────────────┘
-                   │
-┌──────────────────▼──────────────────────────────────────────┐
-│ 2. IMPORTAÇÃO DA SUITE                                      │
-│    • Informar ID da suite no Jira                           │
-│    • Sistema importa automaticamente casos de teste         │
-└──────────────────┬──────────────────────────────────────────┘
-                   │
-┌──────────────────▼──────────────────────────────────────────┐
-│ 3. CRIAÇÃO DA EXECUÇÃO                                      │
-│    • Preencher metadados do ciclo:                          │
-│      - Sprint, Versão, Datas, Funcionalidade, Responsáveis │
-└──────────────────┬──────────────────────────────────────────┘
-                   │
-┌──────────────────▼──────────────────────────────────────────┐
-│ 4. EXECUÇÃO DOS TESTES                                      │
-│    • Executar cada caso de teste                            │
-│    • Registrar resultado (Pass/Fail/Blocked)                │
-│    • Comentários e bugs encontrados                         │
-└──────────────────┬──────────────────────────────────────────┘
-                   │
-┌──────────────────▼──────────────────────────────────────────┐
-│ 5. GERAÇÃO DE RELATÓRIOS                                    │
-│    • Consolidar métricas e gráficos de progresso            │
-│    • Exportar em .xlsx e .pdf                               │
-│    • Compartilhar com stakeholders                          │
-└─────────────────────────────────────────────────────────────┘
-```
+- Status por caso de teste: **Pass / Fail / Blocked / Pending**
+- Status por cenário (quando configurados)
+- Registro de comentários por caso/cenário
+- Registro de issues (bugs e melhorias) vinculados ao caso ou ao cenário
+  - Campos: tipo, chave Jira, título, severidade, status
+
+### Relatórios
+
+- Exportação em **.xlsx** (Excel) com tabelas e métricas
+- Exportação em **.pdf** pronto para compartilhar com stakeholders
 
 ---
 
-## 🛠️ Comandos Disponíveis
+## Comandos Úteis
 
 ### Backend
 
 ```bash
-# Desenvolvimento
-npm run start:dev          # Iniciar com hot-reload
+npm run start:dev        # Desenvolvimento com hot-reload
+npm run build            # Build de produção
+npm run start:prod       # Produção
 
-# Build e Produção
-npm run build              # Compilar para produção
-npm run start:prod         # Iniciar em produção
+npx prisma migrate dev   # Criar nova migration após editar o schema
+npx prisma studio        # Interface visual do banco de dados
 
-# Qualidade de Código
-npm run lint              # Executar ESLint
-npm run format            # Formatar código com Prettier
-
-# Testes
-npm run test              # Executar testes unitários
-npm run test:watch        # Testes em modo watch
-npm run test:cov          # Cobertura de testes
-npm run test:e2e          # Testes end-to-end
-
-# Banco de Dados
-npx prisma migrate dev    # Criar novas migrações
-npx prisma studio        # Visualizar dados (GUI)
+npm run test             # Testes unitários
+npm run test:e2e         # Testes end-to-end
+npm run lint             # Lint
 ```
 
 ### Frontend
 
 ```bash
-# Desenvolvimento
-npm run dev               # Iniciar servidor de desenvolvimento
-
-# Build e Produção
-npm run build             # Compilar para produção
-npm run preview           # Visualizar build local
-
-# Qualidade de Código
-npm run lint              # Executar ESLint
+npm run dev              # Desenvolvimento
+npm run build            # Build de produção
+npm run preview          # Preview do build
+npm run lint             # Lint
 ```
 
 ---
 
-## 📄 Geração de Relatórios
+## Troubleshooting
 
-### Formatos Suportados
-
-**Excel (.xlsx)**
-- Tabelas estruturadas
-- Gráficos de progresso
-- Resumo executivo
-- Análise por prioridade
-
-**PDF**
-- Relatório profissional
-- Gráficos visuais
-- Pronto para compartilhar
-- Fácil impressão
-
-### Como Gerar
-
-1. Acesse a suite de teste
-2. Finalize a execução
-3. Clique em "Gerar Relatório"
-4. Escolha o formato (Excel ou PDF)
-5. Download automático
-
----
-
-## 🔐 Segurança
-
-- ✅ Credenciais Jira armazenadas de forma segura
-- ✅ Validação de entrada (DTO com class-validator)
-- ✅ Autenticação via token Jira
-- ✅ Dados locais (não sincronizam na nuvem)
-
----
-
-## 🐛 Troubleshooting
-
-### Erro de Conexão com PostgreSQL
-
+**Container não sobe / porta em uso**
 ```bash
-# Verificar se Docker está rodando
-docker ps
-
-# Reiniciar containers
 docker compose down
-docker compose up -d
+docker compose up --build
 ```
 
-### Erro de Credenciais Jira
+**Banco de dados corrompido ou quero resetar os dados**
+```bash
+docker compose down -v   # Remove containers E volumes (apaga o banco)
+docker compose up --build
+```
 
-- Verifique se a URL, e-mail e token estão corretos
-- Confirme que o token não expirou
-- Teste a API manualmente: `curl -u email:token https://seu-url/rest/api/3/myself`
+**Frontend não conecta no backend (em dev local)**
 
-### Frontend não carrega
+Verifique se o backend está rodando em `http://localhost:3000`. O frontend assume essa URL por padrão.
 
-- Limpe o cache: `rm -rf node_modules package-lock.json && npm install`
-- Verifique se o backend está rodando em `http://localhost:3000`
+**Erro de credenciais Jira**
 
----
-
-## 📚 Documentação Adicional
-
-- [Especificações Detalhadas](./especificacoes.md)
-- [NestJS Documentation](https://docs.nestjs.com)
-- [Prisma Documentation](https://www.prisma.io/docs)
-- [React Documentation](https://react.dev)
-- [Jira API Documentation](https://developer.atlassian.com/cloud/jira/rest/v3)
+- Confirme que o token API não expirou
+- Verifique se o e-mail é o mesmo da conta Atlassian
+- Teste manualmente: `curl -u email:token https://sua-empresa.atlassian.net/rest/api/3/myself`
 
 ---
 
-## 📈 Roadmap
+## Roadmap
 
 - [ ] Autenticação de usuários
+- [ ] Dashboard com KPIs e histórico
 - [ ] Múltiplos projetos Jira
-- [ ] Histórico de execuções
-- [ ] Integração com outras ferramentas (Azure DevOps, TestRail)
-- [ ] Dashboard com KPIs
+- [ ] Integração com Azure DevOps / TestRail
 - [ ] Notificações em tempo real
-
----
-
-<div align="center">
-
-**Feito com ❤️ para profissionais de QA**
-
-⭐ Se este projeto foi útil, considere dar uma estrela!
-
-</div>
