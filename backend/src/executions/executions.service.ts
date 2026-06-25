@@ -477,7 +477,7 @@ export class ExecutionsService {
         const suiteIds = (batch.suiteIds as string[]) ?? [];
         const suites = await this.prisma.suite.findMany({
           where: { id: { in: suiteIds } },
-          select: { id: true, jiraKey: true, title: true, _count: { select: { testCases: true } } },
+          select: { id: true, jiraKey: true, manualKey: true, title: true, _count: { select: { testCases: true } } },
         });
         return { ...batch, suites };
       }),

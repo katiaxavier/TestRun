@@ -19,7 +19,7 @@ export function BatchCard({ batch, onDelete }: BatchCardProps) {
       ) - ((batch.excludedTestCaseIds as string[] | undefined)?.length ?? 0);
 
   const suiteKeys: string[] = (batch.suites ?? [])
-    .map((s: any) => s.jiraKey)
+    .map((s: any) => s.jiraKey ?? s.manualKey)
     .filter(Boolean);
 
   const formatDate = (date: string | Date | undefined) => {
