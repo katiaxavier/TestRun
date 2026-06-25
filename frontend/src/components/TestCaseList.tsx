@@ -105,7 +105,7 @@ export function TestCaseList({ testCases, onDelete, suiteMap, renderExtra, isMan
           <thead>
             <tr>
               {suiteMap && <th style={{ width: 120 }}>Suíte</th>}
-              <th style={{ width: 120 }}>Key</th>
+              <th style={{ width: 120 }}>ID</th>
               <th>Título</th>
               <th style={{ width: 120 }}>Prioridade</th>
               {onDelete && <th style={{ width: 60 }} />}

@@ -93,7 +93,7 @@ function IssueForm({ form, onChange, onSubmit, onCancel, loading, submitLabel }:
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
         <div>
-          <label className="form-label">Key Jira (opcional)</label>
+          <label className="form-label">ID Jira (opcional)</label>
           <input placeholder="PROJ-999" value={form.jiraKey} onChange={e => onChange({ ...form, jiraKey: e.target.value.toUpperCase() })} />
         </div>
         <div>
@@ -1443,7 +1443,7 @@ export default function ExecutionRunPage() {
               <thead>
                 <tr>
                   <th style={{ width: 40 }}>#</th>
-                  <th style={{ width: 110 }}>Key</th>
+                  <th style={{ width: 110 }}>ID</th>
                   <th>Título</th>
                   <th style={{ width: 120 }}>Prioridade</th>
                   <th style={{ width: 140 }}>Status</th>

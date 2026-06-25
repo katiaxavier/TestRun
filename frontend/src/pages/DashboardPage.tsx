@@ -90,7 +90,7 @@ function CreateSuiteModal({ open, onClose, onSuccess }: { open: boolean; onClose
 
         {mode === 'jira' ? (
           <div className="form-group">
-            <label className="form-label">Key da suíte no Jira</label>
+            <label className="form-label">ID da suíte no Jira</label>
             <input
               autoFocus
               type="text"

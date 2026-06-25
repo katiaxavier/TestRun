@@ -55,7 +55,7 @@ function AddTestCaseModal({ open, suiteId, onClose, onSuccess }: {
       <form onSubmit={handleSubmit}>
         <button type="submit" style={{ display: 'none' }} aria-hidden />
         <div className="form-group">
-          <label className="form-label">Key do ticket no Jira</label>
+          <label className="form-label">ID do ticket no Jira</label>
           <input
             autoFocus
             type="text"
