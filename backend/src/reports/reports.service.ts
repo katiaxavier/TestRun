@@ -883,9 +883,9 @@ export class ReportsService {
                 {
                   table: {
                     headerRows: 1,
-                    widths: ['14%', '26%', '14%', '13%', '18%', '15%'],
+                    widths: ['12%', '22%', '11%', '11%', '14%', '16%', '14%'],
                     body: [
-                      pdfHeaderCells(['ID', 'Caso de Teste', 'Prioridade', 'Status', 'Responsável', 'Issues']),
+                      pdfHeaderCells(['ID', 'Caso de Teste', 'Prioridade', 'Status', 'Responsável', 'Comentários', 'Issues']),
                       ...suiteTcs.flatMap((tc, i) => {
                         const bg = rowBg(i);
                         const issues = tc.issues.map((iss) => iss.jiraKey || iss.title).join(', ') || '-';
@@ -898,6 +898,7 @@ export class ReportsService {
                             ? { text: '', fontSize: 8, alignment: 'center', fillColor: '#EEEEEE', margin: [2, 4, 2, 4] }
                             : pdfStatusCell(tc.status),
                           pdfCell(tc.responsible || '-', bg),
+                          pdfCell(tc.comments || '-', bg),
                           pdfCell(issues, bg),
                         ];
                         const scenarioRows = scenarios.map((s: any) => {
@@ -908,6 +909,7 @@ export class ReportsService {
                             pdfCell(tc.testCase.priority || '-', bg, { alignment: 'center' }),
                             pdfStatusCell(s.status),
                             pdfCell(tc.responsible || '-', bg),
+                            pdfCell(s.comments || '-', bg),
                             pdfCell(sIssues, bg),
                           ];
                         });
@@ -924,9 +926,9 @@ export class ReportsService {
           : [{
               table: {
                 headerRows: 1,
-                widths: ['14%', '26%', '14%', '13%', '18%', '15%'],
+                widths: ['12%', '22%', '11%', '11%', '14%', '16%', '14%'],
                 body: [
-                  pdfHeaderCells(['ID', 'Caso de Teste', 'Prioridade', 'Status', 'Responsável', 'Issues']),
+                  pdfHeaderCells(['ID', 'Caso de Teste', 'Prioridade', 'Status', 'Responsável', 'Comentários', 'Issues']),
                   ...execution.testCases.flatMap((tc, i) => {
                     const bg = rowBg(i);
                     const issues = tc.issues.map((iss) => iss.jiraKey || iss.title).join(', ') || '-';
@@ -939,6 +941,7 @@ export class ReportsService {
                         ? { text: '', fontSize: 8, alignment: 'center', fillColor: '#EEEEEE', margin: [2, 4, 2, 4] }
                         : pdfStatusCell(tc.status),
                       pdfCell(tc.responsible || '-', bg),
+                      pdfCell(tc.comments || '-', bg),
                       pdfCell(issues, bg),
                     ];
                     const scenarioRows = scenarios.map((s: any) => {
@@ -949,6 +952,7 @@ export class ReportsService {
                         pdfCell(tc.testCase.priority || '-', bg, { alignment: 'center' }),
                         pdfStatusCell(s.status),
                         pdfCell(tc.responsible || '-', bg),
+                        pdfCell(s.comments || '-', bg),
                         pdfCell(sIssues, bg),
                       ];
                     });
