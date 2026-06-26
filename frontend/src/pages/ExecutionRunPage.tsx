@@ -1016,10 +1016,6 @@ function TestCaseDrawer({
                               background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', padding: 0, minWidth: 0,
                             }}
                           >
-                            <span style={{
-                              width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
-                              background: STATUS_COLORS[scenario.status] ?? 'var(--text-muted)',
-                            }} />
                             <span style={{ flex: 1, fontSize: '0.85rem', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{scenario.name}</span>
                             {scenario.issues.length > 0 && (
                               <span style={{ display: 'inline-flex', gap: '0.2rem', flexShrink: 0 }}>

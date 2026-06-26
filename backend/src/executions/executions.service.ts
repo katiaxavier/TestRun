@@ -703,12 +703,14 @@ export class ExecutionsService {
   }
 
   async deleteScenarioBatch(etcId: string, scenarioIds: string[]) {
-    if (!scenarioIds.length) return { deleted: 0 };
+    if (!scenarioIds?.length) return { deleted: 0 };
 
     const scenarios = await this.prisma.scenario.findMany({
       where: { id: { in: scenarioIds }, executionTestCaseId: etcId },
       include: { issues: true },
     });
+
+    if (!scenarios.length) return { deleted: 0 };
 
     const remainingCount = await this.prisma.scenario.count({
       where: { executionTestCaseId: etcId, id: { notIn: scenarioIds } },
@@ -716,8 +718,7 @@ export class ExecutionsService {
     const isLast = remainingCount === 0;
 
     if (isLast) {
-      const allIssues = scenarios.flatMap(s => s.issues);
-      if (allIssues.length > 0) {
+      if (scenarios.some(s => s.issues.length > 0)) {
         await this.prisma.issue.updateMany({
           where: { scenarioId: { in: scenarioIds } },
           data: { scenarioId: null, executionTestCaseId: etcId },
@@ -730,12 +731,15 @@ export class ExecutionsService {
           data: { status: etc.originalStatus, originalStatus: null },
         });
       }
+      await this.prisma.scenario.deleteMany({ where: { id: { in: scenarioIds }, executionTestCaseId: etcId } });
+      // Recompute only execution status; test case status was already restored above
+      const etc2 = await this.prisma.executionTestCase.findUnique({ where: { id: etcId } });
+      if (etc2) await this.recomputeExecutionStatus(etc2.executionId);
+    } else {
+      await this.prisma.scenario.deleteMany({ where: { id: { in: scenarioIds }, executionTestCaseId: etcId } });
+      const executionId = await this.recomputeTestCaseStatus(etcId);
+      await this.recomputeExecutionStatus(executionId);
     }
-
-    await this.prisma.scenario.deleteMany({ where: { id: { in: scenarioIds }, executionTestCaseId: etcId } });
-
-    const executionId = await this.recomputeTestCaseStatus(etcId);
-    await this.recomputeExecutionStatus(executionId);
 
     return { deleted: scenarios.length };
   }
