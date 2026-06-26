@@ -113,7 +113,7 @@ export default function BatchExecutionPage() {
         {activeSuites.length > 0 && (
           <div style={{ marginTop: '1.5rem', marginBottom: '2rem' }}>
             <p style={{ fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', opacity: 0.5, marginBottom: '0.5rem' }}>Suítes</p>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
             {activeSuites.map(s => (
               <span key={s.id} style={{ fontSize: '0.85rem', fontWeight: 400 }}>
                 {(s.jiraKey ?? s.manualKey) && <span style={{ fontWeight: 600, fontFamily: 'monospace' }}>{s.jiraKey ?? s.manualKey} · </span>}{s.title}
