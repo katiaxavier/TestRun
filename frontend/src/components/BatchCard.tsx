@@ -8,15 +8,10 @@ interface BatchCardProps {
 }
 
 export function BatchCard({ batch, onDelete }: BatchCardProps) {
-  const totalCases = batch.executions.length > 0
-    ? batch.executions.reduce(
-        (s: number, e: any) => s + (e._count?.testCases ?? e.testCases?.length ?? 0),
-        0,
-      )
-    : (batch.suites ?? []).reduce(
-        (s: number, suite: any) => s + (suite._count?.testCases ?? 0),
-        0,
-      ) - ((batch.excludedTestCaseIds as string[] | undefined)?.length ?? 0);
+  const totalCases = (batch.suites ?? []).reduce(
+    (s: number, suite: any) => s + (suite._count?.testCases ?? 0),
+    0,
+  ) - ((batch.excludedTestCaseIds as string[] | undefined)?.length ?? 0);
 
   const suiteKeys: string[] = (batch.suites ?? [])
     .map((s: any) => s.jiraKey ?? s.manualKey)
