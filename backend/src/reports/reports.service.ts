@@ -323,8 +323,8 @@ export class ReportsService {
     ws.getRow(6).height = 22;
     xlMetaLabel(ws.getCell('A6'), isBatch ? 'Suítes' : 'Suíte');
     xlMetaValue(ws.getCell('C6'), isBatch
-      ? batchSuites.map((s) => `${s.jiraKey} — ${s.title}`).join(' | ')
-      : (execution.suite ? `${execution.suite.jiraKey} — ${execution.suite.title}` : '-'));
+      ? batchSuites.map((s) => `${s.jiraKey ?? s.manualKey} — ${s.title}`).join(' | ')
+      : (execution.suite ? `${execution.suite.jiraKey ?? execution.suite.manualKey} — ${execution.suite.title}` : '-'));
     const effectiveTotal = execution.testCases.reduce((sum, tc) => {
       const s = (tc as any).scenarios ?? [];
       return sum + (s.length > 0 ? s.length : 1);
@@ -576,7 +576,7 @@ export class ReportsService {
 
     ws.getRow(3).height = 22;
     xlMetaLabel(ws.getCell('A3'), 'Suítes');
-    const suiteNamesBatch = report.suites.map((s) => `${s.jiraKey} — ${s.title}`).join(' | ');
+    const suiteNamesBatch = report.suites.map((s) => `${s.jiraKey ?? s.manualKey} — ${s.title}`).join(' | ');
     xlMetaValue(ws.getCell('C3'), suiteNamesBatch || '-');
     xlMetaLabel(ws.getCell('D3'), 'Bloqueado');
     xlMetaValue(ws.getCell('E3'), summary.blocked);
@@ -678,7 +678,7 @@ export class ReportsService {
               stack: [{
                 text: [
                   { text: 'Suítes: ', bold: true },
-                  `${report.suites.map((s) => `${s.jiraKey} — ${s.title}`).join(' | ') || '-'}\n`,
+                  `${report.suites.map((s) => `${s.jiraKey ?? s.manualKey} — ${s.title}`).join(' | ') || '-'}\n`,
                 ],
                 lineHeight: 1.5,
                 fontSize: 10,
@@ -705,7 +705,7 @@ export class ReportsService {
             if (suiteTcs.length === 0) return [];
             return [
               {
-                text: `${suite.jiraKey} — ${suite.title}`,
+                text: `${suite.jiraKey ?? suite.manualKey} — ${suite.title}`,
                 fontSize: 10,
                 bold: true,
                 color: '#818B9D',
@@ -845,8 +845,8 @@ export class ReportsService {
                   { text: 'Data de fim: ',      bold: true }, `${this.formatDate(execution.endDate)}\n`,
                   { text: isBatch ? 'Suítes: ' : 'Suíte: ', bold: true },
                   `${isBatch
-                    ? batchSuites.map((s) => `${s.jiraKey} — ${s.title}`).join(' | ')
-                    : (execution.suite ? `${execution.suite.jiraKey} — ${execution.suite.title}` : '-')
+                    ? batchSuites.map((s) => `${s.jiraKey ?? s.manualKey} — ${s.title}`).join(' | ')
+                    : (execution.suite ? `${execution.suite.jiraKey ?? execution.suite.manualKey} — ${execution.suite.title}` : '-')
                   }\n`,
                   { text: 'Responsável: ',      bold: true }, `${execution.responsible}\n`,
                 ],
@@ -874,7 +874,7 @@ export class ReportsService {
               if (suiteTcs.length === 0) return [];
               return [
                 {
-                  text: `${suite.jiraKey} — ${suite.title}`,
+                  text: `${suite.jiraKey ?? suite.manualKey} — ${suite.title}`,
                   fontSize: 10,
                   bold: true,
                   color: '#818B9D',
@@ -1079,7 +1079,7 @@ export class ReportsService {
     };
   }
 
-  private async resolveBatchSuites(suiteIds: unknown): Promise<Array<{ id: string; jiraKey: string | null; title: string }>> {
+  private async resolveBatchSuites(suiteIds: unknown): Promise<Array<{ id: string; jiraKey: string | null; manualKey: string | null; title: string }>> {
     const ids = Array.isArray(suiteIds) ? (suiteIds as string[]) : [];
     if (ids.length === 0) return [];
     return this.prisma.suite.findMany({ where: { id: { in: ids } } });

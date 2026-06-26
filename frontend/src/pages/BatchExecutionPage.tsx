@@ -161,8 +161,8 @@ export default function BatchExecutionPage() {
           open={newExecOpen}
           onClose={() => setNewExecOpen(false)}
           onSubmit={async (form) => {
-            await executionsApi.createBatchExecution(id, form);
-            await fetchBatch();
+            const { data } = await executionsApi.createBatchExecution(id, form);
+            navigate(`/execution/${data.id}`);
           }}
         />
       )}

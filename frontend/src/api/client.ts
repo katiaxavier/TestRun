@@ -140,7 +140,7 @@ export const executionsApi = {
     startDate: string;
     endDate: string;
     responsible: string;
-  }) => api.post(`/batch/${batchId}/executions`, data),
+  }) => api.post<Execution>(`/batch/${batchId}/executions`, data),
   updateStatus: (id: string, status: string) => api.patch(`/executions/${id}/status`, { status }),
   updateTestCase: (
     executionId: string,

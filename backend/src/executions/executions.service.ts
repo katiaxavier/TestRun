@@ -422,7 +422,7 @@ export class ExecutionsService {
       data: { status: 'IN_PROGRESS' },
     });
 
-    return this.findBatch(batchId);
+    return execution;
   }
 
   async findBatch(id: string) {
