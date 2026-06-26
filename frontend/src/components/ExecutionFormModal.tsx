@@ -20,7 +20,7 @@ interface ExecutionFormModalProps {
 export function ExecutionFormModal({ open, onClose, onSubmit, title = 'Novo Ciclo de Execução' }: ExecutionFormModalProps) {
   const now = new Date();
   const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-  const [form, setForm] = useState<ExecutionFormData>({ sprint: '', version: '', startDate: today, endDate: '', responsible: '' });
+  const [form, setForm] = useState<ExecutionFormData>({ sprint: '', version: '', startDate: today, endDate: today, responsible: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -28,7 +28,7 @@ export function ExecutionFormModal({ open, onClose, onSubmit, title = 'Novo Cicl
     if (!open) {
       const n = new Date();
       const t = `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`;
-      setForm({ sprint: '', version: '', startDate: t, endDate: '', responsible: '' });
+      setForm({ sprint: '', version: '', startDate: t, endDate: t, responsible: '' });
       setError('');
     }
   }, [open]);
