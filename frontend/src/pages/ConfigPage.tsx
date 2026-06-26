@@ -96,7 +96,7 @@ export default function ConfigPage() {
                   )}
                 </div>
                 <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                  Conecte sua conta do Jira para importar projetos e suítes de testes.
+                  Conecte sua conta do Jira para importar suítes de testes.
                 </p>
               </div>
 
