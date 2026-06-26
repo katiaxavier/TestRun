@@ -1326,14 +1326,18 @@ export default function ExecutionRunPage() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', minWidth: 0, overflow: 'hidden' }}>
                   {batchSuites.map((suite) => (
                     <Tooltip key={suite.id} content={suite.title} placement="bottom" display="block">
-                      <h1 className="page-title" style={{ fontSize: '1.3rem', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{suite.title}</h1>
+                      <h1 className="page-title" style={{ fontSize: '1rem', fontWeight: 400, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {(suite.jiraKey ?? suite.manualKey) && <span style={{ fontWeight: 600 }}>{suite.jiraKey ?? suite.manualKey} · </span>}{suite.title}
+                      </h1>
                     </Tooltip>
                   ))}
                 </div>
               </div>
             ) : (
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <h1 className="page-title" style={{ fontSize: '1.3rem' }}>{execution.suite?.jiraKey ?? 'Execução'}</h1>
+                <h1 className="page-title" style={{ fontSize: '1rem', fontWeight: 400 }}>
+                  {(execution.suite?.jiraKey ?? execution.suite?.manualKey) && <span style={{ fontWeight: 600 }}>{execution.suite?.jiraKey ?? execution.suite?.manualKey} · </span>}{execution.suite?.title ?? 'Execução'}
+                </h1>
                 <StatusBadge status={execution.status} />
               </div>
             )}
