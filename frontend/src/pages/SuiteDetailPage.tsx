@@ -297,7 +297,7 @@ export default function SuiteDetailPage() {
         <PageHeader
           backLabel="Suites de Teste"
           onBack={() => navigate('/')}
-          eyebrow={suite.jiraKey ?? (suite.isManual ? 'Manual' : undefined)}
+          eyebrow={suite.jiraKey ?? (suite.isManual ? (suite.manualKey ?? 'Manual') : undefined)}
           title={suite.title}
         />
 
