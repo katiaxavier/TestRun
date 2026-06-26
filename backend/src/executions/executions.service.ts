@@ -150,6 +150,29 @@ export class ExecutionsService {
     return this.findOne(execution.id);
   }
 
+  private async recomputeTestCaseStatus(etcId: string): Promise<string> {
+    const scenarios = await this.prisma.scenario.findMany({
+      where: { executionTestCaseId: etcId },
+      select: { status: true },
+    });
+
+    const statuses = scenarios.map((s) => s.status);
+    let status: string;
+
+    if (statuses.every((s) => s === 'PENDING')) status = 'PENDING';
+    else if (statuses.some((s) => s === 'FAILED')) status = 'FAILED';
+    else if (statuses.some((s) => s === 'BLOCKED')) status = 'BLOCKED';
+    else if (statuses.every((s) => s === 'PASSED')) status = 'PASSED';
+    else status = 'IN_PROGRESS';
+
+    const updated = await this.prisma.executionTestCase.update({
+      where: { id: etcId },
+      data: { status },
+    });
+
+    return updated.executionId;
+  }
+
   private async recomputeExecutionStatus(executionId: string) {
     const testCases = await this.prisma.executionTestCase.findMany({
       where: { executionId },
@@ -592,7 +615,8 @@ export class ExecutionsService {
     const scenario = await this.prisma.scenario.findUnique({ where: { id: scenarioId } });
     if (!scenario || scenario.executionTestCaseId !== etcId)
       throw new HttpException('Cenário não encontrado.', HttpStatus.NOT_FOUND);
-    return this.prisma.scenario.update({
+
+    const updated = await this.prisma.scenario.update({
       where: { id: scenarioId },
       data: {
         name: dto.name,
@@ -601,6 +625,13 @@ export class ExecutionsService {
       },
       include: { issues: true },
     });
+
+    if (dto.status !== undefined) {
+      const executionId = await this.recomputeTestCaseStatus(etcId);
+      await this.recomputeExecutionStatus(executionId);
+    }
+
+    return updated;
   }
 
   async deleteScenario(etcId: string, scenarioId: string) {

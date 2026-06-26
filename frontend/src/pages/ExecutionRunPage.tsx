@@ -763,7 +763,16 @@ function TestCaseDrawer({
     const newScenarios = scenarios.map(s => s.id === updated.id ? updated : s);
     setScenarios(newScenarios);
     setActiveScenario(updated);
-    onUpdated({ ...etc, scenarios: newScenarios });
+
+    const statuses = newScenarios.map(s => s.status);
+    let etcStatus: string;
+    if (statuses.every(s => s === 'PENDING')) etcStatus = 'PENDING';
+    else if (statuses.some(s => s === 'FAILED')) etcStatus = 'FAILED';
+    else if (statuses.some(s => s === 'BLOCKED')) etcStatus = 'BLOCKED';
+    else if (statuses.every(s => s === 'PASSED')) etcStatus = 'PASSED';
+    else etcStatus = 'IN_PROGRESS';
+
+    onUpdated({ ...etc, scenarios: newScenarios, status: etcStatus });
   };
 
   const handleScenarioDeleted = (deletedScenarioIssues?: Issue[]) => {
