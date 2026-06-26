@@ -437,15 +437,8 @@ export class ReportsService {
       { key: 'title',     width: 66 },
       { key: 'severity',  width: 14 },
       { key: 'createdAt', width: 16 },
-      { key: 'updatedAt', width: 16 },
       { key: 'status',    width: 14 },
     ];
-
-    xlTitleRow(wsBugs, 'A1:G1', 'Bugs e Melhorias', 1);
-
-    const bugsHeader = wsBugs.getRow(2);
-    bugsHeader.values = ['Tipo', 'ID', 'Título', 'Severidade', 'Criado em', 'Atualizado em', 'Status'];
-    xlHeaderRow(bugsHeader, 7);
 
     const allIssues: any[] = [];
     execution.testCases.forEach((etc) => {
@@ -456,7 +449,6 @@ export class ReportsService {
           title:     issue.title,
           severity:  SEVERITY_PT[issue.severity ?? ''] || issue.severity || '-',
           createdAt: this.formatDate(issue.createdAt),
-          updatedAt: this.formatDate(issue.updatedAt),
           status:    ISSUE_STATUS_PT[issue.status ?? ''] || issue.status || 'Aberto',
         });
       });
@@ -468,15 +460,17 @@ export class ReportsService {
             title:     issue.title,
             severity:  SEVERITY_PT[issue.severity ?? ''] || issue.severity || '-',
             createdAt: this.formatDate(issue.createdAt),
-            updatedAt: this.formatDate(issue.updatedAt),
             status:    ISSUE_STATUS_PT[issue.status ?? ''] || issue.status || 'Aberto',
           });
         });
       });
     });
 
-    allIssues.forEach((issue, idx) => {
-      const row = wsBugs.getRow(idx + 3);
+    const xlBugs        = allIssues.filter((i) => i.type === 'Bug');
+    const xlImprovements = allIssues.filter((i) => i.type === 'Melhoria');
+
+    const xlWriteIssueRow = (ws: ExcelJS.Worksheet, issue: any, wsRowNum: number, idx: number) => {
+      const row = ws.getRow(wsRowNum);
       const link = this.issueLink(issue.jiraKey);
       row.getCell(1).value = issue.type;
       row.getCell(1).font = { name: 'Arial', size: 11 };
@@ -493,12 +487,41 @@ export class ReportsService {
       row.getCell(4).font = { name: 'Arial', size: 11 };
       row.getCell(5).value = issue.createdAt;
       row.getCell(5).font = { name: 'Arial', size: 11 };
-      row.getCell(6).value = issue.updatedAt;
+      row.getCell(6).value = issue.status;
       row.getCell(6).font = { name: 'Arial', size: 11 };
-      row.getCell(7).value = issue.status;
-      row.getCell(7).font = { name: 'Arial', size: 11 };
-      xlDataRow(row, 7, idx % 2 === 0, [2]);
-    });
+      xlDataRow(row, 6, idx % 2 === 0, [2]);
+    };
+
+    let wsRowNum = 1;
+
+    // Seção Bugs
+    xlTitleRow(wsBugs, `A${wsRowNum}:F${wsRowNum}`, 'Bugs Reportados', wsRowNum);
+    wsRowNum++;
+    const bugsHeaderRow = wsBugs.getRow(wsRowNum);
+    bugsHeaderRow.values = ['Tipo', 'ID', 'Título', 'Severidade', 'Criado em', 'Status'];
+    xlHeaderRow(bugsHeaderRow, 6);
+    wsRowNum++;
+    if (xlBugs.length === 0) {
+      wsBugs.getRow(wsRowNum).getCell(1).value = 'Nenhum bug reportado.';
+      wsRowNum++;
+    } else {
+      xlBugs.forEach((issue, idx) => { xlWriteIssueRow(wsBugs, issue, wsRowNum++, idx); });
+    }
+
+    wsRowNum++; // linha em branco separadora
+
+    // Seção Melhorias
+    xlTitleRow(wsBugs, `A${wsRowNum}:F${wsRowNum}`, 'Melhorias Reportadas', wsRowNum);
+    wsRowNum++;
+    const imprHeaderRow = wsBugs.getRow(wsRowNum);
+    imprHeaderRow.values = ['Tipo', 'ID', 'Título', 'Severidade', 'Criado em', 'Status'];
+    xlHeaderRow(imprHeaderRow, 6);
+    wsRowNum++;
+    if (xlImprovements.length === 0) {
+      wsBugs.getRow(wsRowNum).getCell(1).value = 'Nenhuma melhoria reportada.';
+    } else {
+      xlImprovements.forEach((issue, idx) => { xlWriteIssueRow(wsBugs, issue, wsRowNum++, idx); });
+    }
 
     const buffer = await workbook.xlsx.writeBuffer();
     return Buffer.from(buffer);
@@ -1118,25 +1141,52 @@ export class ReportsService {
     if (issues.length === 0) {
       return { text: emptyMessage, italics: true, fontSize: 9 };
     }
+
+    const sorted = [...issues].sort((a, b) => (a.type === b.type ? 0 : a.type === 'Bug' ? -1 : 1));
+    const separatorIdx = sorted.findIndex((i) => i.type === 'Melhoria');
+    const hasBothTypes = separatorIdx > 0;
+
+    const makeSeparator = (label: string) => [{
+      text: label,
+      colSpan: 5,
+      bold: true,
+      fontSize: 9,
+      color: '#FFFFFF',
+      fillColor: `#${GRAY_DARK}`,
+      alignment: 'center',
+      margin: [3, 5, 3, 5],
+    }, {}, {}, {}, {}];
+
+    const rows: any[] = [];
+    const hasBugs = sorted.some((i) => i.type === 'Bug');
+    if (hasBugs) rows.push(makeSeparator('Bugs'));
+
+    let bgIdx = 0;
+    sorted.forEach((issue, i) => {
+      if (hasBothTypes && i === separatorIdx) {
+        rows.push(makeSeparator('Melhorias'));
+        bgIdx = 0;
+      }
+      const bg = rowBg(bgIdx++);
+      const link = this.issueLink(issue.key);
+      rows.push([
+        pdfCell(issue.type, bg),
+        link
+          ? pdfCell(issue.key, bg, { color: `#${ORANGE_ACC}`, decoration: 'underline', link })
+          : pdfCell(issue.key, bg),
+        pdfCell(issue.title, bg),
+        pdfCell(issue.severity, bg),
+        pdfCell(issue.status, bg),
+      ]);
+    });
+
     return {
       table: {
         headerRows: 1,
         widths: ['12%', '14%', '38%', '16%', '20%'],
         body: [
           pdfHeaderCells(['Tipo', 'ID', 'Título', 'Severidade', 'Status']),
-          ...issues.map((issue, i) => {
-            const bg = rowBg(i);
-            const link = this.issueLink(issue.key);
-            return [
-              pdfCell(issue.type, bg),
-              link
-                ? pdfCell(issue.key, bg, { color: `#${ORANGE_ACC}`, decoration: 'underline', link })
-                : pdfCell(issue.key, bg),
-              pdfCell(issue.title, bg),
-              pdfCell(issue.severity, bg),
-              pdfCell(issue.status, bg),
-            ];
-          }),
+          ...rows,
         ],
       },
       layout: TABLE_LAYOUT,
