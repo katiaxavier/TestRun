@@ -1320,7 +1320,7 @@ export default function ExecutionRunPage() {
             {isBatch ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <span style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)' }}>Lote</span>
+                  <span style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)' }}>Execução</span>
                   <StatusBadge status={execution.status} />
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', minWidth: 0, overflow: 'hidden' }}>
@@ -1334,11 +1334,14 @@ export default function ExecutionRunPage() {
                 </div>
               </div>
             ) : (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <h1 className="page-title" style={{ fontSize: '1rem', fontWeight: 400 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <span style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)' }}>Execução</span>
+                  <StatusBadge status={execution.status} />
+                </div>
+                <h1 className="page-title" style={{ fontSize: '1rem', fontWeight: 400, margin: 0 }}>
                   {(execution.suite?.jiraKey ?? execution.suite?.manualKey) && <span style={{ fontWeight: 600 }}>{execution.suite?.jiraKey ?? execution.suite?.manualKey} · </span>}{execution.suite?.title ?? 'Execução'}
                 </h1>
-                <StatusBadge status={execution.status} />
               </div>
             )}
           </div>
