@@ -268,14 +268,15 @@ export default function DashboardPage() {
           </div>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '1rem' }}>
-            <AnimatePresence>
-              {combinedItems.map((item, i) => (
+            <AnimatePresence mode="popLayout">
+              {combinedItems.map((item) => (
                 <motion.div
                   key={item.type === 'batch' ? `batch-${item.data.id}` : `suite-${item.data.id}`}
+                  layout
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95 }}
-                  transition={{ delay: i * 0.04 }}
+                  transition={{ duration: 0.2 }}
                   className="card card-clickable"
                   style={{
                     background: selectedSuites.includes(item.data.id) ? 'var(--accent-subtle)' : undefined,
