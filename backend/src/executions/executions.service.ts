@@ -431,31 +431,50 @@ export class ExecutionsService {
   async removeTestCaseFromBatch(batchId: string, testCaseId: string) {
     const batch = await this.prisma.executionBatch.findUnique({
       where: { id: batchId },
-      include: { executions: { select: { id: true } } },
     });
 
     if (!batch) {
       throw new HttpException('Lote não encontrado.', HttpStatus.NOT_FOUND);
     }
 
+    const suiteIds = (batch.suiteIds as string[]) ?? [];
     const excluded = (batch.excludedTestCaseIds as string[]) ?? [];
-    if (!excluded.includes(testCaseId)) {
-      await this.prisma.executionBatch.update({
-        where: { id: batchId },
-        data: { excludedTestCaseIds: [...excluded, testCaseId] as any },
-      });
+
+    if (excluded.includes(testCaseId)) {
+      return { success: true };
     }
 
-    // Remove o caso de teste de todas as execuções do lote
-    const executionIds = batch.executions.map((e) => e.id);
-    if (executionIds.length > 0) {
-      await this.prisma.executionTestCase.deleteMany({
-        where: {
-          executionId: { in: executionIds },
-          testCaseId,
-        },
-      });
+    const suites = await this.prisma.suite.findMany({
+      where: { id: { in: suiteIds } },
+      include: { testCases: { select: { id: true } } },
+    });
+
+    const allActiveTcIds = suites
+      .flatMap((s) => s.testCases.map((tc) => tc.id))
+      .filter((id) => !excluded.includes(id));
+
+    if (allActiveTcIds.length === 1 && allActiveTcIds[0] === testCaseId) {
+      throw new HttpException(
+        'Não é possível remover o último caso de teste do lote. Exclua o lote inteiro caso queira encerrá-lo.',
+        HttpStatus.BAD_REQUEST,
+      );
     }
+
+    const newExcluded = [...excluded, testCaseId];
+
+    const newSuiteIds = suiteIds.filter((sid) => {
+      const suite = suites.find((s) => s.id === sid);
+      if (!suite) return false;
+      return suite.testCases.some((tc) => !newExcluded.includes(tc.id));
+    });
+
+    await this.prisma.executionBatch.update({
+      where: { id: batchId },
+      data: {
+        excludedTestCaseIds: newExcluded as any,
+        suiteIds: newSuiteIds as any,
+      },
+    });
 
     return { success: true };
   }

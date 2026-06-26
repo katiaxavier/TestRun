@@ -89,21 +89,15 @@ export default function BatchExecutionPage() {
 
   const executions: Execution[] = batch.executions ?? [];
   const excluded: string[] = batch.excludedTestCaseIds ?? [];
+  const activeSuites = suites.filter(s => (s.testCases ?? []).some(tc => !excluded.includes(tc.id)));
   const allTestCases = suites.flatMap(s => s.testCases ?? []).filter(tc => !excluded.includes(tc.id));
   const suiteMap = Object.fromEntries(suites.map(s => [s.id, s]));
-  const batchTitle = batch.name || `Lote de ${suites.length} ${suites.length === 1 ? 'suite' : 'suites'}`;
+  const batchTitle = batch.name || `Lote de ${activeSuites.length} ${activeSuites.length === 1 ? 'suite' : 'suites'}`;
 
   const handleRemoveTestCase = async (tcId: string) => {
     if (!id) return;
     await executionsApi.removeTestCaseFromBatch(id, tcId);
-    setBatch((prev: any) => ({
-      ...prev,
-      excludedTestCaseIds: [...(prev.excludedTestCaseIds ?? []), tcId],
-      executions: prev.executions.map((ex: any) => ({
-        ...ex,
-        testCases: ex.testCases.filter((etc: any) => etc.testCaseId !== tcId),
-      })),
-    }));
+    await fetchBatch();
   };
 
   return (
@@ -116,11 +110,11 @@ export default function BatchExecutionPage() {
           title={batchTitle}
         />
 
-        {suites.length > 0 && (
+        {activeSuites.length > 0 && (
           <div style={{ marginTop: '1.5rem', marginBottom: '2rem' }}>
             <p style={{ fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', opacity: 0.5, marginBottom: '0.5rem' }}>Suítes</p>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-            {suites.map(s => (
+            {activeSuites.map(s => (
               <span key={s.id} style={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>
                 {s.jiraKey ?? s.manualKey ?? s.title}
               </span>

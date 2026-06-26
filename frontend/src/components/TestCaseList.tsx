@@ -22,6 +22,7 @@ export function TestCaseList({ testCases, onDelete, suiteMap, renderExtra, isMan
   const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>('all');
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<number | 'all'>(10);
 
@@ -49,8 +50,16 @@ export function TestCaseList({ testCases, onDelete, suiteMap, renderExtra, isMan
   const handleDelete = async () => {
     if (!onDelete || !confirmDeleteId) return;
     setDeletingId(confirmDeleteId);
-    setConfirmDeleteId(null);
-    try { await onDelete(confirmDeleteId); } finally { setDeletingId(null); }
+    setDeleteError(null);
+    try {
+      await onDelete(confirmDeleteId);
+      setConfirmDeleteId(null);
+    } catch (err: any) {
+      const msg = err?.response?.data?.message ?? 'Erro ao excluir caso de teste.';
+      setDeleteError(Array.isArray(msg) ? msg.join(' ') : msg);
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   if (testCases.length === 0) {
@@ -205,14 +214,15 @@ export function TestCaseList({ testCases, onDelete, suiteMap, renderExtra, isMan
         open={!!confirmDeleteId}
         title="Excluir Caso de Teste"
         confirmLabel="Excluir"
-        onClose={() => setConfirmDeleteId(null)}
+        error={deleteError}
+        onClose={() => { setConfirmDeleteId(null); setDeleteError(null); }}
         onConfirm={handleDelete}
       >
         {suiteMap ? (
           <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-            Tem certeza que deseja excluir este caso de teste do lote?
+            Tem certeza que deseja remover este caso de teste do lote?
             <br /><br />
-            O caso de teste continuará disponível na suíte principal e não será excluído do Jira.
+            O caso de teste continuará disponível na suíte principal. Execuções já criadas não serão afetadas.
             <br /><br />
             <span style={{ color: 'var(--status-failed)', fontSize: '0.85rem' }}>
               Esta operação não pode ser desfeita.
@@ -222,7 +232,7 @@ export function TestCaseList({ testCases, onDelete, suiteMap, renderExtra, isMan
           <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
             Tem certeza que deseja excluir este caso de teste da suíte?
             <br /><br />
-            O caso de teste não será excluído do Jira, mas será removido de todos os lotes que incluam esta suíte, e os resultados de execuções vinculadas serão perdidos.
+            O caso de teste não será excluído do Jira.
             <br /><br />
             <span style={{ color: 'var(--status-failed)', fontSize: '0.85rem' }}>
               Esta ação não pode ser desfeita.

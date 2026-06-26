@@ -193,6 +193,16 @@ export class SuitesService {
       );
     }
 
+    const execCount = await this.prisma.executionTestCase.count({
+      where: { testCaseId: id },
+    });
+    if (execCount > 0) {
+      throw new HttpException(
+        'Este caso de teste possui histórico de execuções e não pode ser excluído.',
+        HttpStatus.CONFLICT,
+      );
+    }
+
     await this.prisma.testCase.delete({
       where: { id },
     });

@@ -96,7 +96,12 @@ Agrupa múltiplas suítes para execução conjunta.
 - Requer chave Jira válida; o sistema valida a existência do ticket na API do Jira.
 - Não é permitido adicionar a mesma chave Jira duas vezes na mesma suíte.
 
-### 3.4 Exclusão de Suíte
+### 3.4 Exclusão de Caso de Teste da Suíte
+- Não é permitido excluir um TC que já participou de ao menos uma execução, para preservar o histórico de testes.
+- A tentativa de exclusão nesse cenário é bloqueada com mensagem: *"Este caso de teste possui histórico de execuções e não pode ser excluído."*
+- Se o TC nunca foi executado, a exclusão é permitida normalmente.
+
+### 3.5 Exclusão de Suíte
 - Não é possível excluir uma suíte que faça parte de um `ExecutionBatch` ativo.
 - O lote deve ser excluído primeiro.
 
@@ -197,7 +202,13 @@ Isso evita dupla contagem e reflete fielmente o progresso real da execução.
 
 ### 8.3 Exclusão de TC do Lote
 - O TC é adicionado à lista `excludedTestCaseIds` do lote.
-- Não remove o TC da suíte original; apenas o omite nas execuções daquele lote.
+- Não remove o TC da suíte original; apenas o omite nas execuções **futuras** daquele lote.
+- **Execuções já criadas são imutáveis (snapshot):** a exclusão de um TC do lote não altera execuções existentes.
+- **Não é permitido remover o último TC ativo do lote.** Se a operação resultaria em zero TCs ativos, ela é bloqueada com mensagem orientando o usuário a excluir o lote inteiro caso queira encerrá-lo.
+
+### 8.4 Remoção Automática de Suítes "Esvaziadas"
+- Quando todos os TCs de uma suíte forem adicionados a `excludedTestCaseIds`, o ID dessa suíte é removido automaticamente de `suiteIds` pelo backend.
+- O frontend também filtra visualmente, exibindo apenas suítes que possuam ao menos um TC ativo (não excluído), como camada adicional de consistência.
 
 ---
 
@@ -260,6 +271,7 @@ Isso evita dupla contagem e reflete fielmente o progresso real da execução.
 | Suíte | Título obrigatório |
 | Caso de Teste (manual) | Chave Jira obrigatória e válida na API |
 | Caso de Teste (duplicata) | Não é possível adicionar a mesma chave Jira duas vezes na mesma suíte |
+| Caso de Teste (histórico) | Não é possível excluir um TC que já participou de alguma execução |
 | Execução | Suíte deve existir e ter casos de teste |
 | Lote | Mínimo de uma suíte; todas com TCs importados |
 | Cenário | O `ExecutionTestCase` pai deve existir |
