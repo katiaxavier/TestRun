@@ -112,14 +112,7 @@ Na primeira execução o Docker vai:
 | Frontend | http://localhost:5173 |
 | Backend (API) | http://localhost:3000 |
 
-**4. Configure o Jira (opcional)**
-
-Se quiser importar suites do Jira, acesse a página **Configurações** no app e preencha:
-- URL do Jira (ex: `https://sua-empresa.atlassian.net`)
-- E-mail da conta Atlassian
-- API Token ([gere aqui](https://id.atlassian.com/manage-profile/security/api-tokens))
-
-**5. Parar os containers**
+**4. Parar os containers**
 
 ```bash
 docker compose down
@@ -256,8 +249,25 @@ TestRun/
 
 ### Relatórios
 
-- Exportação em **.xlsx** (Excel) com tabelas e métricas
-- Exportação em **.pdf** pronto para compartilhar com stakeholders
+- **Excel (.xlsx)** — duas abas:
+  - *Visualizar Resultado*: metadados do ciclo (sprint, versão, datas, suíte), fórmulas automáticas de contagem por status e tabela completa de casos de teste com ID clicável (link Jira), título, prioridade, status colorido, responsável, comentários e issues. Cenários aparecem como sublinhas dentro do caso de teste.
+  - *Bugs e Melhorias*: lista consolidada de todos os bugs e melhorias registrados, com tipo, ID (link Jira), título, severidade, datas de criação e atualização, e status.
+
+- **PDF** — pronto para apresentar a stakeholders:
+  - Cabeçalho com metadados do ciclo (sprint, versão, datas, suíte, responsável)
+  - Tabela de resumo com métricas (passou, falhou, bloqueado, executado, total)
+  - Barra visual de distribuição de resultados com legenda e percentuais
+  - Detalhamento dos casos de teste com status colorido (cenários como sublinhas)
+  - Tabela de bugs e melhorias reportados
+  - Rodapé com data de geração e paginação
+
+### Integração com o Jira
+
+Acesse a página **Configurações** no app e preencha:
+- URL do Jira (ex: `https://sua-empresa.atlassian.net`)
+- E-mail da conta Atlassian
+- API Token ([gere aqui](https://id.atlassian.com/manage-profile/security/api-tokens))
+
 
 ---
 
