@@ -1157,19 +1157,21 @@ export class ReportsService {
       margin: [3, 5, 3, 5],
     }, {}, {}, {}, {}];
 
-    const rows: any[] = [];
     const hasBugs = sorted.some((i) => i.type === 'Bug');
-    if (hasBugs) rows.push(makeSeparator('Bugs'));
+    const firstSeparator = hasBugs ? makeSeparator('Bugs') : makeSeparator('Melhorias');
 
+    const dataRows: any[] = [];
     let bgIdx = 0;
     sorted.forEach((issue, i) => {
       if (hasBothTypes && i === separatorIdx) {
-        rows.push(makeSeparator('Melhorias'));
+        dataRows.push([{ text: '', colSpan: 5, border: [false, false, false, false], margin: [0, 6, 0, 6] }, {}, {}, {}, {}]);
+        dataRows.push(makeSeparator('Melhorias'));
+        dataRows.push(pdfHeaderCells(['Tipo', 'ID', 'Título', 'Severidade', 'Status']));
         bgIdx = 0;
       }
       const bg = rowBg(bgIdx++);
       const link = this.issueLink(issue.key);
-      rows.push([
+      dataRows.push([
         pdfCell(issue.type, bg),
         link
           ? pdfCell(issue.key, bg, { color: `#${ORANGE_ACC}`, decoration: 'underline', link })
@@ -1182,11 +1184,12 @@ export class ReportsService {
 
     return {
       table: {
-        headerRows: 1,
+        headerRows: 0,
         widths: ['12%', '14%', '38%', '16%', '20%'],
         body: [
+          firstSeparator,
           pdfHeaderCells(['Tipo', 'ID', 'Título', 'Severidade', 'Status']),
-          ...rows,
+          ...dataRows,
         ],
       },
       layout: TABLE_LAYOUT,
