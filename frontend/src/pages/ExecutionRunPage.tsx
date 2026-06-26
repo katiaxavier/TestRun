@@ -1119,17 +1119,22 @@ function TestCaseDrawer({
                 {selectedScenarios.size > 0 && (
                   <motion.div key="bulk-delete" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} style={{ overflow: 'hidden' }}>
                     {deleteSelectedConfirm ? (
-                      <div style={{ display: 'flex', gap: '0.5rem' }}>
-                        <button
-                          className="btn btn-danger btn-sm"
-                          onClick={handleDeleteSelected}
-                          disabled={deletingSelected}
-                          style={{ flex: 1, justifyContent: 'center' }}
-                        >
-                          {deletingSelected ? <div className="spinner" style={{ width: 12, height: 12 }} /> : <Trash size={13} />}
-                          Confirmar exclusão ({selectedScenarios.size})
-                        </button>
-                        <button className="btn btn-ghost btn-sm" onClick={() => setDeleteSelectedConfirm(false)} disabled={deletingSelected}>Cancelar</button>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                        <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textAlign: 'center' }}>
+                          O cenário será removido apenas desta execução.
+                        </p>
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                          <button
+                            className="btn btn-danger btn-sm"
+                            onClick={handleDeleteSelected}
+                            disabled={deletingSelected}
+                            style={{ flex: 1, justifyContent: 'center' }}
+                          >
+                            {deletingSelected ? <div className="spinner" style={{ width: 12, height: 12 }} /> : <Trash size={13} />}
+                            Confirmar exclusão ({selectedScenarios.size})
+                          </button>
+                          <button className="btn btn-ghost btn-sm" onClick={() => setDeleteSelectedConfirm(false)} disabled={deletingSelected}>Cancelar</button>
+                        </div>
                       </div>
                     ) : (
                       <button
