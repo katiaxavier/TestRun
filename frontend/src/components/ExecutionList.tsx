@@ -26,8 +26,8 @@ export function ExecutionList({ executions, onExecutionClick }: ExecutionListPro
     return executions
       .filter(exec => {
         if (status && exec.status.toUpperCase() !== status) return false;
-        if (periodStart && exec.startDate < periodStart) return false;
-        if (periodEnd && exec.endDate > periodEnd) return false;
+        if (periodStart && exec.startDate && exec.startDate.slice(0, 10) < periodStart) return false;
+        if (periodEnd && exec.endDate && exec.endDate.slice(0, 10) > periodEnd) return false;
         return true;
       })
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
