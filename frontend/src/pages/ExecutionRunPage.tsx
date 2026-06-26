@@ -847,32 +847,34 @@ function TestCaseDrawer({
 
             {/* Body */}
             <div className="drawer-body">
-              {/* Status */}
-              <div>
-                <span className="drawer-section-title" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  Status
-                  {savingStatus && <div className="spinner" style={{ width: 10, height: 10 }} />}
-                </span>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                  {STATUS_OPTIONS.map(s => (
-                    <button
-                      key={s}
-                      onClick={() => handleStatusChange(s)}
-                      disabled={savingStatus}
-                      style={{
-                        padding: '0.4rem 0.9rem', borderRadius: 99, fontSize: '0.8rem', fontWeight: 600,
-                        cursor: 'pointer', transition: 'all 0.15s',
-                        background: status === s ? STATUS_COLORS[s] : 'var(--bg-elevated)',
-                        color: status === s ? '#fff' : 'var(--text-secondary)',
-                        border: `1px solid ${status === s ? STATUS_COLORS[s] : 'var(--border)'}`,
-                        opacity: savingStatus ? 0.65 : 1,
-                      }}
-                    >
-                      {STATUS_LABELS[s] ?? s}
-                    </button>
-                  ))}
+              {/* Status — hidden when test case has scenarios */}
+              {!hasScenarios && (
+                <div>
+                  <span className="drawer-section-title" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    Status
+                    {savingStatus && <div className="spinner" style={{ width: 10, height: 10 }} />}
+                  </span>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                    {STATUS_OPTIONS.map(s => (
+                      <button
+                        key={s}
+                        onClick={() => handleStatusChange(s)}
+                        disabled={savingStatus}
+                        style={{
+                          padding: '0.4rem 0.9rem', borderRadius: 99, fontSize: '0.8rem', fontWeight: 600,
+                          cursor: 'pointer', transition: 'all 0.15s',
+                          background: status === s ? STATUS_COLORS[s] : 'var(--bg-elevated)',
+                          color: status === s ? '#fff' : 'var(--text-secondary)',
+                          border: `1px solid ${status === s ? STATUS_COLORS[s] : 'var(--border)'}`,
+                          opacity: savingStatus ? 0.65 : 1,
+                        }}
+                      >
+                        {STATUS_LABELS[s] ?? s}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Cenários */}
               <div>
