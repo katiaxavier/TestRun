@@ -1,5 +1,6 @@
 import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { ConfigService } from '../config/config.service';
 import * as ExcelJS from 'exceljs';
 
 const PdfPrinter = require('pdfmake/src/printer');
@@ -220,7 +221,20 @@ const TABLE_LAYOUT = {
 
 @Injectable()
 export class ReportsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly configService: ConfigService,
+  ) {}
+
+  private get jiraBaseUrl(): string {
+    return this.configService.getJiraConfig().url || '';
+  }
+
+  private issueLink(jiraKey: string | null | undefined): string | null {
+    if (!jiraKey || jiraKey === 'N/A') return null;
+    const base = this.jiraBaseUrl;
+    return base ? `${base}/browse/${jiraKey}` : null;
+  }
 
   private formatDate(date: Date): string {
     if (!date) return '-';
@@ -435,12 +449,27 @@ export class ReportsService {
 
     allIssues.forEach((issue, idx) => {
       const row = wsBugs.getRow(idx + 3);
-      row.values = [
-        issue.type, issue.jiraKey, issue.title, issue.severity,
-        issue.createdAt, issue.updatedAt, issue.status,
-      ];
-      row.font = { name: 'Arial', size: 11 };
-      xlDataRow(row, 7, idx % 2 === 0);
+      const link = this.issueLink(issue.jiraKey);
+      row.getCell(1).value = issue.type;
+      row.getCell(1).font = { name: 'Arial', size: 11 };
+      if (link) {
+        row.getCell(2).value = { formula: `HYPERLINK("${link}","${issue.jiraKey}")`, result: issue.jiraKey };
+        row.getCell(2).font = { name: 'Arial', size: 11, color: { argb: ORANGE_ACC }, underline: true };
+      } else {
+        row.getCell(2).value = issue.jiraKey;
+        row.getCell(2).font = { name: 'Arial', size: 11 };
+      }
+      row.getCell(3).value = issue.title;
+      row.getCell(3).font = { name: 'Arial', size: 11 };
+      row.getCell(4).value = issue.severity;
+      row.getCell(4).font = { name: 'Arial', size: 11 };
+      row.getCell(5).value = issue.createdAt;
+      row.getCell(5).font = { name: 'Arial', size: 11 };
+      row.getCell(6).value = issue.updatedAt;
+      row.getCell(6).font = { name: 'Arial', size: 11 };
+      row.getCell(7).value = issue.status;
+      row.getCell(7).font = { name: 'Arial', size: 11 };
+      xlDataRow(row, 7, idx % 2 === 0, [2]);
     });
 
     const buffer = await workbook.xlsx.writeBuffer();
@@ -1028,9 +1057,12 @@ export class ReportsService {
           pdfHeaderCells(['Tipo', 'ID', 'Título', 'Severidade', 'Status']),
           ...issues.map((issue, i) => {
             const bg = rowBg(i);
+            const link = this.issueLink(issue.key);
             return [
               pdfCell(issue.type, bg),
-              pdfCell(issue.key, bg),
+              link
+                ? pdfCell(issue.key, bg, { color: `#${ORANGE_ACC}`, decoration: 'underline', link })
+                : pdfCell(issue.key, bg),
               pdfCell(issue.title, bg),
               pdfCell(issue.severity, bg),
               pdfCell(issue.status, bg),
