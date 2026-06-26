@@ -814,7 +814,6 @@ function TestCaseDrawer({
       if (isLast) setIssues(deletedIssues);
       onUpdated({ ...etc, scenarios: newScenarios, issues: isLast ? deletedIssues : issues });
       setSelectedScenarios(new Set());
-      setSelectionMode(false);
       setDeleteSelectedConfirm(false);
       addToast(`${ids.length} cenário${ids.length !== 1 ? 's' : ''} excluído${ids.length !== 1 ? 's' : ''}`);
     } catch {
