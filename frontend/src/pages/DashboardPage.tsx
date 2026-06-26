@@ -272,7 +272,6 @@ export default function DashboardPage() {
               {combinedItems.map((item) => (
                 <motion.div
                   key={item.type === 'batch' ? `batch-${item.data.id}` : `suite-${item.data.id}`}
-                  layout
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95 }}
