@@ -129,6 +129,28 @@ docker compose down
 
 ---
 
+## Atualizando para uma nova versão
+
+Quando uma nova versão do projeto for publicada, seus dados no banco **não são perdidos** — o banco fica em um volume Docker separado dos containers.
+
+**1. Baixe as mudanças**
+
+```bash
+git pull
+```
+
+**2. Recrie os containers com a nova versão**
+
+```bash
+docker compose up --build -d
+```
+
+O Docker vai recompilar as imagens e, se houver alterações no schema do banco, as migrations são aplicadas automaticamente na inicialização do backend — sem apagar os dados existentes.
+
+> Para confirmar que tudo subiu corretamente: `docker compose ps`
+
+---
+
 ## Executando sem Docker (desenvolvimento local)
 
 ### Pré-requisitos
