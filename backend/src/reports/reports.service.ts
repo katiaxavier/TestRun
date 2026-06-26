@@ -300,19 +300,19 @@ export class ReportsService {
     xlMetaLabel(ws.getCell('A2'), 'Sprint');
     xlMetaValue(ws.getCell('C2'), execution.sprint);
     xlMetaLabel(ws.getCell('F2'), 'Total Passou');
-    xlMetaValue(ws.getCell('G2'), { formula: 'COUNTIF(E8:E1000,"Passou")' });
+    xlMetaValue(ws.getCell('G2'), { formula: 'COUNTIF(E11:E1000,"Passou")' });
 
     ws.getRow(3).height = 22;
     xlMetaLabel(ws.getCell('A3'), 'Versão do sistema');
     xlMetaValue(ws.getCell('C3'), execution.version);
     xlMetaLabel(ws.getCell('F3'), 'Total Falhou');
-    xlMetaValue(ws.getCell('G3'), { formula: 'COUNTIF(E8:E1000,"Falhou")' });
+    xlMetaValue(ws.getCell('G3'), { formula: 'COUNTIF(E11:E1000,"Falhou")' });
 
     ws.getRow(4).height = 22;
     xlMetaLabel(ws.getCell('A4'), 'Data de início');
     xlMetaValue(ws.getCell('C4'), this.formatDate(execution.startDate));
     xlMetaLabel(ws.getCell('F4'), 'Total Bloqueado');
-    xlMetaValue(ws.getCell('G4'), { formula: 'COUNTIF(E8:E1000,"Bloqueado")' });
+    xlMetaValue(ws.getCell('G4'), { formula: 'COUNTIF(E11:E1000,"Bloqueado")' });
 
     ws.getRow(5).height = 22;
     xlMetaLabel(ws.getCell('A5'), 'Data de fim');
@@ -323,7 +323,7 @@ export class ReportsService {
     ws.getRow(6).height = 22;
     xlMetaLabel(ws.getCell('A6'), isBatch ? 'Suítes' : 'Suíte');
     xlMetaValue(ws.getCell('C6'), isBatch
-      ? batchSuites.map((s) => `${s.jiraKey ?? s.manualKey} — ${s.title}`).join(' | ')
+      ? batchSuites.map((s) => s.jiraKey ?? s.manualKey).join(', ')
       : (execution.suite ? `${execution.suite.jiraKey ?? execution.suite.manualKey} — ${execution.suite.title}` : '-'));
     const effectiveTotal = execution.testCases.reduce((sum, tc) => {
       const s = (tc as any).scenarios ?? [];
@@ -332,13 +332,41 @@ export class ReportsService {
     xlMetaLabel(ws.getCell('F6'), 'Total de Testes');
     xlMetaValue(ws.getCell('G6'), effectiveTotal);
 
-    // Linha 7 – Cabeçalho da tabela
-    const headerRow = ws.getRow(7);
+    // Linhas 7-9 – Ocorrências
+    const xlBugCount = execution.testCases.reduce((sum, etc) => {
+      const tcBugs = etc.issues.filter((i) => i.type === 'BUG').length;
+      const scenarioBugs = ((etc as any).scenarios ?? []).reduce((s: number, sc: any) => s + sc.issues.filter((i: any) => i.type === 'BUG').length, 0);
+      return sum + tcBugs + scenarioBugs;
+    }, 0);
+    const xlImprovementCount = execution.testCases.reduce((sum, etc) => {
+      const tcImpr = etc.issues.filter((i) => i.type !== 'BUG').length;
+      const scenarioImpr = ((etc as any).scenarios ?? []).reduce((s: number, sc: any) => s + sc.issues.filter((i: any) => i.type !== 'BUG').length, 0);
+      return sum + tcImpr + scenarioImpr;
+    }, 0);
+
+    ws.getRow(7).height = 20;
+    ws.mergeCells('F7:G7');
+    const xlOccHeader = ws.getCell('F7');
+    xlOccHeader.value = 'Ocorrências';
+    xlOccHeader.font = { name: 'Arial', size: 10, bold: true, color: { argb: 'FFFFFF' } };
+    xlOccHeader.fill = xlFill(GRAY_DARK);
+    xlOccHeader.alignment = { horizontal: 'center', vertical: 'middle' };
+
+    ws.getRow(8).height = 22;
+    xlMetaLabel(ws.getCell('F8'), 'Bugs reportados');
+    xlMetaValue(ws.getCell('G8'), xlBugCount);
+
+    ws.getRow(9).height = 22;
+    xlMetaLabel(ws.getCell('F9'), 'Melhorias');
+    xlMetaValue(ws.getCell('G9'), xlImprovementCount);
+
+    // Linha 10 – Cabeçalho da tabela
+    const headerRow = ws.getRow(10);
     headerRow.values = ['', 'ID', 'Título do teste', 'Prioridade', 'Status', 'Responsável', 'Comentários', 'Issues'];
     xlHeaderRow(headerRow, 8);
 
-    // Linhas 8+ – Dados
-    let xlRowIdx = 8;
+    // Linhas 11+ – Dados
+    let xlRowIdx = 11;
     execution.testCases.forEach((etc, idx) => {
       const hasScenarios = (etc as any).scenarios?.length > 0;
       const jiraIssues = etc.issues.map((i) => i.jiraKey || i.title).join(', ');
@@ -576,20 +604,35 @@ export class ReportsService {
 
     ws.getRow(3).height = 22;
     xlMetaLabel(ws.getCell('A3'), 'Suítes');
-    const suiteNamesBatch = report.suites.map((s) => `${s.jiraKey ?? s.manualKey} — ${s.title}`).join(' | ');
+    const suiteNamesBatch = report.suites.map((s) => s.jiraKey ?? s.manualKey).join(', ');
     xlMetaValue(ws.getCell('C3'), suiteNamesBatch || '-');
     xlMetaLabel(ws.getCell('D3'), 'Bloqueado');
     xlMetaValue(ws.getCell('E3'), summary.blocked);
     xlMetaLabel(ws.getCell('F3'), 'Pendente');
     xlMetaValue(ws.getCell('G3'), summary.pending);
 
-    const headerRow = ws.getRow(4);
+    const batchBugCount = report.executions.reduce((sum, ex) => sum + ex.testCases.reduce((s, etc) => {
+      return s + etc.issues.filter((i) => i.type === 'BUG').length
+        + ((etc as any).scenarios ?? []).reduce((ss: number, sc: any) => ss + sc.issues.filter((i: any) => i.type === 'BUG').length, 0);
+    }, 0), 0);
+    const batchImprovementCount = report.executions.reduce((sum, ex) => sum + ex.testCases.reduce((s, etc) => {
+      return s + etc.issues.filter((i) => i.type !== 'BUG').length
+        + ((etc as any).scenarios ?? []).reduce((ss: number, sc: any) => ss + sc.issues.filter((i: any) => i.type !== 'BUG').length, 0);
+    }, 0), 0);
+
+    ws.getRow(4).height = 22;
+    xlMetaLabel(ws.getCell('D4'), 'Bugs reportados');
+    xlMetaValue(ws.getCell('E4'), batchBugCount);
+    xlMetaLabel(ws.getCell('F4'), 'Melhorias');
+    xlMetaValue(ws.getCell('G4'), batchImprovementCount);
+
+    const headerRow = ws.getRow(5);
     headerRow.values = ['#', '', 'Suíte', 'ID', 'Título do teste', 'Prioridade', 'Status', 'Responsável', 'Issues'];
     xlHeaderRow(headerRow, 9);
 
     const allBatchTcs = report.executions.flatMap((ex) => ex.testCases);
     let testIndex = 1;
-    let rowIdx = 5;
+    let rowIdx = 6;
     allBatchTcs.forEach((etc) => {
       const row = ws.getRow(rowIdx);
       const jiraIssues = etc.issues.map((i) => i.jiraKey || i.title).join(', ');
@@ -666,6 +709,9 @@ export class ReportsService {
       });
     });
 
+    const pdfBugCount = allIssues.filter((i) => i.type === 'Bug').length;
+    const pdfImprovementCount = allIssues.filter((i) => i.type === 'Melhoria').length;
+
     const docDefinition: any = {
       pageMargins: [40, 50, 40, 50],
       footer: pdfFooter(this.today),
@@ -674,11 +720,11 @@ export class ReportsService {
         {
           columns: [
             {
-              width: '52%',
+              width: '45%',
               stack: [{
                 text: [
                   { text: 'Suítes: ', bold: true },
-                  `${report.suites.map((s) => `${s.jiraKey ?? s.manualKey} — ${s.title}`).join(' | ') || '-'}\n`,
+                  `${report.suites.map((s) => s.jiraKey ?? s.manualKey).join(', ') || '-'}\n`,
                 ],
                 lineHeight: 1.5,
                 fontSize: 10,
@@ -686,8 +732,8 @@ export class ReportsService {
               }],
             },
             {
-              width: '48%',
-              ...this.pdfSummaryTable(summary.totalTests, executedTests, summary.passed, summary.failed, summary.blocked),
+              width: '55%',
+              ...this.pdfSummaryTable(summary.totalTests, executedTests, summary.passed, summary.failed, summary.blocked, pdfBugCount, pdfImprovementCount),
             },
           ],
           margin: [0, 0, 0, 20],
@@ -828,6 +874,9 @@ export class ReportsService {
       });
     });
 
+    const pdfBugCount = allIssues.filter((i) => i.type === 'Bug').length;
+    const pdfImprovementCount = allIssues.filter((i) => i.type === 'Melhoria').length;
+
     const docDefinition: any = {
       pageMargins: [40, 50, 40, 50],
       footer: pdfFooter(this.today),
@@ -836,7 +885,7 @@ export class ReportsService {
         {
           columns: [
             {
-              width: '52%',
+              width: '45%',
               stack: [{
                 text: [
                   { text: 'Sprint: ',           bold: true }, `${execution.sprint}\n`,
@@ -845,7 +894,7 @@ export class ReportsService {
                   { text: 'Data de fim: ',      bold: true }, `${this.formatDate(execution.endDate)}\n`,
                   { text: isBatch ? 'Suítes: ' : 'Suíte: ', bold: true },
                   `${isBatch
-                    ? batchSuites.map((s) => `${s.jiraKey ?? s.manualKey} — ${s.title}`).join(' | ')
+                    ? batchSuites.map((s) => s.jiraKey ?? s.manualKey).join(', ')
                     : (execution.suite ? `${execution.suite.jiraKey ?? execution.suite.manualKey} — ${execution.suite.title}` : '-')
                   }\n`,
                   { text: 'Responsável: ',      bold: true }, `${execution.responsible}\n`,
@@ -856,8 +905,8 @@ export class ReportsService {
               }],
             },
             {
-              width: '48%',
-              ...this.pdfSummaryTable(totalTests, executedTests, passedTests, failedTests, blockedTests),
+              width: '55%',
+              ...this.pdfSummaryTable(totalTests, executedTests, passedTests, failedTests, blockedTests, pdfBugCount, pdfImprovementCount),
             },
           ],
           margin: [0, 0, 0, 20],
@@ -998,30 +1047,46 @@ export class ReportsService {
 
   private pdfSummaryTable(
     total: number, executed: number, passed: number, failed: number,
-    blocked: number,
+    blocked: number, bugs: number, improvements: number,
   ): any {
-    const rows = [
-      ['Total Passou',     `${passed}`],
-      ['Total Falhou',     `${failed}`],
-      ['Total Bloqueado',  `${blocked}`],
-      ['Total Executado',  `${executed}`],
-      ['Total de Testes',  `${total}`],
-    ];
-    return {
+    const makeBlock = (header: string, color: string, rows: [string, number][]) => ({
       table: {
         widths: ['*', 'auto'],
         body: [
           [
-            { text: 'Métrica', bold: true, fontSize: 9, fillColor: `#${DARK_ORA}`, color: '#FFFFFF', alignment: 'center', margin: [4, 5, 4, 5] },
-            { text: 'Valor',   bold: true, fontSize: 9, fillColor: `#${DARK_ORA}`, color: '#FFFFFF', alignment: 'center', margin: [4, 5, 4, 5] },
+            { text: header, bold: true, fontSize: 9, fillColor: color, color: '#FFFFFF', alignment: 'center', colSpan: 2, margin: [4, 5, 4, 5] },
+            {},
           ],
           ...rows.map(([label, value], i) => [
             { text: label, fontSize: 9, fillColor: i % 2 === 0 ? `#${CREAM}` : '#FFFFFF', margin: [4, 3, 4, 3] },
-            { text: value, fontSize: 9, fillColor: i % 2 === 0 ? `#${CREAM}` : '#FFFFFF', alignment: 'center', margin: [4, 3, 4, 3] },
+            { text: String(value), fontSize: 9, fillColor: i % 2 === 0 ? `#${CREAM}` : '#FFFFFF', alignment: 'center', margin: [4, 3, 4, 3] },
           ]),
         ],
       },
       fontSize: 9,
+    });
+
+    return {
+      columns: [
+        {
+          width: '58%',
+          ...makeBlock('Resultados', `#${DARK_ORA}`, [
+            ['Passou',          passed],
+            ['Falhou',          failed],
+            ['Bloqueado',       blocked],
+            ['Total Executado', executed],
+            ['Total de Testes', total],
+          ]),
+        },
+        { width: '4%', text: '' },
+        {
+          width: '38%',
+          ...makeBlock('Ocorrências', `#${GRAY_DARK}`, [
+            ['Bugs',      bugs],
+            ['Melhorias', improvements],
+          ]),
+        },
+      ],
     };
   }
 
