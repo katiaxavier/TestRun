@@ -159,6 +159,21 @@ Quando o último cenário de um `ExecutionTestCase` é excluído:
 ### 5.6 Impacto dos Cenários no Status do TC
 - Enquanto o TC tem cenários ativos, seu status não é exibido nas células de resultado (fica em branco nos relatórios) para evitar dupla contagem.
 
+### 5.7 Unicidade de Nome de Cenário por TC
+- Não é permitido ter dois cenários com o mesmo nome dentro do mesmo `ExecutionTestCase` (na execução) ou dentro do mesmo `TestCase` (nos templates da suíte).
+- O mesmo nome pode existir em TCs diferentes sem restrição.
+
+**Criação individual:** bloqueada com mensagem de erro se o nome já existir no TC.
+
+**Criação em lote:** os cenários com nomes válidos são criados normalmente; os duplicados são ignorados e o usuário é informado quais nomes foram pulados.
+
+**Ad-hoc na execução com template de mesmo nome já existente na suíte:** o cenário é criado normalmente na execução, e o `templateId` é vinculado ao template já existente na suíte — nenhum template novo é criado.
+
+### 5.8 Adição de Cenário Template após Execução Criada
+- Cenários template (`TestCaseScenario`) adicionados à lista de TCs de uma suíte ou lote **após** a criação de uma execução **não afetam execuções já existentes**.
+- A execução é um snapshot imutável do momento de sua criação (ver 4.1 e 8.3); templates adicionados posteriormente só terão efeito em **execuções futuras**.
+- Para refletir o novo template em uma execução em andamento, o testador deve criar o cenário manualmente de forma ad-hoc (ver 5.4).
+
 ---
 
 ## 6. Regras de Issues (Bugs e Melhorias)

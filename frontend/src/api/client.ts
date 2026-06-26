@@ -112,7 +112,7 @@ export const suitesApi = {
   addScenarioTemplate: (tcId: string, name: string) =>
     api.post<TestCaseScenario>(`/suites/test-cases/${tcId}/scenarios`, { name }),
   addScenarioTemplateBatch: (tcId: string, names: string[]) =>
-    api.post<TestCaseScenario[]>(`/suites/test-cases/${tcId}/scenarios/batch`, { names }),
+    api.post<{ created: TestCaseScenario[]; skipped: string[] }>(`/suites/test-cases/${tcId}/scenarios/batch`, { names }),
   deleteScenarioTemplate: (templateId: string) =>
     api.delete(`/suites/test-cases/scenarios/${templateId}`),
 };
@@ -161,7 +161,7 @@ export const executionsApi = {
   createScenario: (executionId: string, etcId: string, name: string) =>
     api.post<Scenario>(`/executions/${executionId}/test-cases/${etcId}/scenarios`, { name }),
   createScenarioBatch: (executionId: string, etcId: string, names: string[]) =>
-    api.post<Scenario[]>(`/executions/${executionId}/test-cases/${etcId}/scenarios/batch`, { names }),
+    api.post<{ created: Scenario[]; skipped: string[] }>(`/executions/${executionId}/test-cases/${etcId}/scenarios/batch`, { names }),
   updateScenario: (executionId: string, etcId: string, scenarioId: string, data: { name?: string; status?: string; comments?: string }) =>
     api.patch<Scenario>(`/executions/${executionId}/test-cases/${etcId}/scenarios/${scenarioId}`, data),
   deleteScenario: (executionId: string, etcId: string, scenarioId: string) =>

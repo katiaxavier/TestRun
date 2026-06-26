@@ -86,19 +86,35 @@ export class SuitesService {
   }
 
   async addScenarioTemplate(tcId: string, name: string) {
-    const tc = await this.prisma.testCase.findUnique({ where: { id: tcId } });
+    const tc = await this.prisma.testCase.findUnique({
+      where: { id: tcId },
+      include: { scenarioTemplates: true },
+    });
     if (!tc) throw new HttpException('Caso de teste não encontrado.', HttpStatus.NOT_FOUND);
+    const exists = tc.scenarioTemplates.some(t => t.name === name);
+    if (exists) throw new HttpException(`Já existe um cenário com o nome "${name}" neste caso de teste.`, HttpStatus.CONFLICT);
     return this.prisma.testCaseScenario.create({ data: { testCaseId: tcId, name } });
   }
 
   async addScenarioTemplateBatch(tcId: string, names: string[]) {
-    const tc = await this.prisma.testCase.findUnique({ where: { id: tcId } });
+    const tc = await this.prisma.testCase.findUnique({
+      where: { id: tcId },
+      include: { scenarioTemplates: true },
+    });
     if (!tc) throw new HttpException('Caso de teste não encontrado.', HttpStatus.NOT_FOUND);
+    const existingNames = new Set(tc.scenarioTemplates.map(t => t.name));
+    const seen = new Set<string>();
     const created = [];
+    const skipped: string[] = [];
     for (const name of names) {
-      created.push(await this.prisma.testCaseScenario.create({ data: { testCaseId: tcId, name } }));
+      if (existingNames.has(name) || seen.has(name)) {
+        skipped.push(name);
+      } else {
+        seen.add(name);
+        created.push(await this.prisma.testCaseScenario.create({ data: { testCaseId: tcId, name } }));
+      }
     }
-    return created;
+    return { created, skipped };
   }
 
   async deleteScenarioTemplate(templateId: string) {

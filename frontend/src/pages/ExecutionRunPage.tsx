@@ -745,14 +745,17 @@ function TestCaseDrawer({
     setAddingBatch(true);
     try {
       const { data } = await executionsApi.createScenarioBatch(executionId, etc.id, names);
-      const newScenarios = [...scenarios, ...data];
+      const newScenarios = [...scenarios, ...data.created];
       setScenarios(newScenarios);
       const newIssues = scenarios.length === 0 && issues.length > 0 ? [] : issues;
       setIssues(newIssues);
       onUpdated({ ...etc, scenarios: newScenarios, issues: newIssues });
       setBatchText('');
       setShowBatchModal(false);
-      addToast(`${data.length} cenários adicionados`);
+      const msg = data.skipped.length > 0
+        ? `${data.created.length} cenário${data.created.length !== 1 ? 's' : ''} adicionado${data.created.length !== 1 ? 's' : ''}, ${data.skipped.length} ignorado${data.skipped.length !== 1 ? 's (já existiam)' : ' (já existia)'}`
+        : `${data.created.length} cenário${data.created.length !== 1 ? 's' : ''} adicionado${data.created.length !== 1 ? 's' : ''}`;
+      addToast(msg);
     } catch {
       addToast('Erro ao adicionar cenários', 'error');
     }

@@ -88,15 +88,21 @@ function ScenarioTemplatePanel({ tc, onUpdate }: {
   const [adding, setAdding] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [addError, setAddError] = useState<string | null>(null);
+  const [skippedInfo, setSkippedInfo] = useState<string | null>(null);
   const templates = tc.scenarioTemplates ?? [];
 
   const handleAdd = async () => {
     if (!newName.trim()) return;
     setAdding(true);
+    setAddError(null);
     try {
       const { data } = await suitesApi.addScenarioTemplate(tc.id, newName.trim());
       onUpdate({ ...tc, scenarioTemplates: [...templates, data] });
       setNewName('');
+    } catch (err: any) {
+      const msg = err?.response?.data?.message ?? 'Erro ao adicionar cenário.';
+      setAddError(Array.isArray(msg) ? msg.join(' ') : msg);
     } finally { setAdding(false); }
   };
 
@@ -104,11 +110,15 @@ function ScenarioTemplatePanel({ tc, onUpdate }: {
     const names = batchText.split('\n').map(l => l.trim()).filter(Boolean);
     if (names.length === 0) return;
     setAdding(true);
+    setSkippedInfo(null);
     try {
       const { data } = await suitesApi.addScenarioTemplateBatch(tc.id, names);
-      onUpdate({ ...tc, scenarioTemplates: [...templates, ...data] });
+      onUpdate({ ...tc, scenarioTemplates: [...templates, ...data.created] });
       setBatchText('');
       setShowBatch(false);
+      if (data.skipped.length > 0) {
+        setSkippedInfo(`${data.skipped.length} cenário${data.skipped.length !== 1 ? 's ignorados (já existem)' : ' ignorado (já existe)'}: ${data.skipped.join(', ')}`);
+      }
     } finally { setAdding(false); }
   };
 
@@ -159,21 +169,31 @@ function ScenarioTemplatePanel({ tc, onUpdate }: {
                 </div>
               ))}
 
+              {skippedInfo && (
+                <p style={{ fontSize: '0.75rem', color: 'var(--status-blocked)', margin: '0.25rem 0' }}>
+                  {skippedInfo}
+                </p>
+              )}
               {!showBatch ? (
-                <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.25rem' }}>
-                  <input
-                    placeholder="Nome do cenário"
-                    value={newName}
-                    onChange={e => setNewName(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && handleAdd()}
-                    style={{ flex: 1, fontSize: '0.8rem', padding: '0.3rem 0.5rem' }}
-                  />
-                  <button className="btn btn-primary btn-sm" onClick={handleAdd} disabled={adding || !newName.trim()}>
-                    {adding ? <div className="spinner" style={{ width: 12, height: 12 }} /> : <Plus size={13} />}
-                  </button>
-                  <button className="btn btn-secondary btn-sm" style={{ fontSize: '0.75rem' }} onClick={() => setShowBatch(true)}>
-                    Lote
-                  </button>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', marginTop: '0.25rem' }}>
+                  <div style={{ display: 'flex', gap: '0.4rem' }}>
+                    <input
+                      placeholder="Nome do cenário"
+                      value={newName}
+                      onChange={e => { setNewName(e.target.value); setAddError(null); }}
+                      onKeyDown={e => e.key === 'Enter' && handleAdd()}
+                      style={{ flex: 1, fontSize: '0.8rem', padding: '0.3rem 0.5rem' }}
+                    />
+                    <button className="btn btn-primary btn-sm" onClick={handleAdd} disabled={adding || !newName.trim()}>
+                      {adding ? <div className="spinner" style={{ width: 12, height: 12 }} /> : <Plus size={13} />}
+                    </button>
+                    <button className="btn btn-secondary btn-sm" style={{ fontSize: '0.75rem' }} onClick={() => setShowBatch(true)}>
+                      Lote
+                    </button>
+                  </div>
+                  {addError && (
+                    <p style={{ fontSize: '0.75rem', color: 'var(--status-failed)', margin: 0 }}>{addError}</p>
+                  )}
                 </div>
               ) : (
                 <div style={{ marginTop: '0.25rem', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>

@@ -533,6 +533,9 @@ export class ExecutionsService {
     });
     if (!etc) throw new HttpException('Item de execução não encontrado.', HttpStatus.NOT_FOUND);
 
+    const nameExists = etc.scenarios.some(s => s.name === dto.name);
+    if (nameExists) throw new HttpException(`Já existe um cenário com o nome "${dto.name}" neste caso de teste.`, HttpStatus.CONFLICT);
+
     const isFirst = etc.scenarios.length === 0;
 
     if (isFirst) {
@@ -542,9 +545,15 @@ export class ExecutionsService {
       });
     }
 
-    const template = await this.prisma.testCaseScenario.create({
-      data: { testCaseId: etc.testCaseId, name: dto.name },
+    // Flow 5b: reutiliza template existente na suíte se houver com o mesmo nome
+    let template = await this.prisma.testCaseScenario.findFirst({
+      where: { testCaseId: etc.testCaseId, name: dto.name },
     });
+    if (!template) {
+      template = await this.prisma.testCaseScenario.create({
+        data: { testCaseId: etc.testCaseId, name: dto.name },
+      });
+    }
 
     const scenario = await this.prisma.scenario.create({
       data: {
@@ -576,6 +585,22 @@ export class ExecutionsService {
     });
     if (!etc) throw new HttpException('Item de execução não encontrado.', HttpStatus.NOT_FOUND);
 
+    const existingNames = new Set(etc.scenarios.map(s => s.name));
+    const seen = new Set<string>();
+    const validNames: string[] = [];
+    const skipped: string[] = [];
+
+    for (const name of names) {
+      if (existingNames.has(name) || seen.has(name)) {
+        skipped.push(name);
+      } else {
+        seen.add(name);
+        validNames.push(name);
+      }
+    }
+
+    if (validNames.length === 0) return { created: [], skipped };
+
     const isFirst = etc.scenarios.length === 0;
 
     if (isFirst) {
@@ -586,10 +611,16 @@ export class ExecutionsService {
     }
 
     const created: any[] = [];
-    for (const name of names) {
-      const template = await this.prisma.testCaseScenario.create({
-        data: { testCaseId: etc.testCaseId, name },
+    for (const name of validNames) {
+      // Flow 5b: reutiliza template existente na suíte se houver com o mesmo nome
+      let template = await this.prisma.testCaseScenario.findFirst({
+        where: { testCaseId: etc.testCaseId, name },
       });
+      if (!template) {
+        template = await this.prisma.testCaseScenario.create({
+          data: { testCaseId: etc.testCaseId, name },
+        });
+      }
       const scenario = await this.prisma.scenario.create({
         data: { executionTestCaseId: etcId, templateId: template.id, name, status: 'PENDING' },
         include: { issues: true },
@@ -608,7 +639,7 @@ export class ExecutionsService {
       });
     }
 
-    return created;
+    return { created, skipped };
   }
 
   async updateScenario(etcId: string, scenarioId: string, dto: UpdateScenarioDto) {
