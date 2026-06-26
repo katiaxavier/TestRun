@@ -391,7 +391,7 @@ export class ReportsService {
           sRow.getCell(5).fill = xlFill(sArgb);
           sRow.getCell(5).font = { name: 'Calibri', size: 10, bold: true };
           sRow.getCell(5).alignment = { horizontal: 'center', vertical: 'middle' };
-          sRow.getCell(6).value = '';
+          sRow.getCell(6).value = etc.responsible || '';
           sRow.getCell(7).value = scenario.comments || '';
           sRow.getCell(7).alignment = { wrapText: true, vertical: 'middle' };
           sRow.getCell(8).value = sIssues || '';
@@ -907,7 +907,7 @@ export class ReportsService {
                             pdfCell(s.name, bg, { italics: true, margin: [10, 3, 3, 3] }),
                             pdfCell(tc.testCase.priority || '-', bg, { alignment: 'center' }),
                             pdfStatusCell(s.status),
-                            pdfCell('-', bg),
+                            pdfCell(tc.responsible || '-', bg),
                             pdfCell(sIssues, bg),
                           ];
                         });
@@ -948,7 +948,7 @@ export class ReportsService {
                         pdfCell(s.name, bg, { italics: true, margin: [10, 3, 3, 3] }),
                         pdfCell(tc.testCase.priority || '-', bg, { alignment: 'center' }),
                         pdfStatusCell(s.status),
-                        pdfCell('-', bg),
+                        pdfCell(tc.responsible || '-', bg),
                         pdfCell(sIssues, bg),
                       ];
                     });
