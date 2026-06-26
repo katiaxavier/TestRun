@@ -885,7 +885,7 @@ export class ReportsService {
                     headerRows: 1,
                     widths: ['12%', '22%', '11%', '11%', '14%', '16%', '14%'],
                     body: [
-                      pdfHeaderCells(['ID', 'Caso de Teste', 'Prioridade', 'Status', 'Responsável', 'Comentários', 'Issues']),
+                      pdfHeaderCells(['ID', 'Caso de Teste', 'Prior.', 'Status', 'Resp.', 'Coment.', 'Issues']),
                       ...suiteTcs.flatMap((tc, i) => {
                         const bg = rowBg(i);
                         const issues = tc.issues.map((iss) => iss.jiraKey || iss.title).join(', ') || '-';
@@ -928,7 +928,7 @@ export class ReportsService {
                 headerRows: 1,
                 widths: ['12%', '22%', '11%', '11%', '14%', '16%', '14%'],
                 body: [
-                  pdfHeaderCells(['ID', 'Caso de Teste', 'Prioridade', 'Status', 'Responsável', 'Comentários', 'Issues']),
+                  pdfHeaderCells(['ID', 'Caso de Teste', 'Prior.', 'Status', 'Resp.', 'Coment.', 'Issues']),
                   ...execution.testCases.flatMap((tc, i) => {
                     const bg = rowBg(i);
                     const issues = tc.issues.map((iss) => iss.jiraKey || iss.title).join(', ') || '-';
