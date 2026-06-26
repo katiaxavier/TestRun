@@ -883,7 +883,7 @@ export class ReportsService {
                 {
                   table: {
                     headerRows: 1,
-                    widths: ['12%', '22%', '11%', '11%', '14%', '16%', '14%'],
+                    widths: ['12%', '20%', '11%', '13%', '14%', '16%', '14%'],
                     body: [
                       pdfHeaderCells(['ID', 'Caso de Teste', 'Prior.', 'Status', 'Resp.', 'Coment.', 'Issues']),
                       ...suiteTcs.flatMap((tc, i) => {
@@ -926,7 +926,7 @@ export class ReportsService {
           : [{
               table: {
                 headerRows: 1,
-                widths: ['12%', '22%', '11%', '11%', '14%', '16%', '14%'],
+                widths: ['12%', '20%', '11%', '13%', '14%', '16%', '14%'],
                 body: [
                   pdfHeaderCells(['ID', 'Caso de Teste', 'Prior.', 'Status', 'Resp.', 'Coment.', 'Issues']),
                   ...execution.testCases.flatMap((tc, i) => {
