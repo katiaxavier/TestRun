@@ -714,9 +714,10 @@ function TestCaseDrawer({
       onUpdated({ ...etc, scenarios: newScenarios, issues: [] });
       setScenarioName('');
       setShowScenarioForm(false);
-      addToast('Cenário adicionado');
-    } catch {
-      addToast('Erro ao adicionar cenário', 'error');
+      addToast('Cenário adicionado e salvo no caso de teste para execuções futuras');
+    } catch (err: any) {
+      const msg = err?.response?.data?.message ?? 'Erro ao adicionar cenário.';
+      addToast(Array.isArray(msg) ? msg.join(' ') : msg, 'error');
     }
     setAddingScenario(false);
   };
@@ -732,9 +733,10 @@ function TestCaseDrawer({
       onUpdated({ ...etc, scenarios: newScenarios, issues: [] });
       setShowWizardModal(false);
       setWizardScenarioName('');
-      addToast('Cenário adicionado');
-    } catch {
-      addToast('Erro ao adicionar cenário', 'error');
+      addToast('Cenário adicionado e salvo no caso de teste para execuções futuras');
+    } catch (err: any) {
+      const msg = err?.response?.data?.message ?? 'Erro ao adicionar cenário.';
+      addToast(Array.isArray(msg) ? msg.join(' ') : msg, 'error');
     }
     setAddingScenario(false);
   };
