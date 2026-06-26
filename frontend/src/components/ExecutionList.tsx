@@ -23,12 +23,14 @@ export function ExecutionList({ executions, onExecutionClick }: ExecutionListPro
   const [periodEnd, setPeriodEnd] = useState('');
 
   const filtered = useMemo(() => {
-    return executions.filter(exec => {
-      if (status && exec.status.toUpperCase() !== status) return false;
-      if (periodStart && exec.startDate < periodStart) return false;
-      if (periodEnd && exec.endDate > periodEnd) return false;
-      return true;
-    });
+    return executions
+      .filter(exec => {
+        if (status && exec.status.toUpperCase() !== status) return false;
+        if (periodStart && exec.startDate < periodStart) return false;
+        if (periodEnd && exec.endDate > periodEnd) return false;
+        return true;
+      })
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }, [executions, status, periodStart, periodEnd]);
 
   const hasFilters = status || periodStart || periodEnd;
