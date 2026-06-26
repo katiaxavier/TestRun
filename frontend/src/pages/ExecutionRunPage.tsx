@@ -5,6 +5,7 @@ import {
   ArrowLeft, X, Plus, Trash, FileXls, FilePdf,
   ArrowSquareOut, CheckCircle, MagnifyingGlass,
   CaretLeft, CaretRight, Pencil, FolderOpen,
+  CheckSquare, Square,
 } from '@phosphor-icons/react';
 import { executionsApi, reportsApi, suitesApi, configApi } from '../api/client';
 import type { Execution, ExecutionTestCase, Issue, Suite, Scenario } from '../api/client';
@@ -637,6 +638,9 @@ function TestCaseDrawer({
   const [showBatchModal, setShowBatchModal] = useState(false);
   const [batchText, setBatchText] = useState('');
   const [addingBatch, setAddingBatch] = useState(false);
+  const [selectedScenarios, setSelectedScenarios] = useState<Set<string>>(new Set());
+  const [deleteSelectedConfirm, setDeleteSelectedConfirm] = useState(false);
+  const [deletingSelected, setDeletingSelected] = useState(false);
 
   useEffect(() => {
     configApi.get().then(({ data }) => setJiraUrl(data.url ?? '')).catch(() => {});
@@ -652,6 +656,8 @@ function TestCaseDrawer({
     setActiveScenario(null);
     setShowScenarioForm(false);
     setRemoveConfirm(false);
+    setSelectedScenarios(new Set());
+    setDeleteSelectedConfirm(false);
   }, [etc.id]);
 
   const hasScenarios = scenarios.length > 0;
@@ -792,6 +798,31 @@ function TestCaseDrawer({
     addToast('Cenário excluído');
   };
 
+  const handleDeleteSelected = async () => {
+    const ids = Array.from(selectedScenarios);
+    if (!ids.length) return;
+    setDeletingSelected(true);
+    try {
+      await executionsApi.deleteScenarioBatch(executionId, etc.id, ids);
+      const newScenarios = scenarios.filter(s => !selectedScenarios.has(s.id));
+      const isLast = newScenarios.length === 0;
+      // When all scenarios are deleted, backend restores issues to test-case level
+      const deletedIssues = isLast
+        ? scenarios.filter(s => selectedScenarios.has(s.id)).flatMap(s => s.issues)
+        : issues;
+      setScenarios(newScenarios);
+      if (isLast) setIssues(deletedIssues);
+      onUpdated({ ...etc, scenarios: newScenarios, issues: isLast ? deletedIssues : issues });
+      setSelectedScenarios(new Set());
+      setSelectionMode(false);
+      setDeleteSelectedConfirm(false);
+      addToast(`${ids.length} cenário${ids.length !== 1 ? 's' : ''} excluído${ids.length !== 1 ? 's' : ''}`);
+    } catch {
+      addToast('Erro ao excluir cenários', 'error');
+    }
+    setDeletingSelected(false);
+  };
+
   const handleRemoveFromExecution = async () => {
     setRemoving(true);
     try {
@@ -897,22 +928,27 @@ function TestCaseDrawer({
                     Cenários
                     {scenarios.length > 0 && <span className="badge">{scenarios.length}</span>}
                   </span>
-                  <div style={{ display: 'flex', gap: '0.4rem' }}>
+                  {!hasScenarios && (
+                    <div style={{ display: 'flex', gap: '0.4rem' }}>
+                      <button className="btn btn-ghost btn-sm" onClick={handleAddScenarioClick} style={{ fontSize: '0.75rem' }}>
+                        <Plus size={13} /> Adicionar Cenário
+                      </button>
+                      <button className="btn btn-ghost btn-sm" onClick={() => setShowBatchModal(true)} style={{ fontSize: '0.75rem' }}>
+                        <Plus size={13} /> Em Lote
+                      </button>
+                    </div>
+                  )}
+                  {hasScenarios && scenarios.length > 1 && (
                     <button
                       className="btn btn-ghost btn-sm"
-                      onClick={handleAddScenarioClick}
-                      style={{ fontSize: '0.75rem' }}
+                      onClick={() => setSelectedScenarios(
+                        selectedScenarios.size === scenarios.length ? new Set() : new Set(scenarios.map(s => s.id))
+                      )}
+                      style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}
                     >
-                      <Plus size={13} /> Adicionar Cenário
+                      {selectedScenarios.size === scenarios.length ? 'Desmarcar todos' : 'Selecionar todos'}
                     </button>
-                    <button
-                      className="btn btn-ghost btn-sm"
-                      onClick={() => setShowBatchModal(true)}
-                      style={{ fontSize: '0.75rem' }}
-                    >
-                      <Plus size={13} /> Em Lote
-                    </button>
-                  </div>
+                  )}
                 </div>
 
                 <AnimatePresence>
@@ -946,47 +982,67 @@ function TestCaseDrawer({
                   <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center', padding: '0.5rem 0' }}>Nenhum cenário adicionado.</p>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                    {scenarios.map(scenario => (
-                      <button
-                        key={scenario.id}
-                        onClick={() => setActiveScenario(scenario)}
-                        style={{
-                          display: 'flex', alignItems: 'center', gap: '0.6rem',
-                          padding: '0.55rem 0.75rem',
-                          background: 'var(--bg-elevated)',
-                          border: '1px solid var(--border-subtle)',
-                          borderRadius: 'var(--radius-sm)',
-                          cursor: 'pointer', textAlign: 'left', width: '100%',
-                          transition: 'background 0.12s',
-                        }}
-                        onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-overlay)')}
-                        onMouseLeave={e => (e.currentTarget.style.background = 'var(--bg-elevated)')}
-                      >
-                        <span style={{
-                          width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
-                          background: STATUS_COLORS[scenario.status] ?? 'var(--text-muted)',
-                        }} />
-                        <span style={{ flex: 1, fontSize: '0.85rem', color: 'var(--text-primary)' }}>{scenario.name}</span>
-                        {scenario.issues.length > 0 && (
-                          <span style={{ display: 'inline-flex', gap: '0.2rem' }}>
-                            {scenario.issues.filter(i => i.type === 'BUG').length > 0 && (
-                              <span style={{ fontSize: '0.7rem', color: 'var(--status-failed)', fontWeight: 600 }}>
-                                {scenario.issues.filter(i => i.type === 'BUG').length} bug(s)
+                    {scenarios.map(scenario => {
+                      const isSelected = selectedScenarios.has(scenario.id);
+                      return (
+                        <div
+                          key={scenario.id}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: '0.5rem',
+                            padding: '0.55rem 0.75rem',
+                            background: isSelected ? 'var(--bg-overlay)' : 'var(--bg-elevated)',
+                            border: `1px solid ${isSelected ? 'var(--accent)' : 'var(--border-subtle)'}`,
+                            borderRadius: 'var(--radius-sm)',
+                            transition: 'background 0.12s, border-color 0.12s',
+                          }}
+                        >
+                          <button
+                            onClick={() => setSelectedScenarios(prev => {
+                              const next = new Set(prev);
+                              if (next.has(scenario.id)) next.delete(scenario.id);
+                              else next.add(scenario.id);
+                              return next;
+                            })}
+                            style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center' }}
+                          >
+                            {isSelected
+                              ? <CheckSquare size={15} weight="fill" style={{ color: 'var(--accent)' }} />
+                              : <Square size={15} style={{ color: 'var(--text-muted)' }} />}
+                          </button>
+                          <button
+                            onClick={() => setActiveScenario(scenario)}
+                            style={{
+                              flex: 1, display: 'flex', alignItems: 'center', gap: '0.6rem',
+                              background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', padding: 0, minWidth: 0,
+                            }}
+                          >
+                            <span style={{
+                              width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
+                              background: STATUS_COLORS[scenario.status] ?? 'var(--text-muted)',
+                            }} />
+                            <span style={{ flex: 1, fontSize: '0.85rem', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{scenario.name}</span>
+                            {scenario.issues.length > 0 && (
+                              <span style={{ display: 'inline-flex', gap: '0.2rem', flexShrink: 0 }}>
+                                {scenario.issues.filter(i => i.type === 'BUG').length > 0 && (
+                                  <span style={{ fontSize: '0.7rem', color: 'var(--status-failed)', fontWeight: 600 }}>
+                                    {scenario.issues.filter(i => i.type === 'BUG').length} bug(s)
+                                  </span>
+                                )}
+                                {scenario.issues.filter(i => i.type === 'IMPROVEMENT').length > 0 && (
+                                  <span style={{ fontSize: '0.7rem', color: 'var(--status-inprogress)', fontWeight: 600 }}>
+                                    {scenario.issues.filter(i => i.type === 'IMPROVEMENT').length} melhoria(s)
+                                  </span>
+                                )}
                               </span>
                             )}
-                            {scenario.issues.filter(i => i.type === 'IMPROVEMENT').length > 0 && (
-                              <span style={{ fontSize: '0.7rem', color: 'var(--status-inprogress)', fontWeight: 600 }}>
-                                {scenario.issues.filter(i => i.type === 'IMPROVEMENT').length} melhoria(s)
-                              </span>
-                            )}
-                          </span>
-                        )}
-                        <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600 }}>
-                          {STATUS_LABELS[scenario.status] ?? scenario.status}
-                        </span>
-                        <CaretRight size={12} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
-                      </button>
-                    ))}
+                            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600, flexShrink: 0 }}>
+                              {STATUS_LABELS[scenario.status] ?? scenario.status}
+                            </span>
+                            <CaretRight size={12} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+                          </button>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -1050,6 +1106,51 @@ function TestCaseDrawer({
                     : <><CheckCircle size={16} /> Salvar comentários</>}
                 </button>
               )}
+
+              {/* Add scenario buttons — shown only when has scenarios (header has them otherwise) */}
+              {hasScenarios && (
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button className="btn btn-ghost btn-sm" onClick={handleAddScenarioClick} style={{ flex: 1, justifyContent: 'center', fontSize: '0.75rem' }}>
+                    <Plus size={13} /> Adicionar Cenário
+                  </button>
+                  <button className="btn btn-ghost btn-sm" onClick={() => setShowBatchModal(true)} style={{ flex: 1, justifyContent: 'center', fontSize: '0.75rem' }}>
+                    <Plus size={13} /> Em Lote
+                  </button>
+                </div>
+              )}
+
+              {/* Bulk delete — appears when scenarios are selected */}
+              <AnimatePresence>
+                {selectedScenarios.size > 0 && (
+                  <motion.div key="bulk-delete" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} style={{ overflow: 'hidden' }}>
+                    {deleteSelectedConfirm ? (
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <button
+                          className="btn btn-danger btn-sm"
+                          onClick={handleDeleteSelected}
+                          disabled={deletingSelected}
+                          style={{ flex: 1, justifyContent: 'center' }}
+                        >
+                          {deletingSelected ? <div className="spinner" style={{ width: 12, height: 12 }} /> : <Trash size={13} />}
+                          Confirmar exclusão ({selectedScenarios.size})
+                        </button>
+                        <button className="btn btn-ghost btn-sm" onClick={() => setDeleteSelectedConfirm(false)} disabled={deletingSelected}>Cancelar</button>
+                      </div>
+                    ) : (
+                      <button
+                        className="btn btn-ghost btn-sm"
+                        onClick={() => setDeleteSelectedConfirm(true)}
+                        style={{ width: '100%', justifyContent: 'center', color: 'var(--status-failed)', fontSize: '0.8rem' }}
+                      >
+                        <Trash size={13} />
+                        Excluir {selectedScenarios.size} cenário{selectedScenarios.size !== 1 ? 's' : ''}
+                      </button>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Remove from execution */}
               <AnimatePresence>
                 {removeConfirm ? (
                   <motion.div key="confirm" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} style={{ overflow: 'hidden' }}>

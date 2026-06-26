@@ -6,6 +6,7 @@ import {
   Body,
   Param,
   Patch,
+  HttpCode,
 } from '@nestjs/common';
 import {
   ExecutionsService,
@@ -105,6 +106,15 @@ export class ExecutionsController {
     @Param('scenarioId') scenarioId: string,
   ) {
     return this.executionsService.deleteScenario(etcId, scenarioId);
+  }
+
+  @Delete(':executionId/test-cases/:etcId/scenarios')
+  @HttpCode(200)
+  async deleteScenarioBatch(
+    @Param('etcId') etcId: string,
+    @Body('ids') ids: string[],
+  ) {
+    return this.executionsService.deleteScenarioBatch(etcId, ids);
   }
 
   @Post(':executionId/test-cases/:etcId/scenarios/:scenarioId/issues')

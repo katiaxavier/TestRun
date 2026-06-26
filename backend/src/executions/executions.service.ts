@@ -702,6 +702,44 @@ export class ExecutionsService {
     return { success: true };
   }
 
+  async deleteScenarioBatch(etcId: string, scenarioIds: string[]) {
+    if (!scenarioIds.length) return { deleted: 0 };
+
+    const scenarios = await this.prisma.scenario.findMany({
+      where: { id: { in: scenarioIds }, executionTestCaseId: etcId },
+      include: { issues: true },
+    });
+
+    const remainingCount = await this.prisma.scenario.count({
+      where: { executionTestCaseId: etcId, id: { notIn: scenarioIds } },
+    });
+    const isLast = remainingCount === 0;
+
+    if (isLast) {
+      const allIssues = scenarios.flatMap(s => s.issues);
+      if (allIssues.length > 0) {
+        await this.prisma.issue.updateMany({
+          where: { scenarioId: { in: scenarioIds } },
+          data: { scenarioId: null, executionTestCaseId: etcId },
+        });
+      }
+      const etc = await this.prisma.executionTestCase.findUnique({ where: { id: etcId } });
+      if (etc?.originalStatus) {
+        await this.prisma.executionTestCase.update({
+          where: { id: etcId },
+          data: { status: etc.originalStatus, originalStatus: null },
+        });
+      }
+    }
+
+    await this.prisma.scenario.deleteMany({ where: { id: { in: scenarioIds }, executionTestCaseId: etcId } });
+
+    const executionId = await this.recomputeTestCaseStatus(etcId);
+    await this.recomputeExecutionStatus(executionId);
+
+    return { deleted: scenarios.length };
+  }
+
   async addScenarioIssue(scenarioId: string, dto: CreateIssueDto) {
     const scenario = await this.prisma.scenario.findUnique({ where: { id: scenarioId } });
     if (!scenario) throw new HttpException('Cenário não encontrado.', HttpStatus.NOT_FOUND);

@@ -166,6 +166,8 @@ export const executionsApi = {
     api.patch<Scenario>(`/executions/${executionId}/test-cases/${etcId}/scenarios/${scenarioId}`, data),
   deleteScenario: (executionId: string, etcId: string, scenarioId: string) =>
     api.delete(`/executions/${executionId}/test-cases/${etcId}/scenarios/${scenarioId}`),
+  deleteScenarioBatch: (executionId: string, etcId: string, ids: string[]) =>
+    api.delete(`/executions/${executionId}/test-cases/${etcId}/scenarios`, { data: { ids } }),
 
   addScenarioIssue: (executionId: string, etcId: string, scenarioId: string, data: { type: string; jiraKey?: string; title: string; severity?: string; status?: string }) =>
     api.post<Issue>(`/executions/${executionId}/test-cases/${etcId}/scenarios/${scenarioId}/issues`, data),
