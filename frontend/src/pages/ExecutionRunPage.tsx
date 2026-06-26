@@ -709,12 +709,12 @@ function TestCaseDrawer({
     setAddingScenario(true);
     try {
       const { data } = await executionsApi.createScenario(executionId, etc.id, scenarioName.trim());
-      const newScenarios = [...scenarios, data];
+      const newScenarios = [...scenarios, data.scenario];
       setScenarios(newScenarios);
       onUpdated({ ...etc, scenarios: newScenarios, issues: [] });
       setScenarioName('');
       setShowScenarioForm(false);
-      addToast('Cenário adicionado e salvo no caso de teste para execuções futuras');
+      addToast(data.templateCreated ? 'Cenário adicionado e salvo no caso de teste para execuções futuras' : 'Cenário adicionado');
     } catch (err: any) {
       const msg = err?.response?.data?.message ?? 'Erro ao adicionar cenário.';
       addToast(Array.isArray(msg) ? msg.join(' ') : msg, 'error');
@@ -727,13 +727,13 @@ function TestCaseDrawer({
     setAddingScenario(true);
     try {
       const { data } = await executionsApi.createScenario(executionId, etc.id, wizardScenarioName.trim());
-      const newScenarios = [...scenarios, data];
+      const newScenarios = [...scenarios, data.scenario];
       setScenarios(newScenarios);
       setIssues([]);
       onUpdated({ ...etc, scenarios: newScenarios, issues: [] });
       setShowWizardModal(false);
       setWizardScenarioName('');
-      addToast('Cenário adicionado e salvo no caso de teste para execuções futuras');
+      addToast(data.templateCreated ? 'Cenário adicionado e salvo no caso de teste para execuções futuras' : 'Cenário adicionado');
     } catch (err: any) {
       const msg = err?.response?.data?.message ?? 'Erro ao adicionar cenário.';
       addToast(Array.isArray(msg) ? msg.join(' ') : msg, 'error');

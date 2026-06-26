@@ -159,7 +159,7 @@ export const executionsApi = {
     api.patch<Issue>(`/executions/${executionId}/test-cases/${etcId}/issues/${issueId}`, data),
 
   createScenario: (executionId: string, etcId: string, name: string) =>
-    api.post<Scenario>(`/executions/${executionId}/test-cases/${etcId}/scenarios`, { name }),
+    api.post<{ scenario: Scenario; templateCreated: boolean }>(`/executions/${executionId}/test-cases/${etcId}/scenarios`, { name }),
   createScenarioBatch: (executionId: string, etcId: string, names: string[]) =>
     api.post<{ created: Scenario[]; skipped: string[] }>(`/executions/${executionId}/test-cases/${etcId}/scenarios/batch`, { names }),
   updateScenario: (executionId: string, etcId: string, scenarioId: string, data: { name?: string; status?: string; comments?: string }) =>

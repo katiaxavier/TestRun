@@ -549,6 +549,7 @@ export class ExecutionsService {
     let template = await this.prisma.testCaseScenario.findFirst({
       where: { testCaseId: etc.testCaseId, name: dto.name },
     });
+    const templateCreated = !template;
     if (!template) {
       template = await this.prisma.testCaseScenario.create({
         data: { testCaseId: etc.testCaseId, name: dto.name },
@@ -572,10 +573,11 @@ export class ExecutionsService {
       });
     }
 
-    return this.prisma.scenario.findUnique({
+    const scenarioResult = await this.prisma.scenario.findUnique({
       where: { id: scenario.id },
       include: { issues: true },
     });
+    return { scenario: scenarioResult, templateCreated };
   }
 
   async createScenarioBatch(etcId: string, names: string[]) {
