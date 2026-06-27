@@ -63,7 +63,7 @@ export function SuiteCard({ suite, selected, onSelect, onDelete }: SuiteCardProp
         </h3>
       </Tooltip>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', marginTop: 'auto', paddingTop: '0.85rem', borderTop: '1px solid var(--border-subtle)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', marginTop: 'auto', paddingTop: '0.85rem', borderTop: '1px solid var(--border-subtle)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
           <Flask size={14} style={{ color: 'var(--accent)' }} />
           <strong style={{ color: 'var(--text-primary)' }}>{suite._count?.testCases ?? 0}</strong> casos

@@ -864,7 +864,7 @@ function TestCaseDrawer({
       <div className="drawer-overlay" onClick={onClose} />
       <motion.div
         className="drawer"
-        initial={{ x: 440 }} animate={{ x: 0 }} exit={{ x: 440 }}
+        initial={{ x: 520 }} animate={{ x: 0 }} exit={{ x: 520 }}
         transition={{ type: 'spring', stiffness: 340, damping: 32 }}
       >
         {activeScenario ? (

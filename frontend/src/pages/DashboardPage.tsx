@@ -267,7 +267,7 @@ export default function DashboardPage() {
             )}
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '1rem' }}>
+          <div className="cards-grid">
             <AnimatePresence mode="popLayout">
               {combinedItems.map((item) => (
                 <motion.div
