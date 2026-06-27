@@ -333,7 +333,7 @@ function IssuePanel({
 
 // ── Scenario view inside drawer ───────────────────────────────────────────────
 function ScenarioView({
-  executionId, etcId, scenario, onBack, onUpdated, onDeleted,
+  executionId, etcId, scenario, onBack, onUpdated, onDeleted, allScenarios, currentScenarioIndex, onNavigate,
 }: {
   executionId: string;
   etcId: string;
@@ -341,6 +341,9 @@ function ScenarioView({
   onBack: () => void;
   onUpdated: (s: Scenario) => void;
   onDeleted: (issues?: Issue[]) => void;
+  allScenarios?: Scenario[];
+  currentScenarioIndex?: number;
+  onNavigate?: (s: Scenario) => void;
 }) {
   const [status, setStatus] = useState(scenario.status);
   const [comments, setComments] = useState(scenario.comments ?? '');
@@ -481,6 +484,28 @@ function ScenarioView({
             )}
           </div>
         </div>
+        {allScenarios && allScenarios.length > 1 && onNavigate && (
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.2rem', flexShrink: 0 }}>
+            <Tooltip content="Cenário anterior" placement="top">
+              <button
+                className="btn btn-ghost btn-icon btn-sm"
+                onClick={() => onNavigate(allScenarios[(currentScenarioIndex ?? 0) - 1])}
+                disabled={(currentScenarioIndex ?? 0) <= 0}
+              >
+                <CaretLeft size={15} />
+              </button>
+            </Tooltip>
+            <Tooltip content="Próximo cenário" placement="top">
+              <button
+                className="btn btn-ghost btn-icon btn-sm"
+                onClick={() => onNavigate(allScenarios[(currentScenarioIndex ?? 0) + 1])}
+                disabled={(currentScenarioIndex ?? 0) >= allScenarios.length - 1}
+              >
+                <CaretRight size={15} />
+              </button>
+            </Tooltip>
+          </div>
+        )}
       </div>
 
       {/* Body */}
@@ -850,6 +875,9 @@ function TestCaseDrawer({
             onBack={() => setActiveScenario(null)}
             onUpdated={handleScenarioUpdated}
             onDeleted={handleScenarioDeleted}
+            allScenarios={scenarios}
+            currentScenarioIndex={scenarios.findIndex(s => s.id === activeScenario.id)}
+            onNavigate={(s) => setActiveScenario(s)}
           />
         ) : (
           <>
