@@ -1058,7 +1058,7 @@ function TestCaseDrawer({
                                 )}
                               </span>
                             )}
-                            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600, flexShrink: 0 }}>
+                            <span style={{ fontSize: '0.72rem', color: STATUS_COLORS[scenario.status] ?? 'var(--text-muted)', fontWeight: 600, flexShrink: 0 }}>
                               {STATUS_LABELS[scenario.status] ?? scenario.status}
                             </span>
                             <CaretRight size={12} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
