@@ -7,10 +7,10 @@ const PdfPrinter = require('pdfmake/src/printer');
 
 const fonts = {
   DejaVuSans: {
-    normal: '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
-    bold: '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',
-    italics: '/usr/share/fonts/truetype/dejavu/DejaVuSans-Oblique.ttf',
-    bolditalics: '/usr/share/fonts/truetype/dejavu/DejaVuSans-BoldOblique.ttf',
+    normal: '/usr/share/fonts/dejavu/DejaVuSans.ttf',
+    bold: '/usr/share/fonts/dejavu/DejaVuSans-Bold.ttf',
+    italics: '/usr/share/fonts/dejavu/DejaVuSans-Oblique.ttf',
+    bolditalics: '/usr/share/fonts/dejavu/DejaVuSans-BoldOblique.ttf',
   },
 };
 const printer = new PdfPrinter(fonts);
