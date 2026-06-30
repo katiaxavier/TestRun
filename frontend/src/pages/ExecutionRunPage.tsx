@@ -1595,7 +1595,7 @@ export default function ExecutionRunPage() {
               <thead>
                 <tr>
                   <th style={{ width: 40 }}>#</th>
-                  <th style={{ width: 110 }}>ID</th>
+                  <th style={{ width: 140 }}>ID</th>
                   <th>Título</th>
                   <th style={{ width: 120 }}>Prioridade</th>
                   <th style={{ width: 140 }}>Status</th>

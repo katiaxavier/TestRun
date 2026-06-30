@@ -114,7 +114,7 @@ export function TestCaseList({ testCases, onDelete, suiteMap, renderExtra, isMan
           <thead>
             <tr>
               {suiteMap && <th style={{ width: 120 }}>Suíte</th>}
-              <th style={{ width: 120 }}>ID</th>
+              <th style={{ width: 150 }}>ID</th>
               <th>Título</th>
               <th style={{ width: 120 }}>Prioridade</th>
               {onDelete && <th style={{ width: 60 }} />}
@@ -147,7 +147,7 @@ export function TestCaseList({ testCases, onDelete, suiteMap, renderExtra, isMan
                       )}
                     </td>
                   )}
-                  <td style={{ width: 110 }}>
+                  <td style={{ width: 150 }}>
                     {tc.link ? (
                       <a
                         href={tc.link}
