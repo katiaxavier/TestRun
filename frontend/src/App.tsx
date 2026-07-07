@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
+import { BrowserRouter, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import { Sidebar } from './components/Sidebar';
 import { TopBar } from './components/TopBar';
 import DashboardPage from './pages/DashboardPage';
@@ -9,9 +9,33 @@ import ExecutionRunPage from './pages/ExecutionRunPage';
 import BatchExecutionPage from './pages/BatchExecutionPage';
 import { authApi } from './api/client';
 import type { AuthUser } from './api/client';
-import { ProjectProvider } from './context/ProjectContext';
-import { BoardProvider } from './context/BoardContext';
+import { ProjectProvider, useProject } from './context/ProjectContext';
+import { BoardProvider, useBoard } from './context/BoardContext';
 import './index.css';
+
+// Sai de telas de detalhe (suíte/execução/lote) quando o usuário troca de
+// projeto ou quadro na sidebar, já que esses detalhes pertencem ao contexto anterior.
+function ExitDetailOnContextSwitch() {
+  const { selectedProject } = useProject();
+  const { selectedBoard } = useBoard();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const prevProjectId = useRef(selectedProject?.id);
+  const prevBoardId = useRef(selectedBoard?.id);
+
+  useEffect(() => {
+    const projectChanged = prevProjectId.current !== undefined && prevProjectId.current !== selectedProject?.id;
+    const boardChanged = prevBoardId.current !== undefined && prevBoardId.current !== selectedBoard?.id;
+    prevProjectId.current = selectedProject?.id;
+    prevBoardId.current = selectedBoard?.id;
+
+    if ((projectChanged || boardChanged) && /^\/(suite|execution|batch)\//.test(location.pathname)) {
+      navigate('/');
+    }
+  }, [selectedProject?.id, selectedBoard?.id, location.pathname, navigate]);
+
+  return null;
+}
 
 export default function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(
@@ -52,6 +76,7 @@ export default function App() {
     <ProjectProvider>
       <BoardProvider>
         <BrowserRouter>
+          <ExitDetailOnContextSwitch />
           <div className={`app-layout${sidebarCollapsed ? ' app-layout--collapsed' : ''}`}>
             <Sidebar collapsed={sidebarCollapsed} onToggle={handleSidebarToggle} user={user} onLogout={handleLogout} />
             <main className="main-content">
