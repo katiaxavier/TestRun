@@ -3,22 +3,28 @@ import {
   Get,
   Post,
   Body,
-  Query,
   HttpException,
   HttpStatus,
 } from '@nestjs/common';
+import type { User } from '@prisma/client';
 import { JiraService } from './jira.service';
+import { CurrentUser } from '../auth/current-user.decorator';
 
 @Controller('jira')
 export class JiraController {
   constructor(private readonly jiraService: JiraService) {}
 
+  @Get('site')
+  async getSite(@CurrentUser() user: User) {
+    return { url: await this.jiraService.getSiteUrl(user.id) };
+  }
+
   @Get('test')
-  async testConnection() {
-    const success = await this.jiraService.testConnection();
+  async testConnection(@CurrentUser() user: User) {
+    const success = await this.jiraService.testConnection(user.id);
     if (!success) {
       throw new HttpException(
-        'Falha na conexão com o Jira. Verifique a URL, usuário e API Token.',
+        'Falha na conexão com o Jira.',
         HttpStatus.UNAUTHORIZED,
       );
     }
@@ -29,13 +35,13 @@ export class JiraController {
   }
 
   @Post('import')
-  async importSuite(@Body('key') key: string) {
+  async importSuite(@Body('key') key: string, @CurrentUser() user: User) {
     if (!key) {
       throw new HttpException(
         'A chave da suíte é obrigatória.',
         HttpStatus.BAD_REQUEST,
       );
     }
-    return await this.jiraService.importSuite(key.trim().toUpperCase());
+    return this.jiraService.importSuite(user.id, key.trim().toUpperCase());
   }
 }

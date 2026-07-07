@@ -13,6 +13,8 @@ export class CreateExecutionDto {
 export class CreateBatchExecutionDto {
   suiteIds!: string[];
   name?: string;
+  projectId!: string;
+  boardId?: string;
 }
 
 export class CreateBatchExecutionItemDto {
@@ -335,16 +337,33 @@ export class ExecutionsService {
         HttpStatus.BAD_REQUEST,
       );
     }
+    if (!dto.projectId) {
+      throw new HttpException('O projeto é obrigatório.', HttpStatus.BAD_REQUEST);
+    }
 
     const suites = await this.prisma.suite.findMany({
       where: { id: { in: dto.suiteIds } },
-      include: { testCases: true },
+      include: { testCases: true, boards: true },
     });
 
     if (suites.length !== dto.suiteIds.length) {
       throw new HttpException(
         'Uma ou mais suites não foram encontradas.',
         HttpStatus.NOT_FOUND,
+      );
+    }
+
+    if (suites.some((s) => s.projectId !== dto.projectId)) {
+      throw new HttpException(
+        'Todas as suites do lote devem pertencer ao mesmo projeto.',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    if (dto.boardId && suites.some((s) => !s.boards.some((b) => b.id === dto.boardId))) {
+      throw new HttpException(
+        'Todas as suites do lote devem pertencer ao quadro selecionado.',
+        HttpStatus.BAD_REQUEST,
       );
     }
 
@@ -360,6 +379,8 @@ export class ExecutionsService {
         name: dto.name || null,
         suiteIds: dto.suiteIds as any,
         status: 'PENDING',
+        projectId: dto.projectId,
+        boardId: dto.boardId,
       },
       include: { executions: true },
     });
@@ -502,8 +523,15 @@ export class ExecutionsService {
     return { success: true };
   }
 
-  async findAllBatches() {
+  // boardId === 'none' é o pseudo-quadro "Sem quadro" (lotes com boardId nulo no banco).
+  async findAllBatches(projectId?: string, boardId?: string) {
+    const where: { projectId?: string; boardId?: string | null } = {};
+    if (projectId) where.projectId = projectId;
+    if (boardId === 'none') where.boardId = null;
+    else if (boardId) where.boardId = boardId;
+
     const batches = await this.prisma.executionBatch.findMany({
+      where,
       orderBy: { createdAt: 'desc' },
       include: {
         executions: {

@@ -5,8 +5,8 @@ import type { Suite } from '../api/client';
 import { Copy, Flask } from '@phosphor-icons/react';
 
 export function BatchExecutionModal({
-  open, onClose, suites, onCreated,
-}: { open: boolean; onClose: () => void; suites: Suite[]; onCreated: (batch: any) => void }) {
+  open, onClose, suites, boardId, onCreated,
+}: { open: boolean; onClose: () => void; suites: Suite[]; boardId?: string; onCreated: (batch: any) => void }) {
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -27,6 +27,8 @@ export function BatchExecutionModal({
     try {
       const { data } = await executionsApi.createBatch(suites.map(s => s.id), {
         name: name || undefined,
+        projectId: suites[0].projectId,
+        boardId,
       });
       onCreated(data);
       setName('');

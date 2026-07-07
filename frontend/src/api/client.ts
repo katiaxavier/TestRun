@@ -3,20 +3,50 @@ import axios from 'axios';
 const api = axios.create({
   baseURL: 'http://localhost:3000',
   headers: { 'Content-Type': 'application/json' },
+  withCredentials: true,
 });
+
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const isAuthCheck = error.config?.url?.includes('/auth/me');
+    if (error.response?.status === 401 && !isAuthCheck) {
+      window.location.reload();
+    }
+    return Promise.reject(error);
+  }
+);
 
 export default api;
 
 // ---- Types ----
 
-export interface JiraConfig {
-  url: string;
-  email: string;
-  token: string;
+export interface AuthUser {
+  id: string;
+  displayName: string;
+  email?: string;
+  avatarUrl?: string;
+}
+
+export interface Project {
+  id: string;
+  jiraProjectId: string;
+  jiraProjectKey: string;
+  name: string;
+}
+
+export interface Board {
+  id: string;
+  jiraBoardId: string;
+  name: string;
+  type: string;
+  projectId: string;
 }
 
 export interface Suite {
   id: string;
+  projectId: string;
+  boards?: Board[];
   jiraKey?: string;
   manualKey?: string;
   title: string;
@@ -95,16 +125,37 @@ export interface Issue {
 
 // ---- API helpers ----
 
-export const configApi = {
-  get: () => api.get<JiraConfig>('/config'),
-  save: (data: JiraConfig) => api.post('/config', data),
+export const authApi = {
+  me: () => api.get<AuthUser>('/auth/me'),
+  logout: () => api.post('/auth/logout'),
+};
+
+export const jiraApi = {
+  getSite: () => api.get<{ url: string }>('/jira/site'),
+};
+
+export const projectsApi = {
+  list: () => api.get<Project[]>('/projects'),
+};
+
+export const boardsApi = {
+  list: (projectId: string) =>
+    api.get<{ boards: Board[]; hasUnassignedSuites: boolean }>('/boards', { params: { projectId } }),
 };
 
 export const suitesApi = {
-  list: () => api.get<Suite[]>('/suites'),
+  list: (projectId?: string, boardId?: string) =>
+    api.get<Suite[]>('/suites', { params: { projectId, boardId } }),
   get: (id: string) => api.get<Suite>(`/suites/${id}`),
-  create: (title: string) => api.post<Suite>('/suites', { title }),
-  importFromJira: (jiraKey: string) => api.post<Suite>('/suites/import', { jiraKey }),
+  create: (title: string, projectId: string, boardId?: string) =>
+    api.post<Suite>('/suites', { title, projectId, boardId }),
+  importFromJira: (jiraKey: string, projectId: string, boardId?: string) =>
+    api.post<Suite>('/suites/import', { jiraKey, projectId, boardId }),
+  sync: (boardId: string) =>
+    api.post<{ total: number; synced: string[]; failed: { key: string; error: string }[] }>(
+      '/suites/sync',
+      { boardId },
+    ),
   delete: (id: string) => api.delete(`/suites/${id}`),
   addTestCase: (suiteId: string, jiraKey: string) =>
     api.post<TestCase>(`/suites/${suiteId}/test-cases`, { jiraKey }),
@@ -121,7 +172,8 @@ export const executionsApi = {
   get: (id: string) => api.get<Execution>(`/executions/${id}`),
   delete: (id: string) => api.delete(`/executions/${id}`),
   getBatch: (id: string) => api.get<any>(`/batch/${id}`),
-  getAllBatches: () => api.get<any[]>(`/batch`),
+  getAllBatches: (projectId?: string, boardId?: string) =>
+    api.get<any[]>(`/batch`, { params: { projectId, boardId } }),
   deleteBatch: (id: string) => api.delete(`/batch/${id}`),
   create: (data: {
     suiteId: string;
@@ -133,6 +185,8 @@ export const executionsApi = {
   }) => api.post<Execution>('/executions', data),
   createBatch: (suiteIds: string[], data: {
     name?: string;
+    projectId: string;
+    boardId?: string;
   }) => api.post('/batch', { suiteIds, ...data }),
   createBatchExecution: (batchId: string, data: {
     sprint: string;

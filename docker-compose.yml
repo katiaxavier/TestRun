@@ -1,6 +1,24 @@
 version: '3.8'
 
 services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: testrun-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-testrun}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-testrun}
+      POSTGRES_DB: ${POSTGRES_DB:-testrun}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-testrun} -d ${POSTGRES_DB:-testrun}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
   backend:
     build:
       context: ./backend
@@ -8,12 +26,21 @@ services:
     restart: unless-stopped
     environment:
       PORT: 3000
+      DATABASE_URL: postgresql://${POSTGRES_USER:-testrun}:${POSTGRES_PASSWORD:-testrun}@postgres:5432/${POSTGRES_DB:-testrun}
+      ATLASSIAN_CLIENT_ID: ${ATLASSIAN_CLIENT_ID:-}
+      ATLASSIAN_CLIENT_SECRET: ${ATLASSIAN_CLIENT_SECRET:-}
+      OAUTH_REDIRECT_URI: ${OAUTH_REDIRECT_URI:-}
+      JIRA_CLOUD_ID: ${JIRA_CLOUD_ID:-}
+      TOKEN_ENC_KEY: ${TOKEN_ENC_KEY:-}
+      SESSION_JWT_SECRET: ${SESSION_JWT_SECRET:-}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
     ports:
       - "3000:3000"
     volumes:
       - ./backend/src:/app/src
-      - sqlite-data:/app/prisma
-    depends_on: []
+    depends_on:
+      postgres:
+        condition: service_healthy
 
   frontend:
     build:
@@ -30,4 +57,4 @@ services:
       - backend
 
 volumes:
-  sqlite-data:
+  postgres-data:

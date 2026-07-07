@@ -1,6 +1,6 @@
 import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { ConfigService } from '../config/config.service';
+import { JiraService } from '../jira/jira.service';
 import * as ExcelJS from 'exceljs';
 
 const PdfPrinter = require('pdfmake/src/printer');
@@ -223,17 +223,15 @@ const TABLE_LAYOUT = {
 export class ReportsService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly configService: ConfigService,
+    private readonly jiraService: JiraService,
   ) {}
 
-  private get jiraBaseUrl(): string {
-    return this.configService.getJiraConfig().url || '';
-  }
-
-  private issueLink(jiraKey: string | null | undefined): string | null {
+  private issueLink(
+    jiraKey: string | null | undefined,
+    jiraBaseUrl: string,
+  ): string | null {
     if (!jiraKey || jiraKey === 'N/A') return null;
-    const base = this.jiraBaseUrl;
-    return base ? `${base}/browse/${jiraKey}` : null;
+    return jiraBaseUrl ? `${jiraBaseUrl}/browse/${jiraKey}` : null;
   }
 
   private formatDate(date: Date): string {
@@ -253,7 +251,8 @@ export class ReportsService {
 
   // ── Excel – ciclo individual ────────────────────────────────────────────────
 
-  async generateXlsx(executionId: string): Promise<Buffer> {
+  async generateXlsx(executionId: string, userId: string): Promise<Buffer> {
+    const jiraBaseUrl = await this.jiraService.getSiteUrl(userId);
     const execution = await this.prisma.execution.findUnique({
       where: { id: executionId },
       include: {
@@ -471,7 +470,7 @@ export class ReportsService {
 
     const xlWriteIssueRow = (ws: ExcelJS.Worksheet, issue: any, wsRowNum: number, idx: number) => {
       const row = ws.getRow(wsRowNum);
-      const link = this.issueLink(issue.jiraKey);
+      const link = this.issueLink(issue.jiraKey, jiraBaseUrl);
       row.getCell(1).value = issue.type;
       row.getCell(1).font = { name: 'Arial', size: 11 };
       if (link) {
@@ -693,7 +692,8 @@ export class ReportsService {
 
   // ── PDF – lote ──────────────────────────────────────────────────────────────
 
-  async generateBatchPdf(batchId: string): Promise<Buffer> {
+  async generateBatchPdf(batchId: string, userId: string): Promise<Buffer> {
+    const jiraBaseUrl = await this.jiraService.getSiteUrl(userId);
     const report = await this.getBatchReport(batchId);
     const { batch, summary } = report;
 
@@ -809,7 +809,7 @@ export class ReportsService {
         })(),
 
         pdfSectionHeader('Bugs e Melhorias Reportados'),
-        this.pdfIssuesTable(allIssues, 'Nenhum bug ou melhoria reportado neste lote.'),
+        this.pdfIssuesTable(allIssues, 'Nenhum bug ou melhoria reportado neste lote.', jiraBaseUrl),
       ],
       defaultStyle: { font: 'DejaVuSans' },
     };
@@ -819,7 +819,8 @@ export class ReportsService {
 
   // ── PDF – ciclo individual ──────────────────────────────────────────────────
 
-  async generatePdf(executionId: string): Promise<Buffer> {
+  async generatePdf(executionId: string, userId: string): Promise<Buffer> {
+    const jiraBaseUrl = await this.jiraService.getSiteUrl(userId);
     const execution = await this.prisma.execution.findUnique({
       where: { id: executionId },
       include: {
@@ -1038,7 +1039,7 @@ export class ReportsService {
             }]),
 
         pdfSectionHeader('Bugs e Melhorias Reportados'),
-        this.pdfIssuesTable(allIssues, 'Nenhum bug ou melhoria reportado neste ciclo.'),
+        this.pdfIssuesTable(allIssues, 'Nenhum bug ou melhoria reportado neste ciclo.', jiraBaseUrl),
       ],
       defaultStyle: { font: 'DejaVuSans' },
     };
@@ -1137,7 +1138,7 @@ export class ReportsService {
     };
   }
 
-  private pdfIssuesTable(issues: any[], emptyMessage: string): any {
+  private pdfIssuesTable(issues: any[], emptyMessage: string, jiraBaseUrl: string): any {
     if (issues.length === 0) {
       return { text: emptyMessage, italics: true, fontSize: 9 };
     }
@@ -1170,7 +1171,7 @@ export class ReportsService {
         bgIdx = 0;
       }
       const bg = rowBg(bgIdx++);
-      const link = this.issueLink(issue.key);
+      const link = this.issueLink(issue.key, jiraBaseUrl);
       dataRows.push([
         pdfCell(issue.type, bg),
         link

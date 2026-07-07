@@ -1,14 +1,20 @@
-import { Controller, Get, Param, Res, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Param, Res, HttpStatus, UseGuards } from '@nestjs/common';
+import type { User } from '@prisma/client';
 import { ReportsService } from './reports.service';
+import { CurrentUser } from '../auth/current-user.decorator';
+import { ProjectAccessGuard } from '../projects/project-access.guard';
+import { ProjectAccess } from '../projects/project-access.decorator';
 
 @Controller('reports')
+@UseGuards(ProjectAccessGuard)
 export class ReportsController {
   constructor(private readonly reportsService: ReportsService) {}
 
   @Get(['executions/:id/xlsx', ':id/xlsx'])
-  async downloadXlsx(@Param('id') id: string, @Res() res: any) {
+  @ProjectAccess('execution')
+  async downloadXlsx(@Param('id') id: string, @CurrentUser() user: User, @Res() res: any) {
     try {
-      const buffer = await this.reportsService.generateXlsx(id);
+      const buffer = await this.reportsService.generateXlsx(id, user.id);
 
       res.status(HttpStatus.OK);
       res.setHeader(
@@ -30,9 +36,10 @@ export class ReportsController {
   }
 
   @Get(['executions/:id/pdf', ':id/pdf'])
-  async downloadPdf(@Param('id') id: string, @Res() res: any) {
+  @ProjectAccess('execution')
+  async downloadPdf(@Param('id') id: string, @CurrentUser() user: User, @Res() res: any) {
     try {
-      const buffer = await this.reportsService.generatePdf(id);
+      const buffer = await this.reportsService.generatePdf(id, user.id);
 
       res.status(HttpStatus.OK);
       res.setHeader('Content-Type', 'application/pdf');
@@ -51,11 +58,13 @@ export class ReportsController {
   }
 
   @Get('batch/:id')
+  @ProjectAccess('batch', 'id')
   async getBatchReport(@Param('id') id: string) {
     return this.reportsService.getBatchReport(id);
   }
 
   @Get('batch/:id/xlsx')
+  @ProjectAccess('batch', 'id')
   async downloadBatchXlsx(@Param('id') id: string, @Res() res: any) {
     try {
       const buffer = await this.reportsService.generateBatchXlsx(id);
@@ -80,9 +89,10 @@ export class ReportsController {
   }
 
   @Get('batch/:id/pdf')
-  async downloadBatchPdf(@Param('id') id: string, @Res() res: any) {
+  @ProjectAccess('batch', 'id')
+  async downloadBatchPdf(@Param('id') id: string, @CurrentUser() user: User, @Res() res: any) {
     try {
-      const buffer = await this.reportsService.generateBatchPdf(id);
+      const buffer = await this.reportsService.generateBatchPdf(id, user.id);
 
       res.status(HttpStatus.OK);
       res.setHeader('Content-Type', 'application/pdf');

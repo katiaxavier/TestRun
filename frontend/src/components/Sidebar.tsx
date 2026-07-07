@@ -1,18 +1,22 @@
 import { NavLink } from 'react-router-dom';
-import { FlaskIcon, GearIcon, CaretDoubleLeftIcon, CaretDoubleRightIcon } from '@phosphor-icons/react';
+import { FlaskIcon, CaretDoubleLeftIcon, CaretDoubleRightIcon, SignOutIcon } from '@phosphor-icons/react';
 import { Tooltip } from './Tooltip';
+import { ProjectSelector } from './ProjectSelector';
+import { BoardSelector } from './BoardSelector';
+import type { AuthUser } from '../api/client';
 
 const links = [
   { to: '/', label: 'Suítes de Teste', icon: FlaskIcon, end: true },
-  { to: '/config', label: 'Configurações', icon: GearIcon },
 ];
 
 interface SidebarProps {
   collapsed: boolean;
   onToggle: () => void;
+  user: AuthUser | null;
+  onLogout: () => void;
 }
 
-export function Sidebar({ collapsed, onToggle }: SidebarProps) {
+export function Sidebar({ collapsed, onToggle, user, onLogout }: SidebarProps) {
   return (
     <nav className={`sidebar${collapsed ? ' sidebar--collapsed' : ''}`}>
       <div className="sidebar-logo">
@@ -29,6 +33,9 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
             : <CaretDoubleLeftIcon size={13} weight="bold" />}
         </button>
       </div>
+
+      <ProjectSelector collapsed={collapsed} />
+      <BoardSelector collapsed={collapsed} />
 
       {links.map(({ to, label, icon: Icon, end }) => (
         <Tooltip
@@ -54,8 +61,31 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
       ))}
 
       <div className="sidebar-footer">
-        {!collapsed && (
-          <span className="sidebar-footer-version">Testrun v1.0 — Local</span>
+        {user && (
+          <div className="sidebar-user" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', width: '100%' }}>
+            {user.avatarUrl && (
+              <img
+                src={user.avatarUrl}
+                alt={user.displayName}
+                style={{ width: 24, height: 24, borderRadius: '50%', flexShrink: 0 }}
+              />
+            )}
+            {!collapsed && (
+              <span className="sidebar-footer-version" style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {user.displayName}
+              </span>
+            )}
+            <Tooltip content="Sair" placement="right" delay={150}>
+              <button
+                type="button"
+                onClick={onLogout}
+                aria-label="Sair"
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', flexShrink: 0 }}
+              >
+                <SignOutIcon size={16} />
+              </button>
+            </Tooltip>
+          </div>
         )}
       </div>
     </nav>
