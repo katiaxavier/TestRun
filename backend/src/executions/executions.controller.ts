@@ -7,6 +7,7 @@ import {
   Param,
   Patch,
   HttpCode,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -25,6 +26,22 @@ import { ProjectAccess } from '../projects/project-access.decorator';
 @UseGuards(ProjectAccessGuard)
 export class ExecutionsController {
   constructor(private readonly executionsService: ExecutionsService) {}
+
+  @Get()
+  @ProjectAccess('direct')
+  async findRecent(
+    @Query('projectId') projectId: string,
+    @Query('boardId') boardId?: string,
+    @Query('status') status?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.executionsService.findRecentExecutions(
+      projectId,
+      boardId,
+      status,
+      limit ? Number(limit) : undefined,
+    );
+  }
 
   @Get(':id')
   @ProjectAccess('execution')

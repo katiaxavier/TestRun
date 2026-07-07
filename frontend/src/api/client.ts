@@ -80,6 +80,7 @@ export interface Execution {
   suiteId?: string;
   suite?: Suite;
   batchId?: string;
+  batch?: { id: string; name?: string };
   sprint: string;
   version?: string;
   startDate: string;
@@ -169,6 +170,8 @@ export const suitesApi = {
 };
 
 export const executionsApi = {
+  getRecent: (projectId?: string, boardId?: string, opts?: { limit?: number; status?: string }) =>
+    api.get<Execution[]>('/executions', { params: { projectId, boardId, limit: opts?.limit, status: opts?.status } }),
   get: (id: string) => api.get<Execution>(`/executions/${id}`),
   delete: (id: string) => api.delete(`/executions/${id}`),
   getBatch: (id: string) => api.get<any>(`/batch/${id}`),

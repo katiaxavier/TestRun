@@ -62,7 +62,7 @@ nesta sessão).
 
 ---
 
-## Fase 2 — Nova tela de Dashboard como home (pendente)
+## Fase 2 — Nova tela de Dashboard como home ✅ Concluída
 
 ### Backend: endpoint agregado de execuções
 
@@ -165,6 +165,13 @@ Criar `frontend/src/pages/DashboardPage.tsx` do zero (nome livre após o rename 
   de página inteira, já que os dois painéis são independentes).
 - Múltiplas execuções em andamento simultâneas: comportamento documentado (mostra a mais recente como "ativa"),
   não é bug.
+
+**Verificação feita**: `tsc --noEmit` sem erros no frontend e no backend; hot-reload do backend (Nest) confirmou
+a rota `GET /executions` mapeada sem colidir com `GET /executions/:id`; `curl` no endpoint retornou `401`
+(esperado, sem sessão OAuth — confirma que a rota existe e passa pelo guard, não um 404/500); Vite recarregou
+`DashboardPage.tsx`, `App.tsx`, `Sidebar.tsx` e `TopBar.tsx` sem erros de compilação. Teste manual no navegador
+(painel ativo com polling, empty-states, troca de projeto/quadro) fica pendente de validação pelo usuário —
+mesma limitação da Fase 1 (sem OAuth Atlassian configurado nesta sessão).
 
 ---
 
