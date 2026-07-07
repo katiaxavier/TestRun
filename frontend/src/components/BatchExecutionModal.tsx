@@ -27,6 +27,7 @@ export function BatchExecutionModal({
     try {
       const { data } = await executionsApi.createBatch(suites.map(s => s.id), {
         name: name || undefined,
+        projectId: suites[0].projectId,
       });
       onCreated(data);
       setName('');

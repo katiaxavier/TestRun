@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Delete, Body, Param } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Body, Param, Query } from '@nestjs/common';
 import {
   ExecutionsService,
   CreateBatchExecutionDto,
@@ -10,8 +10,8 @@ export class BatchController {
   constructor(private readonly executionsService: ExecutionsService) {}
 
   @Get()
-  async findAll() {
-    return this.executionsService.findAllBatches();
+  async findAll(@Query('projectId') projectId?: string) {
+    return this.executionsService.findAllBatches(projectId);
   }
 
   @Post()

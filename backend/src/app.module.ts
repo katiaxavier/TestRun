@@ -10,6 +10,7 @@ import { JiraModule } from './jira/jira.module';
 import { SuitesModule } from './suites/suites.module';
 import { ExecutionsModule } from './executions/executions.module';
 import { ReportsModule } from './reports/reports.module';
+import { ProjectsModule } from './projects/projects.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { ReportsModule } from './reports/reports.module';
     PrismaModule,
     AuthModule,
     JiraModule,
+    ProjectsModule,
     SuitesModule,
     ExecutionsModule,
     ReportsModule,

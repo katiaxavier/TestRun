@@ -9,8 +9,9 @@ export class SuitesService {
     private readonly jiraService: JiraService,
   ) {}
 
-  async findAll() {
+  async findAll(projectId?: string) {
     return this.prisma.suite.findMany({
+      where: projectId ? { projectId } : {},
       include: {
         _count: {
           select: { testCases: true, executions: true },
@@ -48,11 +49,11 @@ export class SuitesService {
     return suite;
   }
 
-  async createManual(title: string) {
-    const count = await this.prisma.suite.count({ where: { isManual: true } });
+  async createManual(title: string, projectId: string) {
+    const count = await this.prisma.suite.count({ where: { isManual: true, projectId } });
     const manualKey = `SUITE-${String(count + 1).padStart(3, '0')}`;
     const suite = await this.prisma.suite.create({
-      data: { title, isManual: true, manualKey },
+      data: { title, isManual: true, manualKey, projectId },
     });
     return this.findOne(suite.id);
   }
@@ -124,7 +125,7 @@ export class SuitesService {
     return { success: true };
   }
 
-  async importFromJira(jiraKey: string, userId: string) {
+  async importFromJira(jiraKey: string, userId: string, projectId: string) {
     const key = jiraKey.trim().toUpperCase();
 
     // 1. Buscar do Jira
@@ -132,11 +133,12 @@ export class SuitesService {
 
     // 2. Criar ou atualizar a Suite no banco
     const suite = await this.prisma.suite.upsert({
-      where: { jiraKey: key },
+      where: { projectId_jiraKey: { projectId, jiraKey: key } },
       update: { title: jiraData.suiteTitle },
       create: {
         jiraKey: key,
         title: jiraData.suiteTitle,
+        projectId,
       },
     });
 

@@ -4,6 +4,7 @@ import {
   Post,
   Delete,
   Param,
+  Query,
   Body,
   HttpException,
   HttpStatus,
@@ -17,8 +18,8 @@ export class SuitesController {
   constructor(private readonly suitesService: SuitesService) {}
 
   @Get()
-  async findAll() {
-    return this.suitesService.findAll();
+  async findAll(@Query('projectId') projectId?: string) {
+    return this.suitesService.findAll(projectId);
   }
 
   @Get(':id')
@@ -27,22 +28,32 @@ export class SuitesController {
   }
 
   @Post()
-  async createManual(@Body('title') title: string) {
+  async createManual(@Body('title') title: string, @Body('projectId') projectId: string) {
     if (!title?.trim()) {
       throw new HttpException('O título da suíte é obrigatório.', HttpStatus.BAD_REQUEST);
     }
-    return this.suitesService.createManual(title.trim());
+    if (!projectId) {
+      throw new HttpException('O projeto é obrigatório.', HttpStatus.BAD_REQUEST);
+    }
+    return this.suitesService.createManual(title.trim(), projectId);
   }
 
   @Post('import')
-  async importSuite(@Body('jiraKey') jiraKey: string, @CurrentUser() user: User) {
+  async importSuite(
+    @Body('jiraKey') jiraKey: string,
+    @Body('projectId') projectId: string,
+    @CurrentUser() user: User,
+  ) {
     if (!jiraKey) {
       throw new HttpException(
         'A chave do Jira é obrigatória.',
         HttpStatus.BAD_REQUEST,
       );
     }
-    return this.suitesService.importFromJira(jiraKey, user.id);
+    if (!projectId) {
+      throw new HttpException('O projeto é obrigatório.', HttpStatus.BAD_REQUEST);
+    }
+    return this.suitesService.importFromJira(jiraKey, user.id, projectId);
   }
 
   @Post(':id/test-cases')

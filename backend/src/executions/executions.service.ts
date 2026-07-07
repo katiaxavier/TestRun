@@ -13,6 +13,7 @@ export class CreateExecutionDto {
 export class CreateBatchExecutionDto {
   suiteIds!: string[];
   name?: string;
+  projectId!: string;
 }
 
 export class CreateBatchExecutionItemDto {
@@ -335,6 +336,9 @@ export class ExecutionsService {
         HttpStatus.BAD_REQUEST,
       );
     }
+    if (!dto.projectId) {
+      throw new HttpException('O projeto é obrigatório.', HttpStatus.BAD_REQUEST);
+    }
 
     const suites = await this.prisma.suite.findMany({
       where: { id: { in: dto.suiteIds } },
@@ -345,6 +349,13 @@ export class ExecutionsService {
       throw new HttpException(
         'Uma ou mais suites não foram encontradas.',
         HttpStatus.NOT_FOUND,
+      );
+    }
+
+    if (suites.some((s) => s.projectId !== dto.projectId)) {
+      throw new HttpException(
+        'Todas as suites do lote devem pertencer ao mesmo projeto.',
+        HttpStatus.BAD_REQUEST,
       );
     }
 
@@ -360,6 +371,7 @@ export class ExecutionsService {
         name: dto.name || null,
         suiteIds: dto.suiteIds as any,
         status: 'PENDING',
+        projectId: dto.projectId,
       },
       include: { executions: true },
     });
@@ -502,8 +514,9 @@ export class ExecutionsService {
     return { success: true };
   }
 
-  async findAllBatches() {
+  async findAllBatches(projectId?: string) {
     const batches = await this.prisma.executionBatch.findMany({
+      where: projectId ? { projectId } : {},
       orderBy: { createdAt: 'desc' },
       include: {
         executions: {

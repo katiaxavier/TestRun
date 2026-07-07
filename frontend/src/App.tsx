@@ -9,6 +9,7 @@ import ExecutionRunPage from './pages/ExecutionRunPage';
 import BatchExecutionPage from './pages/BatchExecutionPage';
 import { authApi } from './api/client';
 import type { AuthUser } from './api/client';
+import { ProjectProvider } from './context/ProjectContext';
 import './index.css';
 
 export default function App() {
@@ -47,19 +48,21 @@ export default function App() {
   }
 
   return (
-    <BrowserRouter>
-      <div className={`app-layout${sidebarCollapsed ? ' app-layout--collapsed' : ''}`}>
-        <Sidebar collapsed={sidebarCollapsed} onToggle={handleSidebarToggle} user={user} onLogout={handleLogout} />
-        <main className="main-content">
-          <TopBar />
-          <Routes>
-            <Route path="/" element={<DashboardPage />} />
-            <Route path="/suite/:id" element={<SuiteDetailPage />} />
-            <Route path="/execution/:id" element={<ExecutionRunPage />} />
-            <Route path="/batch/:id" element={<BatchExecutionPage />} />
-          </Routes>
-        </main>
-      </div>
-    </BrowserRouter>
+    <ProjectProvider>
+      <BrowserRouter>
+        <div className={`app-layout${sidebarCollapsed ? ' app-layout--collapsed' : ''}`}>
+          <Sidebar collapsed={sidebarCollapsed} onToggle={handleSidebarToggle} user={user} onLogout={handleLogout} />
+          <main className="main-content">
+            <TopBar />
+            <Routes>
+              <Route path="/" element={<DashboardPage />} />
+              <Route path="/suite/:id" element={<SuiteDetailPage />} />
+              <Route path="/execution/:id" element={<ExecutionRunPage />} />
+              <Route path="/batch/:id" element={<BatchExecutionPage />} />
+            </Routes>
+          </main>
+        </div>
+      </BrowserRouter>
+    </ProjectProvider>
   );
 }

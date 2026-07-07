@@ -14,10 +14,11 @@ import { ConfirmModal } from '../components/ConfirmModal';
 import { SuiteCard } from '../components/SuiteCard';
 import { BatchCard } from '../components/BatchCard';
 import { Tooltip } from '../components/Tooltip';
+import { useProject } from '../context/ProjectContext';
 
 type CreateMode = 'jira' | 'manual';
 
-function CreateSuiteModal({ open, onClose, onSuccess }: { open: boolean; onClose: () => void; onSuccess: (s: Suite) => void }) {
+function CreateSuiteModal({ open, onClose, onSuccess, projectId }: { open: boolean; onClose: () => void; onSuccess: (s: Suite) => void; projectId: string }) {
   const [mode, setMode] = useState<CreateMode>('jira');
   const [jiraKey, setJiraKey] = useState('');
   const [title, setTitle] = useState('');
@@ -35,11 +36,11 @@ function CreateSuiteModal({ open, onClose, onSuccess }: { open: boolean; onClose
     try {
       if (mode === 'jira') {
         if (!jiraKey.trim()) return;
-        const { data } = await suitesApi.importFromJira(jiraKey.trim());
+        const { data } = await suitesApi.importFromJira(jiraKey.trim(), projectId);
         onSuccess(data);
       } else {
         if (!title.trim()) return;
-        const { data } = await suitesApi.create(title.trim());
+        const { data } = await suitesApi.create(title.trim(), projectId);
         onSuccess(data);
       }
       onClose();
@@ -131,6 +132,7 @@ function CreateSuiteModal({ open, onClose, onSuccess }: { open: boolean; onClose
 
 export default function DashboardPage() {
   const navigate = useNavigate();
+  const { selectedProject, loading: projectLoading } = useProject();
   const [suites, setSuites] = useState<Suite[]>([]);
   const [batches, setBatches] = useState<any[]>([]);
   const [selectedSuites, setSelectedSuites] = useState<string[]>([]);
@@ -143,25 +145,32 @@ export default function DashboardPage() {
   const [filter, setFilter] = useState<'all' | 'suites' | 'batches'>('all');
   const [batchModalOpen, setBatchModalOpen] = useState(false);
 
-  const fetchSuites = useCallback(async () => {
+  const fetchSuites = useCallback(async (projectId: string) => {
     try {
-      const { data } = await suitesApi.list();
+      const { data } = await suitesApi.list(projectId);
       setSuites(data);
     } catch {}
     finally { setLoading(false); }
   }, []);
 
-  const fetchBatches = useCallback(async () => {
+  const fetchBatches = useCallback(async (projectId: string) => {
     try {
-      const { data } = await executionsApi.getAllBatches();
+      const { data } = await executionsApi.getAllBatches(projectId);
       setBatches(data);
     } catch {}
   }, []);
 
   useEffect(() => {
-    fetchSuites();
-    fetchBatches();
-  }, [fetchSuites, fetchBatches]);
+    if (!selectedProject) {
+      setSuites([]);
+      setBatches([]);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    fetchSuites(selectedProject.id);
+    fetchBatches(selectedProject.id);
+  }, [selectedProject, fetchSuites, fetchBatches]);
 
   const handleImportSuccess = (suite: Suite) => {
     setSuites(prev => {
@@ -234,7 +243,7 @@ export default function DashboardPage() {
                 <CopyIcon size={16} /> Criar Lote de Suítes
               </button>
             </Tooltip>
-            <button className="btn btn-primary" style={{ height: 48 }} onClick={() => setCreateOpen(true)}>
+            <button className="btn btn-primary" style={{ height: 48 }} onClick={() => setCreateOpen(true)} disabled={!selectedProject}>
               <Plus size={16} /> Nova Suíte
             </button>
           </div>
@@ -253,7 +262,15 @@ export default function DashboardPage() {
         </div>
         <div style={{ height: 1, background: 'var(--border-subtle)', marginBottom: '1.5rem' }}></div>
 
-        {loading ? (
+        {projectLoading ? (
+          <div className="loading-page"><div className="spinner" /> Carregando...</div>
+        ) : !selectedProject ? (
+          <div className="empty-state" style={{ marginTop: '3rem' }}>
+            <Flask size={56} />
+            <h3>Nenhum projeto selecionado</h3>
+            <p>Selecione um projeto no menu lateral para ver suas suítes e lotes.</p>
+          </div>
+        ) : loading ? (
           <div className="loading-page"><div className="spinner" /> Carregando...</div>
         ) : combinedItems.length === 0 ? (
           <div className="empty-state" style={{ marginTop: '3rem' }}>
@@ -298,7 +315,14 @@ export default function DashboardPage() {
         )}
       </motion.div>
 
-      <CreateSuiteModal open={createOpen} onClose={() => setCreateOpen(false)} onSuccess={handleImportSuccess} />
+      {selectedProject && (
+        <CreateSuiteModal
+          open={createOpen}
+          onClose={() => setCreateOpen(false)}
+          onSuccess={handleImportSuccess}
+          projectId={selectedProject.id}
+        />
+      )}
       <ConfirmModal
         open={!!deleteTargetSuite}
         title="Excluir Suíte"
@@ -339,7 +363,7 @@ export default function DashboardPage() {
         onCreated={(batch) => {
           setSelectedSuites([]);
           setBatchModalOpen(false);
-          fetchBatches();
+          if (selectedProject) fetchBatches(selectedProject.id);
           navigate(`/batch/${batch.id}`);
         }}
       />

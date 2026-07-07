@@ -16,20 +16,50 @@ model User {
   accessToken        String?
   refreshToken       String?
   accessTokenExpires DateTime?
+  memberships        ProjectMembership[]
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 }
 
+model Project {
+  id             String              @id @default(uuid())
+  jiraProjectId  String              @unique
+  jiraProjectKey String              @unique
+  name           String
+  lastSyncedAt   DateTime?
+  suites         Suite[]
+  batches        ExecutionBatch[]
+  memberships    ProjectMembership[]
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+}
+
+model ProjectMembership {
+  id            String   @id @default(uuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projectId     String
+  project       Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  lastCheckedAt DateTime @default(now())
+
+  @@unique([userId, projectId])
+}
+
 model Suite {
   id         String      @id @default(uuid())
-  jiraKey    String?     @unique
-  manualKey  String?     @unique
+  projectId  String
+  project    Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  jiraKey    String?
+  manualKey  String?
   title      String
   isManual   Boolean     @default(false)
   testCases  TestCase[]
   executions Execution[]
   createdAt  DateTime    @default(now())
   updatedAt  DateTime    @updatedAt
+
+  @@unique([projectId, jiraKey])
+  @@unique([projectId, manualKey])
 }
 
 model TestCase {
@@ -76,6 +106,8 @@ model Execution {
 
 model ExecutionBatch {
   id                  String      @id @default(uuid())
+  projectId           String
+  project             Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
   name                String?
   suiteIds            Json
   testedFeature       String?

@@ -31,6 +31,47 @@ export class JiraService {
     return siteUrl;
   }
 
+  async listProjects(
+    userId: string,
+  ): Promise<Array<{ jiraProjectId: string; jiraProjectKey: string; name: string }>> {
+    const { accessToken, apiBaseUrl } = await this.authContext(userId);
+
+    const projects: Array<{ jiraProjectId: string; jiraProjectKey: string; name: string }> = [];
+    let startAt = 0;
+    let isLast = false;
+
+    while (!isLast) {
+      const response = await fetch(
+        `${apiBaseUrl}/rest/api/3/project/search?startAt=${startAt}&maxResults=50`,
+        {
+          method: 'GET',
+          headers: { Authorization: `Bearer ${accessToken}`, Accept: 'application/json' },
+        },
+      );
+
+      if (!response.ok) {
+        throw new HttpException(
+          `Erro ao listar projetos do Jira (${response.statusText}).`,
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+
+      const data = await response.json();
+      for (const project of data.values ?? []) {
+        projects.push({
+          jiraProjectId: project.id,
+          jiraProjectKey: project.key,
+          name: project.name,
+        });
+      }
+
+      isLast = data.isLast ?? true;
+      startAt += data.values?.length ?? 0;
+    }
+
+    return projects;
+  }
+
   async testConnection(userId: string): Promise<boolean> {
     try {
       const { accessToken, apiBaseUrl } = await this.authContext(userId);
