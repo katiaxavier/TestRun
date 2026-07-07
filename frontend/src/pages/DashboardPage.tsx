@@ -56,7 +56,8 @@ export default function DashboardPage() {
       ? `Lote — ${execution.batch.name}`
       : undefined;
 
-  const navigateToExecution = (execution: Execution) => navigate(`/execution/${execution.id}`);
+  const navigateToExecution = (execution: Execution) =>
+    navigate(`/execution/${execution.id}`, { state: { from: 'dashboard' } });
 
   if (projectLoading || boardLoading) {
     return <div className="loading-page"><div className="spinner" /> Carregando...</div>;

@@ -6,7 +6,7 @@ import { BoardSelector } from './BoardSelector';
 import type { AuthUser } from '../api/client';
 
 const links = [
-  { to: '/', label: 'Dashboard', icon: GaugeIcon, end: true },
+  { to: '/dashboard', label: 'Dashboard', icon: GaugeIcon, end: true },
   { to: '/suites', label: 'Suítes de Teste', icon: FlaskIcon, end: true },
 ];
 
