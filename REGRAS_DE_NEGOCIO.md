@@ -1,29 +1,69 @@
 # Regras de Negócio — TestRun
 
-**Versão:** 1.0  
-**Data:** 24/06/2026  
+**Versão:** 2.0  
+**Data:** 07/07/2026  
 **Sistema:** TestRun — Plataforma de Gestão de Testes de QA
 
 ---
 
 ## 1. Visão Geral
 
-O TestRun é uma plataforma local de gerenciamento de testes que centraliza a criação de suítes, execução de casos de teste, registro de bugs/melhorias e geração de relatórios (Excel e PDF). Integra-se opcionalmente com o Jira para importação de tickets.
+O TestRun é uma plataforma colaborativa de gerenciamento de testes que centraliza a criação de suítes, execução de casos de teste, registro de bugs/melhorias e geração de relatórios (Excel e PDF). Login é feito via conta Atlassian (OAuth 2.0), e o acesso aos dados é organizado por Projeto e Quadro do Jira: suítes, execuções e lotes pertencem a um Projeto (e opcionalmente a um Quadro) e são compartilhados por todos os membros que têm acesso a esse Projeto no Jira. A integração com o Jira deixou de ser opcional/manual (Basic Auth) e passou a ser a fonte de identidade (autenticação) e de visibilidade (autorização) do sistema.
 
 ---
 
 ## 2. Entidades do Sistema
 
-### 2.1 Suíte (`Suite`)
-Conjunto de casos de teste. Pode ser criada manualmente ou importada do Jira.
+### 2.1 Usuário (`User`)
+Conta local criada/atualizada a partir do login com a Atlassian.
 
 | Campo | Tipo | Regra |
 |---|---|---|
-| `jiraKey` | string (opcional) | Preenchido apenas em suítes importadas do Jira |
+| `atlassianAccountId` | string | Único; identifica a conta Atlassian do usuário |
+| `displayName` | string | Obrigatório |
+| `email`, `avatarUrl` | string (opcionais) | Vindos do perfil Atlassian |
+| `accessToken` / `refreshToken` | string (cifrados) | Tokens OAuth do usuário, armazenados cifrados (AES-256-GCM) no servidor; nunca expostos ao frontend |
+| `accessTokenExpires` | datetime | Usado para renovar o `accessToken` automaticamente via `refreshToken` |
+
+### 2.2 Projeto (`Project`)
+Espelha um projeto do Jira. É o nível de compartilhamento: tudo que pertence a um Projeto é visível para todos os usuários com acesso a ele no Jira.
+
+| Campo | Tipo | Regra |
+|---|---|---|
+| `jiraProjectId` / `jiraProjectKey` | string | Únicos; identificam o projeto no Jira |
+| `name` | string | Obrigatório |
+| `lastSyncedAt` | datetime (opcional) | Última sincronização de metadados do projeto |
+
+Existe um projeto sentinela `MANUAL` (`jiraProjectId = 'manual'`) que não corresponde a nenhum projeto real do Jira — abriga as suítes criadas manualmente (sem vínculo com o Jira). Qualquer usuário autenticado tem acesso a ele, já que não é regido por permissão do Jira.
+
+### 2.3 Quadro (`Board`)
+Um projeto do Jira pode conter vários quadros (boards) reais — por exemplo, times/frentes diferentes dentro do mesmo projeto. O Quadro é um nível opcional entre Projeto e Suíte, usado para segmentar a sincronização.
+
+| Campo | Tipo | Regra |
+|---|---|---|
+| `jiraBoardId` | string | Único; identifica o quadro no Jira |
+| `name`, `type` | string | Metadados do quadro (ex.: tipo Scrum/Kanban) |
+| `projectId` | FK | Todo quadro pertence a exatamente um projeto |
+
+### 2.4 Vínculo de Acesso ao Projeto (`ProjectMembership`)
+Cache local de "o usuário X pode acessar o projeto Y no Jira", usado para autorização sem precisar consultar o Jira a cada requisição.
+
+| Campo | Tipo | Regra |
+|---|---|---|
+| `userId` + `projectId` | únicos (composto) | Um registro por par usuário/projeto |
+| `lastCheckedAt` | datetime | Data da última confirmação do acesso contra o Jira; usado no TTL (ver 10.2) |
+
+### 2.5 Suíte (`Suite`)
+Conjunto de casos de teste. Pode ser criada manualmente ou importada do Jira. Pertence sempre a um Projeto e pode estar associada a nenhum, um ou vários Quadros (relação muitos-para-muitos, já que uma mesma suíte pode aparecer em mais de um quadro do Jira ao mesmo tempo).
+
+| Campo | Tipo | Regra |
+|---|---|---|
+| `projectId` | FK | Obrigatório; toda suíte pertence a exatamente um projeto |
+| `jiraKey` | string (opcional) | Preenchido apenas em suítes importadas do Jira; único por projeto (`projectId` + `jiraKey`) |
 | `title` | string | Obrigatório |
 | `isManual` | boolean | `true` = criada manualmente; `false` = importada do Jira |
 
-### 2.2 Caso de Teste (`TestCase`)
+### 2.6 Caso de Teste (`TestCase`)
 Item individual de teste pertencente a uma suíte.
 
 | Campo | Tipo | Regra |
@@ -32,10 +72,10 @@ Item individual de teste pertencente a uma suíte.
 | `priority` | string | Importada do Jira ou definida manualmente |
 | `suiteId` | FK | Cada caso pertence a exatamente uma suíte |
 
-### 2.3 Cenário Template (`TestCaseScenario`)
+### 2.7 Cenário Template (`TestCaseScenario`)
 Modelo de cenário/charter definido no nível da suíte, antes da execução. Serve como base para as execuções futuras.
 
-### 2.4 Execução (`Execution`)
+### 2.8 Execução (`Execution`)
 Representa um ciclo de teste de uma suíte.
 
 | Campo | Tipo | Regra |
@@ -43,7 +83,7 @@ Representa um ciclo de teste de uma suíte.
 | `status` | enum | `PENDING` → `IN_PROGRESS` → `COMPLETED` (calculado automaticamente) |
 | `batchId` | FK (opcional) | Preenchido se a execução pertence a um lote |
 
-### 2.5 Caso de Teste na Execução (`ExecutionTestCase`)
+### 2.9 Caso de Teste na Execução (`ExecutionTestCase`)
 Instância de um caso de teste dentro de uma execução.
 
 | Campo | Valores | Regra |
@@ -51,7 +91,7 @@ Instância de um caso de teste dentro de uma execução.
 | `status` | `PENDING`, `PASSED`, `FAILED`, `BLOCKED`, `IN_PROGRESS` | Atualizado manualmente pelo testador |
 | `originalStatus` | string (nullable) | Guarda o status do TC antes de cenários serem criados |
 
-### 2.6 Cenário de Execução (`Scenario`)
+### 2.10 Cenário de Execução (`Scenario`)
 Instância de um cenário dentro de uma execução. Pode originar de um template ou ser criado durante a execução (ad-hoc).
 
 | Campo | Tipo | Regra |
@@ -59,7 +99,7 @@ Instância de um cenário dentro de uma execução. Pode originar de um template
 | `templateId` | FK (nullable) | `null` = criado ad-hoc durante execução |
 | `status` | enum | Mesmo conjunto do `ExecutionTestCase`; inicia sempre como `PENDING` |
 
-### 2.7 Issue (`Issue`)
+### 2.11 Issue (`Issue`)
 Bug ou melhoria vinculado a um caso de teste ou a um cenário.
 
 | Campo | Valores |
@@ -68,7 +108,7 @@ Bug ou melhoria vinculado a um caso de teste ou a um cenário.
 | `severity` | Trivial, Normal, Low, Medium, High, Critical, Gravissima |
 | `status` | Open, In Progress, Resolved, Cancelled |
 
-### 2.8 Lote (`ExecutionBatch`)
+### 2.12 Lote (`ExecutionBatch`)
 Agrupa múltiplas suítes para execução conjunta.
 
 | Campo | Tipo | Regra |
@@ -104,6 +144,18 @@ Agrupa múltiplas suítes para execução conjunta.
 ### 3.5 Exclusão de Suíte
 - Não é possível excluir uma suíte que faça parte de um `ExecutionBatch` ativo.
 - O lote deve ser excluído primeiro.
+
+### 3.6 Toda Suíte Pertence a um Projeto
+- Criação manual ou importação exigem um `projectId` (projeto selecionado na interface).
+- A chave Jira de uma suíte é única **por projeto** (duas suítes em projetos diferentes podem ter a mesma `jiraKey`).
+
+### 3.7 Sincronização de Suítes por Quadro
+- Critério de "suíte" no Jira: issues do tipo (`issuetype`) **"Test Suite"**.
+- A sincronização é feita **por Quadro**, não pelo projeto inteiro: `POST /suites/sync` recebe `{ boardId }`.
+- O sistema busca todas as chaves de issues "Test Suite" do quadro e importa cada uma reaproveitando a regra de importação (3.2).
+- Falhas de importação individuais **não abortam o lote de sincronização**: as suítes que falharem são reportadas separadamente (`failed: [{ key, error }]`), e as demais são sincronizadas normalmente.
+- Uma suíte já existente que é sincronizada por um novo quadro **ganha esse quadro adicionalmente** — a associação com quadros anteriores não é removida (relação muitos-para-muitos: a mesma suíte pode pertencer a mais de um quadro ao mesmo tempo).
+- Chamadas ao Jira durante a sincronização re-tentam automaticamente em caso de erro `429` (rate limit), respeitando o header `Retry-After` (com backoff exponencial como alternativa).
 
 ---
 
@@ -210,6 +262,7 @@ Isso evita dupla contagem e reflete fielmente o progresso real da execução.
 ### 8.1 Criação
 - Deve conter ao menos uma suíte.
 - Todas as suítes devem ter casos de teste importados.
+- Pertence obrigatoriamente a um Projeto (`projectId`); pode opcionalmente estar associado a um Quadro (`boardId`).
 
 ### 8.2 Execução a partir de um Lote
 - Uma única instância de `Execution` é criada contendo todos os TCs de todas as suítes do lote.
@@ -227,31 +280,91 @@ Isso evita dupla contagem e reflete fielmente o progresso real da execução.
 
 ---
 
-## 9. Integração com Jira
+## 9. Autenticação (Login com Atlassian)
 
-### 9.1 Configuração
-- Requer: URL do Jira, e-mail e token de API.
-- As credenciais são armazenadas localmente em arquivo JSON de configuração.
+### 9.1 Fluxo (OAuth 2.0 3LO)
+1. `GET /auth/login` redireciona para `https://auth.atlassian.com/authorize`, com escopos
+   `read:me read:jira-work read:board-scope:jira-software read:issue-details:jira read:project:jira offline_access`.
+2. `GET /auth/callback` troca o `code` recebido por `access_token`/`refresh_token`, valida o `state`
+   (proteção CSRF) contra um cookie httpOnly de curta duração.
+3. O sistema resolve o `cloudId` da organização Atlassian (`GET /oauth/token/accessible-resources`) e
+   busca o perfil do usuário (`GET https://api.atlassian.com/me`).
+4. É feito upsert do `User` local pela `atlassianAccountId` (identificador único da conta Atlassian).
+5. É emitida uma sessão própria do TestRun (JWT em cookie httpOnly, `trs_session`), com validade de 7 dias.
+6. Todas as chamadas subsequentes ao Jira usam o `accessToken` do usuário logado contra
+   `https://api.atlassian.com/ex/jira/{cloudId}/...` — não há mais Basic Auth nem configuração manual de credenciais.
 
-### 9.2 Autenticação
-- Basic Auth: `Base64(email:token)` no header `Authorization`.
+### 9.2 Sessão e Renovação de Token
+- Rotas da API exigem sessão válida (`JwtAuthGuard` global); rotas de login/callback são as únicas públicas.
+- O `accessToken` do Jira é renovado automaticamente com o `refreshToken` quando expirado (`accessTokenExpires`).
+- `accessToken` e `refreshToken` são armazenados **cifrados** (AES-256-GCM) no banco — nunca em texto puro, nunca expostos ao frontend.
+- `POST /auth/logout` encerra a sessão (limpa o cookie); `GET /auth/me` retorna o usuário logado.
 
-### 9.3 Endpoints Utilizados
-| Finalidade | Endpoint Jira |
-|---|---|
-| Testar conexão | `GET /rest/api/3/myself` |
-| Buscar detalhes de issue | `GET /rest/api/3/issue/{key}` |
-
-### 9.4 Tratamento de Erros
-- Configuração ausente → erro 400.
-- Issue não encontrada no Jira → erro 404.
-- Erros de API → erro 400 ou 500 com mensagem detalhada.
+### 9.3 Tratamento de Erros
+- `state` do OAuth inválido ou ausente → redireciona ao frontend com erro (`state_mismatch`).
+- Falha na troca do código/perfil → redireciona ao frontend com erro (`oauth_failed`).
+- Requisição sem sessão válida → erro 401.
 
 ---
 
-## 10. Relatórios
+## 10. Autorização e Escopo por Projeto
 
-### 10.1 Estrutura do Relatório Excel
+### 10.1 Princípio
+- Autorização é **binária por projeto**: se o usuário enxerga o projeto no Jira, ele pode ver e editar
+  tudo o que pertence a esse projeto no TestRun (suítes, casos, execuções, lotes, relatórios). Não há
+  papéis diferenciados (viewer/editor/admin) — isso fica para uma fase futura.
+- Todo recurso (suíte, caso de teste, cenário template, lote, quadro, execução) resolve para um único
+  projeto, e o acesso do usuário a esse projeto é sempre checado antes de ler ou escrever o recurso.
+
+### 10.2 Cache de Permissão (`ProjectMembership`)
+- A permissão de acesso a um projeto é cacheada localmente com TTL de **15 minutos** (`lastCheckedAt`).
+- Dentro do TTL, o acesso é liberado sem consultar o Jira.
+- Expirado o TTL, o sistema revalida contra o Jira (relista os projetos acessíveis ao usuário) e atualiza o cache.
+- Se o Jira estiver indisponível durante a revalidação: usuários que já tinham acesso confirmado
+  anteriormente continuam liberados (fail-open); usuários sem nenhum cache anterior são bloqueados.
+- Exceção: o projeto sentinela `MANUAL` (ver 2.2) é liberado para qualquer usuário autenticado, sem
+  depender de cache ou consulta ao Jira.
+
+### 10.3 Erros
+- Requisição sem usuário autenticado → erro 401.
+- Usuário autenticado sem acesso ao projeto do recurso → erro 403.
+- Recurso (suíte, caso de teste, lote, quadro, execução) inexistente → erro 404 (não 403, mesmo que o
+  `projectId` de referência não seja resolvível).
+
+---
+
+## 11. Integração Técnica com o Jira
+
+### 11.1 Descoberta de Site
+- O `cloudId` da organização (uma única organização Atlassian é suportada) é resolvido a partir do
+  token do usuário logado via `GET /oauth/token/accessible-resources`.
+
+### 11.2 Endpoints Utilizados
+| Finalidade | Endpoint Jira |
+|---|---|
+| Recursos acessíveis / cloudId | `GET https://api.atlassian.com/oauth/token/accessible-resources` |
+| Perfil do usuário logado | `GET https://api.atlassian.com/me` |
+| Listar projetos acessíveis | `GET /rest/api/3/project/search` (paginado) |
+| Buscar quadros de um projeto | API Agile do Jira (`/rest/agile/1.0/board`) |
+| Buscar suítes ("Test Suite") de um quadro | `POST /rest/api/3/search/jql` (JQL, paginação por `nextPageToken`) |
+| Buscar detalhes de issue | `GET /rest/api/3/issue/{key}` |
+
+O endpoint clássico `GET/POST /rest/api/3/search` foi **descontinuado pela Atlassian** (retorna `410 Gone`);
+qualquer busca de issues por JQL deve usar `/rest/api/3/search/jql`.
+
+### 11.3 Rate Limit
+- Toda chamada ao Jira passa por um mecanismo de retry: em resposta `429`, aguarda o tempo indicado em
+  `Retry-After` (ou aplica backoff exponencial se o header não vier), até 3 tentativas.
+
+### 11.4 Tratamento de Erros
+- Issue não encontrada no Jira → erro 404.
+- Erros de API do Jira → erro 400 ou 500 com mensagem detalhada.
+
+---
+
+## 12. Relatórios
+
+### 12.1 Estrutura do Relatório Excel
 **Aba 1 — Visualizar Resultado:**
 - Metadados: Sprint, Versão, Datas, Nome da Suíte, Totalizadores.
 - Tabela de casos de teste: Índice, ID (com link Jira), Título, Prioridade, Status, Responsável, Comentários, Issues.
@@ -262,7 +375,7 @@ Isso evita dupla contagem e reflete fielmente o progresso real da execução.
 **Aba 2 — Bugs e Melhorias:**
 - Todas as issues consolidadas: Tipo, ID, Título, Severidade, Data de Criação, Atualização, Status.
 
-### 10.2 Estrutura do Relatório PDF
+### 12.2 Estrutura do Relatório PDF
 - Cabeçalho: Sprint, Versão, Datas, Suíte, Responsável.
 - Tabela de métricas: Total, Executados, Passou, Falhou, Bloqueado.
 - Gráfico de distribuição de status (barras visuais).
@@ -270,7 +383,7 @@ Isso evita dupla contagem e reflete fielmente o progresso real da execução.
 - Seção de issues consolidadas.
 - Rodapé: data de geração e numeração de páginas.
 
-### 10.3 Relatórios de Lote
+### 12.3 Relatórios de Lote
 - Mesma estrutura, porém:
   - Lista múltiplas suítes.
   - Consolida todos os TCs de todas as suítes.
@@ -279,23 +392,24 @@ Isso evita dupla contagem e reflete fielmente o progresso real da execução.
 
 ---
 
-## 11. Validações Gerais
+## 13. Validações Gerais
 
 | Entidade | Regra |
 |---|---|
-| Suíte | Título obrigatório |
+| Suíte | Título obrigatório; deve pertencer a um projeto (`projectId`) |
 | Caso de Teste (manual) | Chave Jira obrigatória e válida na API |
 | Caso de Teste (duplicata) | Não é possível adicionar a mesma chave Jira duas vezes na mesma suíte |
 | Caso de Teste (histórico) | Não é possível excluir um TC que já participou de alguma execução |
 | Execução | Suíte deve existir e ter casos de teste |
-| Lote | Mínimo de uma suíte; todas com TCs importados |
+| Lote | Mínimo de uma suíte; todas com TCs importados; deve pertencer a um projeto (`projectId`) |
 | Cenário | O `ExecutionTestCase` pai deve existir |
 | Issue | Tipo e título obrigatórios |
 | Status | Sempre normalizado para maiúsculas (`PENDING`, `PASSED`, `FAILED`, `BLOCKED`, `IN_PROGRESS`) |
+| Acesso a Projeto | Usuário deve ter `ProjectMembership` válida (cache ou revalidação no Jira) para ler/escrever qualquer recurso do projeto |
 
 ---
 
-## 12. Fluxo de Status dos Casos de Teste
+## 14. Fluxo de Status dos Casos de Teste
 
 ```
 PENDING
@@ -310,9 +424,14 @@ Não há restrição de transição; o testador pode alterar para qualquer statu
 
 ---
 
-## 13. Permissões e Acesso
+## 15. Permissões e Acesso
 
-O sistema não possui controle de autenticação de usuários; é projetado para uso local por equipes de QA. Qualquer usuário com acesso ao sistema pode realizar todas as operações.
+- O sistema exige login via conta Atlassian (OAuth); não há mais uso local sem autenticação.
+- Autorização é **binária por projeto** (ver 10.1): dentro de um projeto ao qual o usuário tem acesso
+  no Jira, ele pode realizar todas as operações (não há papéis viewer/editor/admin).
+- Não existe granularidade fina de permissão (por suíte, por execução) nem controle de leitura vs.
+  escrita dentro do projeto — isso é trabalho futuro (fora do roteiro atual).
+- Uma única organização Atlassian é suportada (não é uma plataforma multi-tenant).
 
 ---
 
