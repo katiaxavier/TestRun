@@ -7,6 +7,7 @@ import {
   Param,
   Patch,
   HttpCode,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ExecutionsService,
@@ -17,32 +18,40 @@ import {
   CreateScenarioDto,
   UpdateScenarioDto,
 } from './executions.service';
+import { ProjectAccessGuard } from '../projects/project-access.guard';
+import { ProjectAccess } from '../projects/project-access.decorator';
 
 @Controller('executions')
+@UseGuards(ProjectAccessGuard)
 export class ExecutionsController {
   constructor(private readonly executionsService: ExecutionsService) {}
 
   @Get(':id')
+  @ProjectAccess('execution')
   async findOne(@Param('id') id: string) {
     return this.executionsService.findOne(id);
   }
 
   @Post()
+  @ProjectAccess('suite', 'suiteId', 'body')
   async create(@Body() dto: CreateExecutionDto) {
     return this.executionsService.create(dto);
   }
 
   @Delete(':id')
+  @ProjectAccess('execution')
   async delete(@Param('id') id: string) {
     return this.executionsService.delete(id);
   }
 
   @Patch(':id/status')
+  @ProjectAccess('execution')
   async updateStatus(@Param('id') id: string, @Body('status') status: string) {
     return this.executionsService.updateStatus(id, status);
   }
 
   @Patch(':executionId/test-cases/:id')
+  @ProjectAccess('execution')
   async updateTestCase(
     @Param('id') id: string,
     @Body() dto: UpdateTestCaseDto,
@@ -51,11 +60,13 @@ export class ExecutionsController {
   }
 
   @Post(':executionId/test-cases/:id/issues')
+  @ProjectAccess('execution')
   async addIssue(@Param('id') id: string, @Body() dto: CreateIssueDto) {
     return this.executionsService.addIssue(id, dto);
   }
 
   @Delete(':executionId/test-cases/:etcId')
+  @ProjectAccess('execution')
   async removeTestCase(
     @Param('executionId') executionId: string,
     @Param('etcId') etcId: string,
@@ -64,11 +75,13 @@ export class ExecutionsController {
   }
 
   @Patch(':executionId/test-cases/:etcId/issues/:id')
+  @ProjectAccess('execution')
   async updateIssue(@Param('id') id: string, @Body() dto: UpdateIssueDto) {
     return this.executionsService.updateIssue(id, dto);
   }
 
   @Delete(':executionId/test-cases/:etcId/issues/:id')
+  @ProjectAccess('execution')
   async removeIssue(@Param('id') id: string) {
     return this.executionsService.removeIssue(id);
   }
@@ -76,6 +89,7 @@ export class ExecutionsController {
   // ── Scenarios ────────────────────────────────────────────────────────────────
 
   @Post(':executionId/test-cases/:etcId/scenarios')
+  @ProjectAccess('execution')
   async createScenario(
     @Param('etcId') etcId: string,
     @Body() dto: CreateScenarioDto,
@@ -84,6 +98,7 @@ export class ExecutionsController {
   }
 
   @Post(':executionId/test-cases/:etcId/scenarios/batch')
+  @ProjectAccess('execution')
   async createScenarioBatch(
     @Param('etcId') etcId: string,
     @Body('names') names: string[],
@@ -92,6 +107,7 @@ export class ExecutionsController {
   }
 
   @Patch(':executionId/test-cases/:etcId/scenarios/:scenarioId')
+  @ProjectAccess('execution')
   async updateScenario(
     @Param('etcId') etcId: string,
     @Param('scenarioId') scenarioId: string,
@@ -101,6 +117,7 @@ export class ExecutionsController {
   }
 
   @Delete(':executionId/test-cases/:etcId/scenarios/:scenarioId')
+  @ProjectAccess('execution')
   async deleteScenario(
     @Param('etcId') etcId: string,
     @Param('scenarioId') scenarioId: string,
@@ -110,6 +127,7 @@ export class ExecutionsController {
 
   @Delete(':executionId/test-cases/:etcId/scenarios')
   @HttpCode(200)
+  @ProjectAccess('execution')
   async deleteScenarioBatch(
     @Param('etcId') etcId: string,
     @Body('ids') ids: string[],
@@ -118,6 +136,7 @@ export class ExecutionsController {
   }
 
   @Post(':executionId/test-cases/:etcId/scenarios/:scenarioId/issues')
+  @ProjectAccess('execution')
   async addScenarioIssue(
     @Param('scenarioId') scenarioId: string,
     @Body() dto: CreateIssueDto,
@@ -126,6 +145,7 @@ export class ExecutionsController {
   }
 
   @Patch(':executionId/test-cases/:etcId/scenarios/:scenarioId/issues/:issueId')
+  @ProjectAccess('execution')
   async updateScenarioIssue(
     @Param('scenarioId') scenarioId: string,
     @Param('issueId') issueId: string,
@@ -135,6 +155,7 @@ export class ExecutionsController {
   }
 
   @Delete(':executionId/test-cases/:etcId/scenarios/:scenarioId/issues/:issueId')
+  @ProjectAccess('execution')
   async removeScenarioIssue(
     @Param('scenarioId') scenarioId: string,
     @Param('issueId') issueId: string,
