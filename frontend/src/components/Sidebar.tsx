@@ -34,8 +34,12 @@ export function Sidebar({ collapsed, onToggle, user, onLogout }: SidebarProps) {
         </button>
       </div>
 
-      <ProjectSelector collapsed={collapsed} />
-      <BoardSelector collapsed={collapsed} />
+      <div className="sidebar-context">
+        <ProjectSelector collapsed={collapsed} />
+        <BoardSelector collapsed={collapsed} />
+      </div>
+
+      {!collapsed && <div className="sidebar-divider" />}
 
       {links.map(({ to, label, icon: Icon, end }) => (
         <Tooltip
