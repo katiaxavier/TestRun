@@ -75,6 +75,8 @@ export class ProjectAccessGuard implements CanActivate {
           return this.projectAccess.resolveScenarioTemplateProject(resourceId);
         case 'batch':
           return this.projectAccess.resolveBatchProject(resourceId);
+        case 'board':
+          return this.projectAccess.resolveBoardProject(resourceId);
       }
     })();
 

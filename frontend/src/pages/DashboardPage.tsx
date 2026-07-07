@@ -5,6 +5,7 @@ import {
   Plus, Flask, MagnifyingGlass,
   WarningCircle, CloudArrowDown,
   GridFourIcon, FlaskIcon, CopyIcon, PencilSimple,
+  ArrowsClockwiseIcon, CheckCircleIcon,
 } from '@phosphor-icons/react';
 import { suitesApi, executionsApi } from '../api/client';
 import BatchExecutionModal from '../components/BatchExecutionModal';
@@ -15,10 +16,11 @@ import { SuiteCard } from '../components/SuiteCard';
 import { BatchCard } from '../components/BatchCard';
 import { Tooltip } from '../components/Tooltip';
 import { useProject } from '../context/ProjectContext';
+import { useBoard } from '../context/BoardContext';
 
 type CreateMode = 'jira' | 'manual';
 
-function CreateSuiteModal({ open, onClose, onSuccess, projectId }: { open: boolean; onClose: () => void; onSuccess: (s: Suite) => void; projectId: string }) {
+function CreateSuiteModal({ open, onClose, onSuccess, projectId, boardId }: { open: boolean; onClose: () => void; onSuccess: (s: Suite) => void; projectId: string; boardId?: string }) {
   const [mode, setMode] = useState<CreateMode>('jira');
   const [jiraKey, setJiraKey] = useState('');
   const [title, setTitle] = useState('');
@@ -36,11 +38,11 @@ function CreateSuiteModal({ open, onClose, onSuccess, projectId }: { open: boole
     try {
       if (mode === 'jira') {
         if (!jiraKey.trim()) return;
-        const { data } = await suitesApi.importFromJira(jiraKey.trim(), projectId);
+        const { data } = await suitesApi.importFromJira(jiraKey.trim(), projectId, boardId);
         onSuccess(data);
       } else {
         if (!title.trim()) return;
-        const { data } = await suitesApi.create(title.trim(), projectId);
+        const { data } = await suitesApi.create(title.trim(), projectId, boardId);
         onSuccess(data);
       }
       onClose();
@@ -133,6 +135,8 @@ function CreateSuiteModal({ open, onClose, onSuccess, projectId }: { open: boole
 export default function DashboardPage() {
   const navigate = useNavigate();
   const { selectedProject, loading: projectLoading } = useProject();
+  const { selectedBoard, loading: boardLoading } = useBoard();
+  const realBoardId = selectedBoard && selectedBoard.id !== 'none' ? selectedBoard.id : undefined;
   const [suites, setSuites] = useState<Suite[]>([]);
   const [batches, setBatches] = useState<any[]>([]);
   const [selectedSuites, setSelectedSuites] = useState<string[]>([]);
@@ -144,33 +148,50 @@ export default function DashboardPage() {
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<'all' | 'suites' | 'batches'>('all');
   const [batchModalOpen, setBatchModalOpen] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState<{ total: number; synced: string[]; failed: { key: string; error: string }[] } | null>(null);
 
-  const fetchSuites = useCallback(async (projectId: string) => {
+  const fetchSuites = useCallback(async (projectId: string, boardId?: string) => {
     try {
-      const { data } = await suitesApi.list(projectId);
+      const { data } = await suitesApi.list(projectId, boardId);
       setSuites(data);
     } catch {}
     finally { setLoading(false); }
   }, []);
 
-  const fetchBatches = useCallback(async (projectId: string) => {
+  const fetchBatches = useCallback(async (projectId: string, boardId?: string) => {
     try {
-      const { data } = await executionsApi.getAllBatches(projectId);
+      const { data } = await executionsApi.getAllBatches(projectId, boardId);
       setBatches(data);
     } catch {}
   }, []);
 
   useEffect(() => {
-    if (!selectedProject) {
+    if (!selectedProject || !selectedBoard) {
       setSuites([]);
       setBatches([]);
       setLoading(false);
       return;
     }
     setLoading(true);
-    fetchSuites(selectedProject.id);
-    fetchBatches(selectedProject.id);
-  }, [selectedProject, fetchSuites, fetchBatches]);
+    fetchSuites(selectedProject.id, selectedBoard.id);
+    fetchBatches(selectedProject.id, selectedBoard.id);
+  }, [selectedProject, selectedBoard, fetchSuites, fetchBatches]);
+
+  const handleSync = async () => {
+    if (!realBoardId || syncing) return;
+    setSyncing(true);
+    setSyncResult(null);
+    try {
+      const { data } = await suitesApi.sync(realBoardId);
+      setSyncResult(data);
+      if (selectedProject && selectedBoard) fetchSuites(selectedProject.id, selectedBoard.id);
+    } catch (err: any) {
+      const msg = err?.response?.data?.message ?? 'Erro ao sincronizar suítes.';
+      setSyncResult({ total: 0, synced: [], failed: [{ key: '', error: Array.isArray(msg) ? msg.join(' ') : msg }] });
+    }
+    setSyncing(false);
+  };
 
   const handleImportSuccess = (suite: Suite) => {
     setSuites(prev => {
@@ -243,11 +264,52 @@ export default function DashboardPage() {
                 <CopyIcon size={16} /> Criar Lote de Suítes
               </button>
             </Tooltip>
+            <Tooltip content={!realBoardId ? 'Selecione um quadro real para sincronizar (não disponível para "Sem quadro").' : undefined} placement="top">
+              <button className="btn btn-secondary" style={{ height: 48 }} onClick={handleSync} disabled={!realBoardId || syncing}>
+                {syncing
+                  ? <><div className="spinner" style={{ width: 14, height: 14 }} /> Sincronizando...</>
+                  : <><ArrowsClockwiseIcon size={16} /> Sincronizar</>}
+              </button>
+            </Tooltip>
             <button className="btn btn-primary" style={{ height: 48 }} onClick={() => setCreateOpen(true)} disabled={!selectedProject}>
               <Plus size={16} /> Nova Suíte
             </button>
           </div>
         </div>
+
+        {syncResult && (
+          <div
+            style={{
+              display: 'flex', alignItems: 'flex-start', gap: '0.5rem', padding: '0.75rem 1rem',
+              marginBottom: '1.25rem', borderRadius: 'var(--radius-sm)', fontSize: '0.83rem',
+              background: syncResult.failed.length > 0 ? 'rgba(239,68,68,0.08)' : 'rgba(34,197,94,0.08)',
+              border: `1px solid ${syncResult.failed.length > 0 ? 'rgba(239,68,68,0.25)' : 'rgba(34,197,94,0.25)'}`,
+            }}
+          >
+            {syncResult.failed.length > 0
+              ? <WarningCircle size={16} style={{ flexShrink: 0, marginTop: 2, color: 'var(--status-failed)' }} />
+              : <CheckCircleIcon size={16} style={{ flexShrink: 0, marginTop: 2, color: 'var(--status-passed)' }} />}
+            <div style={{ flex: 1 }}>
+              <span>
+                Sincronização concluída: {syncResult.synced.length} de {syncResult.total} suíte(s) atualizada(s).
+              </span>
+              {syncResult.failed.length > 0 && (
+                <ul style={{ margin: '0.35rem 0 0', paddingLeft: '1.1rem', color: 'var(--status-failed)' }}>
+                  {syncResult.failed.map((f, i) => (
+                    <li key={i}>{f.key ? `${f.key}: ` : ''}{f.error}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => setSyncResult(null)}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '0.9rem' }}
+            >
+              ✕
+            </button>
+          </div>
+        )}
 
         <div className="filters" style={{ marginBottom: '2rem' }}>
           <button className={`filter-item ${filter === 'all' ? 'active' : ''}`} onClick={() => setFilter('all')}>
@@ -269,6 +331,14 @@ export default function DashboardPage() {
             <Flask size={56} />
             <h3>Nenhum projeto selecionado</h3>
             <p>Selecione um projeto no menu lateral para ver suas suítes e lotes.</p>
+          </div>
+        ) : boardLoading ? (
+          <div className="loading-page"><div className="spinner" /> Carregando...</div>
+        ) : !selectedBoard ? (
+          <div className="empty-state" style={{ marginTop: '3rem' }}>
+            <Flask size={56} />
+            <h3>Nenhum quadro encontrado</h3>
+            <p>Este projeto não tem quadros no Jira nem suítes sem quadro.</p>
           </div>
         ) : loading ? (
           <div className="loading-page"><div className="spinner" /> Carregando...</div>
@@ -321,6 +391,7 @@ export default function DashboardPage() {
           onClose={() => setCreateOpen(false)}
           onSuccess={handleImportSuccess}
           projectId={selectedProject.id}
+          boardId={realBoardId}
         />
       )}
       <ConfirmModal
@@ -360,10 +431,11 @@ export default function DashboardPage() {
         open={batchModalOpen}
         onClose={() => setBatchModalOpen(false)}
         suites={suites.filter(s => selectedSuites.includes(s.id))}
+        boardId={realBoardId}
         onCreated={(batch) => {
           setSelectedSuites([]);
           setBatchModalOpen(false);
-          if (selectedProject) fetchBatches(selectedProject.id);
+          if (selectedProject && selectedBoard) fetchBatches(selectedProject.id, selectedBoard.id);
           navigate(`/batch/${batch.id}`);
         }}
       />

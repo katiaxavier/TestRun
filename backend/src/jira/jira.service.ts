@@ -26,6 +26,27 @@ export class JiraService {
     };
   }
 
+  // Retenta em 429 respeitando o header Retry-After (com backoff exponencial como
+  // fallback) — usado principalmente pela sincronização em lote (Fase 4), que faz
+  // várias chamadas seguidas e é o cenário mais provável de esbarrar em rate limit.
+  private async fetchWithRetry(
+    url: string,
+    init: RequestInit,
+    retries = 3,
+  ): Promise<Response> {
+    for (let attempt = 0; ; attempt++) {
+      const response = await fetch(url, init);
+      if (response.status !== 429 || attempt >= retries) {
+        return response;
+      }
+      const retryAfter = Number(response.headers.get('Retry-After'));
+      const waitMs = Number.isFinite(retryAfter) && retryAfter > 0
+        ? retryAfter * 1000
+        : 1000 * 2 ** attempt;
+      await new Promise((resolve) => setTimeout(resolve, waitMs));
+    }
+  }
+
   async getSiteUrl(userId: string): Promise<string> {
     const { siteUrl } = await this.authContext(userId);
     return siteUrl;
@@ -41,7 +62,7 @@ export class JiraService {
     let isLast = false;
 
     while (!isLast) {
-      const response = await fetch(
+      const response = await this.fetchWithRetry(
         `${apiBaseUrl}/rest/api/3/project/search?startAt=${startAt}&maxResults=50`,
         {
           method: 'GET',
@@ -72,10 +93,90 @@ export class JiraService {
     return projects;
   }
 
+  // Lista os quadros (boards) de um projeto — /rest/agile/1.0/board, paginação clássica
+  // (startAt/total/isLast, igual project/search). Exige os escopos granulares
+  // read:board-scope:jira-software + read:project:jira (além do read:issue-details:jira
+  // usado por searchSuitesByBoard), configurados no console da Atlassian.
+  async listBoards(
+    userId: string,
+    jiraProjectKey: string,
+  ): Promise<Array<{ jiraBoardId: string; name: string; type: string }>> {
+    const { accessToken, apiBaseUrl } = await this.authContext(userId);
+
+    const boards: Array<{ jiraBoardId: string; name: string; type: string }> = [];
+    let startAt = 0;
+    let isLast = false;
+
+    while (!isLast) {
+      const response = await this.fetchWithRetry(
+        `${apiBaseUrl}/rest/agile/1.0/board?projectKeyOrId=${encodeURIComponent(jiraProjectKey)}&startAt=${startAt}&maxResults=50`,
+        {
+          method: 'GET',
+          headers: { Authorization: `Bearer ${accessToken}`, Accept: 'application/json' },
+        },
+      );
+
+      if (!response.ok) {
+        throw new HttpException(
+          `Erro ao listar quadros do projeto no Jira (${response.statusText}).`,
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+
+      const data = await response.json();
+      for (const board of data.values ?? []) {
+        boards.push({ jiraBoardId: String(board.id), name: board.name, type: board.type });
+      }
+
+      isLast = data.isLast ?? true;
+      startAt += data.values?.length ?? 0;
+    }
+
+    return boards;
+  }
+
+  // Busca, via JQL, as chaves de todas as issues do tipo "Test Suite" em um quadro —
+  // usado pela sincronização em lote (Fase 4) para descobrir suítes automaticamente.
+  // /rest/agile/1.0/board/{id}/issue tem paginação clássica (startAt/total), diferente
+  // do /rest/api/3/search/jql usado em outros pontos deste serviço.
+  async searchSuitesByBoard(userId: string, jiraBoardId: string): Promise<string[]> {
+    const { accessToken, apiBaseUrl } = await this.authContext(userId);
+    const jql = 'issuetype = "Test Suite" ORDER BY key ASC';
+
+    const keys: string[] = [];
+    let startAt = 0;
+
+    while (true) {
+      const url =
+        `${apiBaseUrl}/rest/agile/1.0/board/${jiraBoardId}/issue` +
+        `?jql=${encodeURIComponent(jql)}&fields=key&startAt=${startAt}&maxResults=50`;
+      const response = await this.fetchWithRetry(url, {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${accessToken}`, Accept: 'application/json' },
+      });
+
+      if (!response.ok) {
+        throw new HttpException(
+          `Erro ao buscar suítes do quadro no Jira (${response.statusText}).`,
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+
+      const data = await response.json();
+      const issues = data.issues ?? [];
+      for (const issue of issues) keys.push(issue.key);
+
+      startAt += issues.length;
+      if (issues.length === 0 || startAt >= (data.total ?? 0)) break;
+    }
+
+    return keys;
+  }
+
   async testConnection(userId: string): Promise<boolean> {
     try {
       const { accessToken, apiBaseUrl } = await this.authContext(userId);
-      const response = await fetch(`${apiBaseUrl}/rest/api/3/myself`, {
+      const response = await this.fetchWithRetry(`${apiBaseUrl}/rest/api/3/myself`, {
         method: 'GET',
         headers: { Authorization: `Bearer ${accessToken}`, Accept: 'application/json' },
       });
@@ -94,7 +195,7 @@ export class JiraService {
 
     let response: Response;
     try {
-      response = await fetch(`${apiBaseUrl}/rest/api/3/issue/${key}`, {
+      response = await this.fetchWithRetry(`${apiBaseUrl}/rest/api/3/issue/${key}`, {
         method: 'GET',
         headers: { Authorization: `Bearer ${accessToken}`, Accept: 'application/json' },
       });
@@ -129,7 +230,7 @@ export class JiraService {
     const issueUrl = `${apiBaseUrl}/rest/api/3/issue/${suiteKey}`;
 
     try {
-      const response = await fetch(issueUrl, {
+      const response = await this.fetchWithRetry(issueUrl, {
         method: 'GET',
         headers: { Authorization: `Bearer ${accessToken}`, Accept: 'application/json' },
       });

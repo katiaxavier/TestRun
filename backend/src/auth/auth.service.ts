@@ -43,7 +43,11 @@ export class AuthService {
     const params = new URLSearchParams({
       audience: 'api.atlassian.com',
       client_id: process.env.ATLASSIAN_CLIENT_ID ?? '',
-      scope: 'read:me read:jira-work offline_access',
+      // read:board-scope:jira-software + read:issue-details:jira são escopos granulares
+      // (aba "Granular scopes" dentro da própria Jira API no console) — necessários para
+      // /rest/agile/1.0/board (quadros), que a Jira Software REST API exige em vez dos
+      // escopos clássicos.
+      scope: 'read:me read:jira-work read:board-scope:jira-software read:issue-details:jira read:project:jira offline_access',
       redirect_uri: process.env.OAUTH_REDIRECT_URI ?? '',
       state,
       response_type: 'code',

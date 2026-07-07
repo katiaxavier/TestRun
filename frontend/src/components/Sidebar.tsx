@@ -2,6 +2,7 @@ import { NavLink } from 'react-router-dom';
 import { FlaskIcon, CaretDoubleLeftIcon, CaretDoubleRightIcon, SignOutIcon } from '@phosphor-icons/react';
 import { Tooltip } from './Tooltip';
 import { ProjectSelector } from './ProjectSelector';
+import { BoardSelector } from './BoardSelector';
 import type { AuthUser } from '../api/client';
 
 const links = [
@@ -34,6 +35,7 @@ export function Sidebar({ collapsed, onToggle, user, onLogout }: SidebarProps) {
       </div>
 
       <ProjectSelector collapsed={collapsed} />
+      <BoardSelector collapsed={collapsed} />
 
       {links.map(({ to, label, icon: Icon, end }) => (
         <Tooltip

@@ -23,8 +23,8 @@ export class SuitesController {
 
   @Get()
   @ProjectAccess('direct')
-  async findAll(@Query('projectId') projectId?: string) {
-    return this.suitesService.findAll(projectId);
+  async findAll(@Query('projectId') projectId?: string, @Query('boardId') boardId?: string) {
+    return this.suitesService.findAll(projectId, boardId);
   }
 
   @Get(':id')
@@ -35,14 +35,27 @@ export class SuitesController {
 
   @Post()
   @ProjectAccess('direct')
-  async createManual(@Body('title') title: string, @Body('projectId') projectId: string) {
+  async createManual(
+    @Body('title') title: string,
+    @Body('projectId') projectId: string,
+    @Body('boardId') boardId: string | undefined,
+  ) {
     if (!title?.trim()) {
       throw new HttpException('O título da suíte é obrigatório.', HttpStatus.BAD_REQUEST);
     }
     if (!projectId) {
       throw new HttpException('O projeto é obrigatório.', HttpStatus.BAD_REQUEST);
     }
-    return this.suitesService.createManual(title.trim(), projectId);
+    return this.suitesService.createManual(title.trim(), projectId, boardId);
+  }
+
+  @Post('sync')
+  @ProjectAccess('board', 'boardId', 'body')
+  async syncBoard(@Body('boardId') boardId: string, @CurrentUser() user: User) {
+    if (!boardId) {
+      throw new HttpException('O quadro é obrigatório.', HttpStatus.BAD_REQUEST);
+    }
+    return this.suitesService.syncBoardSuites(user.id, boardId);
   }
 
   @Post('import')
@@ -50,6 +63,7 @@ export class SuitesController {
   async importSuite(
     @Body('jiraKey') jiraKey: string,
     @Body('projectId') projectId: string,
+    @Body('boardId') boardId: string | undefined,
     @CurrentUser() user: User,
   ) {
     if (!jiraKey) {
@@ -61,7 +75,7 @@ export class SuitesController {
     if (!projectId) {
       throw new HttpException('O projeto é obrigatório.', HttpStatus.BAD_REQUEST);
     }
-    return this.suitesService.importFromJira(jiraKey, user.id, projectId);
+    return this.suitesService.importFromJira(jiraKey, user.id, projectId, boardId);
   }
 
   @Post(':id/test-cases')

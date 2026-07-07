@@ -11,6 +11,7 @@ import { SuitesModule } from './suites/suites.module';
 import { ExecutionsModule } from './executions/executions.module';
 import { ReportsModule } from './reports/reports.module';
 import { ProjectsModule } from './projects/projects.module';
+import { BoardsModule } from './boards/boards.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { ProjectsModule } from './projects/projects.module';
     AuthModule,
     JiraModule,
     ProjectsModule,
+    BoardsModule,
     SuitesModule,
     ExecutionsModule,
     ReportsModule,

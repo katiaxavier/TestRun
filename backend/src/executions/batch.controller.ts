@@ -14,8 +14,8 @@ export class BatchController {
 
   @Get()
   @ProjectAccess('direct')
-  async findAll(@Query('projectId') projectId?: string) {
-    return this.executionsService.findAllBatches(projectId);
+  async findAll(@Query('projectId') projectId?: string, @Query('boardId') boardId?: string) {
+    return this.executionsService.findAllBatches(projectId, boardId);
   }
 
   @Post()

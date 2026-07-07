@@ -9,10 +9,17 @@ export class SuitesService {
     private readonly jiraService: JiraService,
   ) {}
 
-  async findAll(projectId?: string) {
+  // boardId === 'none' é o pseudo-quadro "Sem quadro" (suítes sem nenhum board associado).
+  async findAll(projectId?: string, boardId?: string) {
+    const where: { projectId?: string; boards?: { none: object } | { some: { id: string } } } = {};
+    if (projectId) where.projectId = projectId;
+    if (boardId === 'none') where.boards = { none: {} };
+    else if (boardId) where.boards = { some: { id: boardId } };
+
     return this.prisma.suite.findMany({
-      where: projectId ? { projectId } : {},
+      where,
       include: {
+        boards: true,
         _count: {
           select: { testCases: true, executions: true },
         },
@@ -25,6 +32,7 @@ export class SuitesService {
     const suite = await this.prisma.suite.findUnique({
       where: { id },
       include: {
+        boards: true,
         _count: {
           select: { testCases: true, executions: true },
         },
@@ -49,11 +57,17 @@ export class SuitesService {
     return suite;
   }
 
-  async createManual(title: string, projectId: string) {
+  async createManual(title: string, projectId: string, boardId?: string) {
     const count = await this.prisma.suite.count({ where: { isManual: true, projectId } });
     const manualKey = `SUITE-${String(count + 1).padStart(3, '0')}`;
     const suite = await this.prisma.suite.create({
-      data: { title, isManual: true, manualKey, projectId },
+      data: {
+        title,
+        isManual: true,
+        manualKey,
+        projectId,
+        ...(boardId ? { boards: { connect: { id: boardId } } } : {}),
+      },
     });
     return this.findOne(suite.id);
   }
@@ -125,20 +139,26 @@ export class SuitesService {
     return { success: true };
   }
 
-  async importFromJira(jiraKey: string, userId: string, projectId: string) {
+  async importFromJira(jiraKey: string, userId: string, projectId: string, boardId?: string) {
     const key = jiraKey.trim().toUpperCase();
 
     // 1. Buscar do Jira
     const jiraData = await this.jiraService.importSuite(userId, key);
 
-    // 2. Criar ou atualizar a Suite no banco
+    // 2. Criar ou atualizar a Suite no banco. `connect` só adiciona o quadro à relação —
+    // nunca remove uma associação existente com outro quadro (uma suíte pode aparecer em
+    // mais de um quadro do Jira ao mesmo tempo).
     const suite = await this.prisma.suite.upsert({
       where: { projectId_jiraKey: { projectId, jiraKey: key } },
-      update: { title: jiraData.suiteTitle },
+      update: {
+        title: jiraData.suiteTitle,
+        ...(boardId ? { boards: { connect: { id: boardId } } } : {}),
+      },
       create: {
         jiraKey: key,
         title: jiraData.suiteTitle,
         projectId,
+        ...(boardId ? { boards: { connect: { id: boardId } } } : {}),
       },
     });
 
@@ -171,6 +191,32 @@ export class SuitesService {
     }
 
     return this.findOne(suite.id);
+  }
+
+  async syncBoardSuites(userId: string, boardId: string) {
+    const board = await this.prisma.board.findUnique({ where: { id: boardId } });
+    if (!board) {
+      throw new HttpException('Quadro não encontrado.', HttpStatus.NOT_FOUND);
+    }
+
+    const keys = await this.jiraService.searchSuitesByBoard(userId, board.jiraBoardId);
+
+    const synced: string[] = [];
+    const failed: Array<{ key: string; error: string }> = [];
+
+    for (const key of keys) {
+      try {
+        await this.importFromJira(key, userId, board.projectId, board.id);
+        synced.push(key);
+      } catch (error) {
+        failed.push({
+          key,
+          error: error instanceof HttpException ? error.message : String(error),
+        });
+      }
+    }
+
+    return { total: keys.length, synced, failed };
   }
 
   async deleteSuite(id: string) {

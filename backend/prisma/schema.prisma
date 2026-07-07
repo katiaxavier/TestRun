@@ -27,11 +27,25 @@ model Project {
   jiraProjectKey String              @unique
   name           String
   lastSyncedAt   DateTime?
+  boards         Board[]
   suites         Suite[]
   batches        ExecutionBatch[]
   memberships    ProjectMembership[]
   createdAt      DateTime            @default(now())
   updatedAt      DateTime            @updatedAt
+}
+
+model Board {
+  id          String   @id @default(uuid())
+  jiraBoardId String   @unique
+  name        String
+  type        String
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  suites      Suite[]
+  batches     ExecutionBatch[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model ProjectMembership {
@@ -49,6 +63,7 @@ model Suite {
   id         String      @id @default(uuid())
   projectId  String
   project    Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  boards     Board[]
   jiraKey    String?
   manualKey  String?
   title      String
@@ -108,6 +123,8 @@ model ExecutionBatch {
   id                  String      @id @default(uuid())
   projectId           String
   project             Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  boardId             String?
+  board               Board?      @relation(fields: [boardId], references: [id], onDelete: SetNull)
   name                String?
   suiteIds            Json
   testedFeature       String?

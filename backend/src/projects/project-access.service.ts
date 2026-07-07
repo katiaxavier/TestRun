@@ -76,6 +76,14 @@ export class ProjectAccessService {
     return batch?.projectId ?? null;
   }
 
+  async resolveBoardProject(boardId: string): Promise<string | null> {
+    const board = await this.prisma.board.findUnique({
+      where: { id: boardId },
+      select: { projectId: true },
+    });
+    return board?.projectId ?? null;
+  }
+
   async resolveExecutionProject(executionId: string): Promise<string | null> {
     const execution = await this.prisma.execution.findUnique({
       where: { id: executionId },
