@@ -133,6 +133,9 @@ export default function DashboardPage() {
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
                 <ClockCounterClockwiseIcon size={18} weight="duotone" style={{ color: 'var(--text-muted)' }} />
                 <h2 style={{ fontSize: '1.1rem', fontWeight: 700, letterSpacing: '-0.01em' }}>Últimas Execuções</h2>
+                <button className="btn btn-ghost btn-sm" style={{ marginLeft: 'auto' }} onClick={() => navigate('/executions')}>
+                  Ver todas
+                </button>
               </div>
               {recentExecutions.length === 0 ? (
                 <div className="empty-state" style={{ padding: '2rem' }}>

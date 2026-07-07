@@ -1304,7 +1304,9 @@ export default function ExecutionRunPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const fromDashboard = (location.state as { from?: string } | null)?.from === 'dashboard';
+  const from = (location.state as { from?: string } | null)?.from;
+  const fromDashboard = from === 'dashboard';
+  const fromExecutionsList = from === 'executions';
   const [execution, setExecution] = useState<Execution | null>(null);
   const [batchSuites, setBatchSuites] = useState<Suite[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1355,7 +1357,11 @@ export default function ExecutionRunPage() {
     try {
       await executionsApi.delete(id);
       setDeleteConfirm(false);
-      navigate(fromDashboard ? '/dashboard' : (execution?.batchId ? `/batch/${execution.batchId}` : `/suite/${execution?.suiteId}`));
+      navigate(
+        fromDashboard ? '/dashboard'
+        : fromExecutionsList ? '/executions'
+        : (execution?.batchId ? `/batch/${execution.batchId}` : `/suite/${execution?.suiteId}`)
+      );
     } catch {}
     setDeleting(false);
   };
@@ -1439,8 +1445,12 @@ export default function ExecutionRunPage() {
   const pageStartIndex = pageSize === 'all' ? 0 : (currentPage - 1) * pageSize;
   const pageTcs = pageSize === 'all' ? filteredTcs : filteredTcs.slice(pageStartIndex, pageStartIndex + pageSize);
   const isBatch = !!execution.batchId;
-  const backTo = fromDashboard ? '/dashboard' : (isBatch ? `/batch/${execution.batchId}` : `/suite/${execution.suiteId}`);
-  const backLabel = fromDashboard ? 'Voltar ao Dashboard' : (isBatch ? 'Voltar ao Lote' : 'Voltar à Suíte');
+  const backTo = fromDashboard ? '/dashboard'
+    : fromExecutionsList ? '/executions'
+    : (isBatch ? `/batch/${execution.batchId}` : `/suite/${execution.suiteId}`);
+  const backLabel = fromDashboard ? 'Voltar ao Dashboard'
+    : fromExecutionsList ? 'Voltar a Todas as Execuções'
+    : (isBatch ? 'Voltar ao Lote' : 'Voltar à Suíte');
 
   return (
     <div className="page">

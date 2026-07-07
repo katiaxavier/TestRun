@@ -4,6 +4,7 @@ import { Sidebar } from './components/Sidebar';
 import { TopBar } from './components/TopBar';
 import DashboardPage from './pages/DashboardPage';
 import SuitesPage from './pages/SuitesPage';
+import ExecutionsPage from './pages/ExecutionsPage';
 import LoginPage from './pages/LoginPage';
 import SuiteDetailPage from './pages/SuiteDetailPage';
 import ExecutionRunPage from './pages/ExecutionRunPage';
@@ -30,7 +31,7 @@ function ExitDetailOnContextSwitch() {
     prevProjectId.current = selectedProject?.id;
     prevBoardId.current = selectedBoard?.id;
 
-    if ((projectChanged || boardChanged) && /^\/(suite|execution|batch)\//.test(location.pathname)) {
+    if ((projectChanged || boardChanged) && (/^\/(suite|execution|batch)\//.test(location.pathname) || location.pathname === '/executions')) {
       navigate('/dashboard');
     }
   }, [selectedProject?.id, selectedBoard?.id, location.pathname, navigate]);
@@ -86,6 +87,7 @@ export default function App() {
                 <Route path="/" element={<Navigate to="/dashboard" replace />} />
                 <Route path="/dashboard" element={<DashboardPage />} />
                 <Route path="/suites" element={<SuitesPage />} />
+                <Route path="/executions" element={<ExecutionsPage />} />
                 <Route path="/suite/:id" element={<SuiteDetailPage />} />
                 <Route path="/execution/:id" element={<ExecutionRunPage />} />
                 <Route path="/batch/:id" element={<BatchExecutionPage />} />

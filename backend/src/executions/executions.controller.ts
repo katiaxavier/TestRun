@@ -43,6 +43,28 @@ export class ExecutionsController {
     );
   }
 
+  @Get('search')
+  @ProjectAccess('direct')
+  async findAll(
+    @Query('projectId') projectId: string,
+    @Query('boardId') boardId?: string,
+    @Query('status') status?: string,
+    @Query('periodStart') periodStart?: string,
+    @Query('periodEnd') periodEnd?: string,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
+  ) {
+    return this.executionsService.findAllExecutions(
+      projectId,
+      boardId,
+      status,
+      periodStart,
+      periodEnd,
+      page ? Number(page) : undefined,
+      pageSize ? Number(pageSize) : undefined,
+    );
+  }
+
   @Get(':id')
   @ProjectAccess('execution')
   async findOne(@Param('id') id: string) {

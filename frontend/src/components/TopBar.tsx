@@ -1,5 +1,5 @@
 import { useLocation } from 'react-router-dom';
-import { FlaskIcon, GaugeIcon, PlayIcon, CopyIcon } from '@phosphor-icons/react';
+import { FlaskIcon, GaugeIcon, PlayIcon, CopyIcon, ClockCounterClockwiseIcon } from '@phosphor-icons/react';
 
 type RouteConfig = {
   match: (pathname: string) => boolean;
@@ -12,6 +12,7 @@ const routes: RouteConfig[] = [
   { match: p => p.startsWith('/execution/'),        title: 'Execução',         Icon: PlayIcon  },
   { match: p => p.startsWith('/suite/'),            title: 'Suíte',            Icon: FlaskIcon },
   { match: p => p === '/suites',                    title: 'Suítes de Teste',  Icon: FlaskIcon },
+  { match: p => p === '/executions',                title: 'Todas as Execuções', Icon: ClockCounterClockwiseIcon },
   { match: p => p === '/dashboard' || p === '/',    title: 'Dashboard',       Icon: GaugeIcon },
 ];
 
