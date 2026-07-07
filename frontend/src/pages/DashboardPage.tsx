@@ -259,16 +259,16 @@ export default function DashboardPage() {
                 style={{ width: 220, paddingLeft: '2.25rem', height: 48 }}
               />
             </div>
-            <Tooltip content={selectedSuites.length < 2 ? 'Selecione pelo menos duas suítes para criar um lote.' : undefined} placement="top">
-              <button className={`btn-create-batch ${selectedSuites.length >= 2 ? 'active' : ''}`} onClick={() => setBatchModalOpen(true)} disabled={selectedSuites.length < 2}>
-                <CopyIcon size={16} /> Criar Lote de Suítes
-              </button>
-            </Tooltip>
             <Tooltip content={!realBoardId ? 'Selecione um quadro real para sincronizar (não disponível para "Sem quadro").' : undefined} placement="top">
               <button className="btn btn-secondary" style={{ height: 48 }} onClick={handleSync} disabled={!realBoardId || syncing}>
                 {syncing
                   ? <><div className="spinner" style={{ width: 14, height: 14 }} /> Sincronizando...</>
                   : <><ArrowsClockwiseIcon size={16} /> Sincronizar</>}
+              </button>
+            </Tooltip>
+            <Tooltip content={selectedSuites.length < 2 ? 'Selecione pelo menos duas suítes para criar um lote.' : undefined} placement="top">
+              <button className={`btn-create-batch ${selectedSuites.length >= 2 ? 'active' : ''}`} onClick={() => setBatchModalOpen(true)} disabled={selectedSuites.length < 2}>
+                <CopyIcon size={16} /> Criar Lote de Suítes
               </button>
             </Tooltip>
             <button className="btn btn-primary" style={{ height: 48 }} onClick={() => setCreateOpen(true)} disabled={!selectedProject}>
