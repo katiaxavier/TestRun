@@ -1,5 +1,5 @@
 import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
-import { ConfigService } from '../config/config.service';
+import { AuthService } from '../auth/auth.service';
 
 export interface JiraImportResult {
   suiteKey: string;
@@ -14,58 +14,48 @@ export interface JiraImportResult {
 
 @Injectable()
 export class JiraService {
-  constructor(private readonly configService: ConfigService) {}
+  constructor(private readonly authService: AuthService) {}
 
-  private getAuthHeader(email: string, token: string): string {
-    const creds = `${email}:${token}`;
-    return `Basic ${Buffer.from(creds).toString('base64')}`;
+  private async authContext(userId: string) {
+    const accessToken = await this.authService.getValidAccessToken(userId);
+    const { cloudId, url } = await this.authService.resolveSite(accessToken);
+    return {
+      accessToken,
+      siteUrl: url,
+      apiBaseUrl: `https://api.atlassian.com/ex/jira/${cloudId}`,
+    };
   }
 
-  async testConnection(): Promise<boolean> {
-    const config = this.configService.getJiraConfig();
-    if (!config.url || !config.email || !config.token) {
-      throw new HttpException(
-        'Configurações do Jira incompletas. Por favor, configure a URL, e-mail e API Token.',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
+  async getSiteUrl(userId: string): Promise<string> {
+    const { siteUrl } = await this.authContext(userId);
+    return siteUrl;
+  }
 
+  async testConnection(userId: string): Promise<boolean> {
     try {
-      const auth = this.getAuthHeader(config.email, config.token);
-      // Fazer uma requisição simples de teste para obter informações do usuário atual
-      const response = await fetch(`${config.url}/rest/api/3/myself`, {
+      const { accessToken, apiBaseUrl } = await this.authContext(userId);
+      const response = await fetch(`${apiBaseUrl}/rest/api/3/myself`, {
         method: 'GET',
-        headers: {
-          Authorization: auth,
-          Accept: 'application/json',
-        },
+        headers: { Authorization: `Bearer ${accessToken}`, Accept: 'application/json' },
       });
-
-      if (!response.ok) {
-        return false;
-      }
-      return true;
+      return response.ok;
     } catch (error) {
       console.error('Jira connection test failed:', error);
       return false;
     }
   }
 
-  async fetchIssue(key: string): Promise<{ key: string; title: string; link: string; priority?: string }> {
-    const config = this.configService.getJiraConfig();
-    if (!config.url || !config.email || !config.token) {
-      throw new HttpException(
-        'Configurações do Jira incompletas. Por favor, configure a URL, e-mail e API Token.',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
+  async fetchIssue(
+    userId: string,
+    key: string,
+  ): Promise<{ key: string; title: string; link: string; priority?: string }> {
+    const { accessToken, apiBaseUrl, siteUrl } = await this.authContext(userId);
 
-    const auth = this.getAuthHeader(config.email, config.token);
     let response: Response;
     try {
-      response = await fetch(`${config.url}/rest/api/3/issue/${key}`, {
+      response = await fetch(`${apiBaseUrl}/rest/api/3/issue/${key}`, {
         method: 'GET',
-        headers: { Authorization: auth, Accept: 'application/json' },
+        headers: { Authorization: `Bearer ${accessToken}`, Accept: 'application/json' },
       });
     } catch (error) {
       throw new HttpException(
@@ -79,7 +69,7 @@ export class JiraService {
         throw new HttpException(`Issue '${key}' não encontrada no Jira.`, HttpStatus.NOT_FOUND);
       }
       throw new HttpException(
-        `Erro ao consultar Jira (${response.statusText}). Verifique as credenciais.`,
+        `Erro ao consultar Jira (${response.statusText}).`,
         HttpStatus.BAD_REQUEST,
       );
     }
@@ -88,30 +78,19 @@ export class JiraService {
     return {
       key,
       title: data.fields?.summary || key,
-      link: `${config.url}/browse/${key}`,
+      link: `${siteUrl}/browse/${key}`,
       priority: data.fields?.priority?.name,
     };
   }
 
-  async importSuite(suiteKey: string): Promise<JiraImportResult> {
-    const config = this.configService.getJiraConfig();
-    if (!config.url || !config.email || !config.token) {
-      throw new HttpException(
-        'Configurações do Jira incompletas. Por favor, configure a URL, e-mail e API Token.',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
-
-    const auth = this.getAuthHeader(config.email, config.token);
-    const issueUrl = `${config.url}/rest/api/3/issue/${suiteKey}`;
+  async importSuite(userId: string, suiteKey: string): Promise<JiraImportResult> {
+    const { accessToken, apiBaseUrl, siteUrl } = await this.authContext(userId);
+    const issueUrl = `${apiBaseUrl}/rest/api/3/issue/${suiteKey}`;
 
     try {
       const response = await fetch(issueUrl, {
         method: 'GET',
-        headers: {
-          Authorization: auth,
-          Accept: 'application/json',
-        },
+        headers: { Authorization: `Bearer ${accessToken}`, Accept: 'application/json' },
       });
 
       if (!response.ok) {
@@ -122,7 +101,7 @@ export class JiraService {
           );
         }
         throw new HttpException(
-          `Erro ao consultar Jira (${response.statusText}). Verifique as credenciais.`,
+          `Erro ao consultar Jira (${response.statusText}).`,
           HttpStatus.BAD_REQUEST,
         );
       }
@@ -186,7 +165,7 @@ if (targetIssue && targetIssue.key !== suiteKey) {
                title:
                  targetIssue.fields?.summary ||
                  `Caso de Teste ${targetIssue.key}`,
-               link: `${config.url}/browse/${targetIssue.key}`,
+               link: `${siteUrl}/browse/${targetIssue.key}`,
                priority: targetIssue.fields?.priority?.name,
              });
            }
@@ -207,7 +186,7 @@ if (targetIssue && targetIssue.key !== suiteKey) {
                title:
                  targetIssue.fields?.summary ||
                  `Caso de Teste ${targetIssue.key}`,
-               link: `${config.url}/browse/${targetIssue.key}`,
+               link: `${siteUrl}/browse/${targetIssue.key}`,
                priority: targetIssue.fields?.priority?.name,
              });
            }

@@ -3,16 +3,29 @@ import axios from 'axios';
 const api = axios.create({
   baseURL: 'http://localhost:3000',
   headers: { 'Content-Type': 'application/json' },
+  withCredentials: true,
 });
+
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const isAuthCheck = error.config?.url?.includes('/auth/me');
+    if (error.response?.status === 401 && !isAuthCheck) {
+      window.location.reload();
+    }
+    return Promise.reject(error);
+  }
+);
 
 export default api;
 
 // ---- Types ----
 
-export interface JiraConfig {
-  url: string;
-  email: string;
-  token: string;
+export interface AuthUser {
+  id: string;
+  displayName: string;
+  email?: string;
+  avatarUrl?: string;
 }
 
 export interface Suite {
@@ -95,9 +108,13 @@ export interface Issue {
 
 // ---- API helpers ----
 
-export const configApi = {
-  get: () => api.get<JiraConfig>('/config'),
-  save: (data: JiraConfig) => api.post('/config', data),
+export const authApi = {
+  me: () => api.get<AuthUser>('/auth/me'),
+  logout: () => api.post('/auth/logout'),
+};
+
+export const jiraApi = {
+  getSite: () => api.get<{ url: string }>('/jira/site'),
 };
 
 export const suitesApi = {

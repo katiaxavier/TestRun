@@ -35,7 +35,7 @@ O **TestRun** é uma aplicação web de QA que centraliza a gestão de ciclos de
 
 ### Backend
 ```
-NestJS 11 | TypeScript | Prisma ORM | SQLite | Node.js 20
+NestJS 11 | TypeScript | Prisma ORM | PostgreSQL | Node.js 20
 ```
 
 ### Frontend
@@ -94,31 +94,42 @@ git clone <url-do-repositorio>
 cd TestRun
 ```
 
-**2. Suba os containers**
+**2. Configure as variáveis de ambiente**
+
+```bash
+cp .env.example .env
+```
+
+Os valores padrão já funcionam para subir o Postgres localmente. As variáveis de OAuth/Atlassian
+(`ATLASSIAN_CLIENT_ID`, `ATLASSIAN_CLIENT_SECRET`, etc.) ainda não são usadas nesta fase e podem
+ficar em branco.
+
+**3. Suba os containers**
 
 ```bash
 docker compose up --build
 ```
 
 Na primeira execução o Docker vai:
+- Subir o Postgres e aguardar ele ficar saudável
 - Fazer build das imagens do backend e frontend
 - Rodar as migrations do banco de dados automaticamente
 - Iniciar os servidores
 
-**3. Acesse a aplicação**
+**4. Acesse a aplicação**
 
 | Serviço | URL |
 |---|---|
 | Frontend | http://localhost:5173 |
 | Backend (API) | http://localhost:3000 |
 
-**4. Parar os containers**
+**5. Parar os containers**
 
 ```bash
 docker compose down
 ```
 
-> Os dados do banco são persistidos em um volume Docker (`sqlite-data`). Para apagar os dados junto com os containers use `docker compose down -v`.
+> Os dados do banco são persistidos em um volume Docker (`postgres-data`). Para apagar os dados junto com os containers use `docker compose down -v`.
 
 ---
 
@@ -150,6 +161,7 @@ O Docker vai recompilar as imagens e, se houver alterações no schema do banco,
 
 - **Node.js** >= 20
 - **npm**
+- **PostgreSQL** >= 14 rodando localmente (ou via `docker compose up -d postgres`)
 
 ### Passo a passo
 
@@ -165,6 +177,7 @@ cd TestRun
 ```bash
 cd backend
 npm install
+cp .env.example .env   # ajuste DATABASE_URL se necessário
 npx prisma migrate dev
 npm run start:dev
 ```
@@ -196,9 +209,8 @@ TestRun/
 │   │   ├── suites/          # Suites, casos de teste e cenários
 │   │   └── prisma/          # Serviço do Prisma ORM
 │   ├── prisma/
-│   │   ├── schema.prisma    # Schema do banco de dados
-│   │   ├── migrations/      # Histórico de migrations
-│   │   └── dev.db           # Banco SQLite (criado automaticamente)
+│   │   ├── schema.prisma    # Schema do banco de dados (PostgreSQL)
+│   │   └── migrations/      # Histórico de migrations
 │   └── Dockerfile
 │
 ├── frontend/
@@ -309,9 +321,14 @@ docker compose up --build
 
 **Banco de dados corrompido ou quero resetar os dados**
 ```bash
-docker compose down -v   # Remove containers E volumes (apaga o banco)
+docker compose down -v   # Remove containers E volumes (apaga o banco Postgres)
 docker compose up --build
 ```
+
+**Erro `permission denied` ao rodar `docker`/`docker compose`**
+
+Confirme que seu usuário está no grupo `docker` (`groups $USER`). Se acabou de ser adicionado ao
+grupo, é necessário fazer logout/login (grupos não são recarregados em sessões já abertas).
 
 **Frontend não conecta no backend (em dev local)**
 

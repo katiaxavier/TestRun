@@ -8,7 +8,9 @@ import {
   HttpException,
   HttpStatus,
 } from '@nestjs/common';
+import type { User } from '@prisma/client';
 import { SuitesService } from './suites.service';
+import { CurrentUser } from '../auth/current-user.decorator';
 
 @Controller('suites')
 export class SuitesController {
@@ -33,22 +35,26 @@ export class SuitesController {
   }
 
   @Post('import')
-  async importSuite(@Body('jiraKey') jiraKey: string) {
+  async importSuite(@Body('jiraKey') jiraKey: string, @CurrentUser() user: User) {
     if (!jiraKey) {
       throw new HttpException(
         'A chave do Jira é obrigatória.',
         HttpStatus.BAD_REQUEST,
       );
     }
-    return this.suitesService.importFromJira(jiraKey);
+    return this.suitesService.importFromJira(jiraKey, user.id);
   }
 
   @Post(':id/test-cases')
-  async addTestCase(@Param('id') suiteId: string, @Body('jiraKey') jiraKey: string) {
+  async addTestCase(
+    @Param('id') suiteId: string,
+    @Body('jiraKey') jiraKey: string,
+    @CurrentUser() user: User,
+  ) {
     if (!jiraKey?.trim()) {
       throw new HttpException('A chave do Jira é obrigatória.', HttpStatus.BAD_REQUEST);
     }
-    return this.suitesService.addTestCase(suiteId, jiraKey);
+    return this.suitesService.addTestCase(suiteId, jiraKey, user.id);
   }
 
   @Post('test-cases/:tcId/scenarios')

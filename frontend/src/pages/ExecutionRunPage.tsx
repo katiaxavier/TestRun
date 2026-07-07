@@ -7,7 +7,7 @@ import {
   CaretLeft, CaretRight, Pencil, FolderOpen,
   CheckSquare, Square,
 } from '@phosphor-icons/react';
-import { executionsApi, reportsApi, suitesApi, configApi } from '../api/client';
+import { executionsApi, reportsApi, suitesApi, jiraApi } from '../api/client';
 import type { Execution, ExecutionTestCase, Issue, Suite, Scenario } from '../api/client';
 import { StatusBadge } from '../components/StatusBadge';
 import { Modal } from '../components/Modal';
@@ -361,7 +361,7 @@ function ScenarioView({
   const [savingName, setSavingName] = useState(false);
 
   useEffect(() => {
-    configApi.get().then(({ data }) => setJiraUrl(data.url ?? '')).catch(() => {});
+    jiraApi.getSite().then(({ data }) => setJiraUrl(data.url ?? '')).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -668,7 +668,7 @@ function TestCaseDrawer({
   const [deletingSelected, setDeletingSelected] = useState(false);
 
   useEffect(() => {
-    configApi.get().then(({ data }) => setJiraUrl(data.url ?? '')).catch(() => {});
+    jiraApi.getSite().then(({ data }) => setJiraUrl(data.url ?? '')).catch(() => {});
   }, []);
 
   useEffect(() => {

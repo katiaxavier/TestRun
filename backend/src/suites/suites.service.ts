@@ -57,7 +57,7 @@ export class SuitesService {
     return this.findOne(suite.id);
   }
 
-  async addTestCase(suiteId: string, jiraKey: string) {
+  async addTestCase(suiteId: string, jiraKey: string, userId: string) {
     await this.findOne(suiteId);
 
     const key = jiraKey.trim().toUpperCase();
@@ -72,7 +72,7 @@ export class SuitesService {
       );
     }
 
-    const issue = await this.jiraService.fetchIssue(key);
+    const issue = await this.jiraService.fetchIssue(userId, key);
 
     return this.prisma.testCase.create({
       data: {
@@ -124,11 +124,11 @@ export class SuitesService {
     return { success: true };
   }
 
-  async importFromJira(jiraKey: string) {
+  async importFromJira(jiraKey: string, userId: string) {
     const key = jiraKey.trim().toUpperCase();
 
     // 1. Buscar do Jira
-    const jiraData = await this.jiraService.importSuite(key);
+    const jiraData = await this.jiraService.importSuite(userId, key);
 
     // 2. Criar ou atualizar a Suite no banco
     const suite = await this.prisma.suite.upsert({
