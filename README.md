@@ -21,6 +21,8 @@ O **TestRun** é uma aplicação web de QA que centraliza a gestão de ciclos de
 
 ### Solução
 
+- **Login via OAuth Atlassian**, com acesso aos projetos e quadros do Jira que o usuário já enxerga
+- **Múltiplos projetos e quadros (boards)**, com sincronização de suites por quadro
 - **Importação automática** de suites do Jira via ID da task
 - **Suites manuais** criadas diretamente no TestRun (sem Jira)
 - **Lotes de execução** que agrupam múltiplas suites num único ciclo
@@ -101,8 +103,10 @@ cp .env.example .env
 ```
 
 Os valores padrão já funcionam para subir o Postgres localmente. As variáveis de OAuth/Atlassian
-(`ATLASSIAN_CLIENT_ID`, `ATLASSIAN_CLIENT_SECRET`, etc.) ainda não são usadas nesta fase e podem
-ficar em branco.
+(`ATLASSIAN_CLIENT_ID`, `ATLASSIAN_CLIENT_SECRET`, `OAUTH_REDIRECT_URI`, `JIRA_CLOUD_ID`) são
+necessárias para o login funcionar — veja como configurá-las em
+[Integração com o Jira](#integração-com-o-jira). `TOKEN_ENC_KEY` e `SESSION_JWT_SECRET` também
+precisam de um valor (gere com `openssl rand -base64 32`).
 
 **3. Suba os containers**
 
@@ -202,7 +206,9 @@ Frontend estará em: `http://localhost:5173`
 TestRun/
 ├── backend/
 │   ├── src/
-│   │   ├── config/          # Configuração do Jira (salva em config.json)
+│   │   ├── auth/            # Login via OAuth 2.0 (3LO) Atlassian, sessão JWT
+│   │   ├── projects/        # Projetos Jira e guard de autorização por projeto
+│   │   ├── boards/          # Quadros (boards) dentro de cada projeto
 │   │   ├── executions/      # Execuções individuais e lotes (batch)
 │   │   ├── jira/            # Integração com a API do Jira
 │   │   ├── reports/         # Geração de relatórios .xlsx e .pdf
@@ -215,13 +221,16 @@ TestRun/
 │
 ├── frontend/
 │   ├── src/
-│   │   ├── components/      # Componentes reutilizáveis
+│   │   ├── components/
+│   │   │   ├── ProjectSelector.tsx     # Seleção de projeto (Espaço) na sidebar
+│   │   │   ├── BoardSelector.tsx       # Seleção de quadro na sidebar
+│   │   │   └── ...                     # Demais componentes reutilizáveis
 │   │   ├── pages/
+│   │   │   ├── LoginPage.tsx           # Login via OAuth Atlassian
 │   │   │   ├── DashboardPage.tsx       # Lista de suites
 │   │   │   ├── SuiteDetailPage.tsx     # Detalhes e execuções de uma suite
 │   │   │   ├── ExecutionRunPage.tsx    # Execução guiada de testes
-│   │   │   ├── BatchExecutionPage.tsx  # Execução em lote (múltiplas suites)
-│   │   │   └── ConfigPage.tsx          # Configuração do Jira
+│   │   │   └── BatchExecutionPage.tsx  # Execução em lote (múltiplas suites)
 │   │   └── api/
 │   │       └── client.ts    # Cliente HTTP (Axios)
 │   └── Dockerfile
@@ -273,12 +282,30 @@ TestRun/
   - Tabela de bugs e melhorias reportados
   - Rodapé com data de geração e paginação
 
+### Projetos e Quadros
+
+- Após o login, o usuário escolhe um **projeto Jira** (Espaço) e, dentro dele, um **quadro** (Board)
+- Acesso por projeto é controlado por um guard de autorização — só vê o que a conta Atlassian logada
+  pode acessar
+- A sincronização de suites (`POST /suites/sync`) é feita por quadro, não pelo projeto inteiro
+
 ### Integração com o Jira
 
-Acesse a página **Configurações** no app e preencha:
-- URL do Jira (ex: `https://sua-empresa.atlassian.net`)
-- E-mail da conta Atlassian
-- API Token ([gere aqui](https://id.atlassian.com/manage-profile/security/api-tokens))
+O login usa **OAuth 2.0 (3LO) da Atlassian**. Para configurar:
+
+1. Registre um app em [developer.atlassian.com/console](https://developer.atlassian.com/console/myapps/)
+2. Adicione o produto **Jira API** e habilite os escopos (na aba **Granular scopes**, dentro da
+   própria "Jira API" — não é um produto separado):
+   - `read:me`
+   - `read:jira-work`
+   - `read:project:jira`
+   - `read:board-scope:jira-software`
+   - `read:issue-details:jira`
+   - `offline_access` (necessário para o refresh token)
+3. Configure a **Callback URL** apontando para `OAUTH_REDIRECT_URI` (ex: `http://localhost:3000/auth/callback`)
+4. Preencha no `.env`: `ATLASSIAN_CLIENT_ID`, `ATLASSIAN_CLIENT_SECRET`, `OAUTH_REDIRECT_URI` e,
+   opcionalmente, `JIRA_CLOUD_ID` (fixa o site Jira quando a conta tem acesso a mais de um)
+5. Gere `TOKEN_ENC_KEY` e `SESSION_JWT_SECRET` com `openssl rand -base64 32`
 
 
 ---
@@ -344,6 +371,6 @@ Verifique se o backend está rodando em `http://localhost:3000`. O frontend assu
 
 ## Roadmap
 
-- [ ] Autenticação de usuários
-- [ ] Múltiplos projetos Jira
+- [x] Autenticação de usuários (OAuth Atlassian)
+- [x] Múltiplos projetos e quadros do Jira
 - [ ] Criação de suites/casos de teste integrados ao Jira
