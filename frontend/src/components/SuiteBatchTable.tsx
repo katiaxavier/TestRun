@@ -43,12 +43,12 @@ export function SuiteBatchTable({ items, selectedSuites, onSelectSuite, onDelete
           <thead>
             <tr>
               <th style={{ width: 40 }} />
-              <th style={{ width: 90 }}>Tipo</th>
-              <th style={{ width: 160 }}>Chave(s)</th>
+              <th style={{ width: 90, whiteSpace: 'nowrap' }}>Tipo</th>
+              <th style={{ width: 160, whiteSpace: 'nowrap' }}>Chave(s)</th>
               <th>Título / Nome</th>
-              <th style={{ width: 90 }}>Casos</th>
-              <th style={{ width: 110 }}>Execuções</th>
-              <th style={{ width: 110 }}>Criado em</th>
+              <th style={{ width: 90, whiteSpace: 'nowrap' }}>Casos</th>
+              <th style={{ width: 110, whiteSpace: 'nowrap' }}>Execuções</th>
+              <th style={{ width: 130, whiteSpace: 'nowrap' }}>Criado em</th>
               <th style={{ width: 60 }} />
             </tr>
           </thead>
