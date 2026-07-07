@@ -5,7 +5,7 @@ import {
   Plus, Flask, MagnifyingGlass,
   WarningCircle, CloudArrowDown,
   GridFourIcon, FlaskIcon, CopyIcon, PencilSimple,
-  ArrowsClockwiseIcon, CheckCircleIcon,
+  ArrowsClockwiseIcon, CheckCircleIcon, ListIcon,
 } from '@phosphor-icons/react';
 import { suitesApi, executionsApi } from '../api/client';
 import BatchExecutionModal from '../components/BatchExecutionModal';
@@ -14,11 +14,13 @@ import { Modal } from '../components/Modal';
 import { ConfirmModal } from '../components/ConfirmModal';
 import { SuiteCard } from '../components/SuiteCard';
 import { BatchCard } from '../components/BatchCard';
+import { SuiteBatchTable } from '../components/SuiteBatchTable';
 import { Tooltip } from '../components/Tooltip';
 import { useProject } from '../context/ProjectContext';
 import { useBoard } from '../context/BoardContext';
 
 type CreateMode = 'jira' | 'manual';
+type ViewMode = 'grid' | 'list';
 
 function CreateSuiteModal({ open, onClose, onSuccess, projectId, boardId }: { open: boolean; onClose: () => void; onSuccess: (s: Suite) => void; projectId: string; boardId?: string }) {
   const [mode, setMode] = useState<CreateMode>('jira');
@@ -132,7 +134,7 @@ function CreateSuiteModal({ open, onClose, onSuccess, projectId, boardId }: { op
 }
 
 
-export default function DashboardPage() {
+export default function SuitesPage() {
   const navigate = useNavigate();
   const { selectedProject, loading: projectLoading } = useProject();
   const { selectedBoard, loading: boardLoading } = useBoard();
@@ -150,6 +152,14 @@ export default function DashboardPage() {
   const [batchModalOpen, setBatchModalOpen] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<{ total: number; synced: string[]; failed: { key: string; error: string }[] } | null>(null);
+  const [viewMode, setViewMode] = useState<ViewMode>(
+    () => (localStorage.getItem('suites-view-mode') as ViewMode) || 'grid'
+  );
+
+  const handleViewModeChange = (mode: ViewMode) => {
+    setViewMode(mode);
+    localStorage.setItem('suites-view-mode', mode);
+  };
 
   const fetchSuites = useCallback(async (projectId: string, boardId?: string) => {
     try {
@@ -311,16 +321,36 @@ export default function DashboardPage() {
           </div>
         )}
 
-        <div className="filters" style={{ marginBottom: '2rem' }}>
-          <button className={`filter-item ${filter === 'all' ? 'active' : ''}`} onClick={() => setFilter('all')}>
-            <GridFourIcon size={16} /> Todas <span className="filter-count">{filterCounts.all.total}</span>
-          </button>
-          <button className={`filter-item ${filter === 'suites' ? 'active' : ''}`} onClick={() => setFilter('suites')}>
-            <FlaskIcon size={16} /> Suítes <span className="filter-count">{filterCounts.suites.suites}</span>
-          </button>
-          <button className={`filter-item ${filter === 'batches' ? 'active' : ''}`} onClick={() => setFilter('batches')}>
-            <CopyIcon size={16} /> Lotes <span className="filter-count">{filterCounts.batches.batches}</span>
-          </button>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2rem', gap: '1rem', flexWrap: 'wrap' }}>
+          <div className="filters" style={{ marginBottom: 0 }}>
+            <button className={`filter-item ${filter === 'all' ? 'active' : ''}`} onClick={() => setFilter('all')}>
+              <GridFourIcon size={16} /> Todas <span className="filter-count">{filterCounts.all.total}</span>
+            </button>
+            <button className={`filter-item ${filter === 'suites' ? 'active' : ''}`} onClick={() => setFilter('suites')}>
+              <FlaskIcon size={16} /> Suítes <span className="filter-count">{filterCounts.suites.suites}</span>
+            </button>
+            <button className={`filter-item ${filter === 'batches' ? 'active' : ''}`} onClick={() => setFilter('batches')}>
+              <CopyIcon size={16} /> Lotes <span className="filter-count">{filterCounts.batches.batches}</span>
+            </button>
+          </div>
+          <div className="filters" style={{ marginBottom: 0 }}>
+            <button
+              className={`filter-item ${viewMode === 'grid' ? 'active' : ''}`}
+              onClick={() => handleViewModeChange('grid')}
+              aria-pressed={viewMode === 'grid'}
+              aria-label="Visualização em cards"
+            >
+              <GridFourIcon size={16} />
+            </button>
+            <button
+              className={`filter-item ${viewMode === 'list' ? 'active' : ''}`}
+              onClick={() => handleViewModeChange('list')}
+              aria-pressed={viewMode === 'list'}
+              aria-label="Visualização em lista"
+            >
+              <ListIcon size={16} />
+            </button>
+          </div>
         </div>
         <div style={{ height: 1, background: 'var(--border-subtle)', marginBottom: '1.5rem' }}></div>
 
@@ -353,6 +383,17 @@ export default function DashboardPage() {
               </button>
             )}
           </div>
+        ) : viewMode === 'list' ? (
+          <SuiteBatchTable
+            items={combinedItems}
+            selectedSuites={selectedSuites}
+            onSelectSuite={(id, checked) => {
+              if (checked) setSelectedSuites(prev => [...prev, id]);
+              else setSelectedSuites(prev => prev.filter(i => i !== id));
+            }}
+            onDeleteSuite={s => setDeleteTargetSuite(s)}
+            onDeleteBatch={b => setDeleteTargetBatch(b)}
+          />
         ) : (
           <div className="cards-grid">
             <AnimatePresence mode="popLayout">
@@ -442,4 +483,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-

@@ -11,7 +11,7 @@ const routes: RouteConfig[] = [
   { match: p => p.startsWith('/batch/'),            title: 'Lote',             Icon: CopyIcon  },
   { match: p => p.startsWith('/execution/'),        title: 'Execução',         Icon: PlayIcon  },
   { match: p => p.startsWith('/suite/'),            title: 'Suíte',            Icon: FlaskIcon },
-  { match: p => p === '/',                          title: 'Suítes de Teste',  Icon: FlaskIcon },
+  { match: p => p === '/suites',                    title: 'Suítes de Teste',  Icon: FlaskIcon },
 ];
 
 export function TopBar() {

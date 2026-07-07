@@ -1340,7 +1340,7 @@ export default function ExecutionRunPage() {
           setBatchSuites([]);
         }
       }
-    } catch { navigate('/'); }
+    } catch { navigate('/suites'); }
     finally { setLoading(false); }
   }, [id, navigate]);
 

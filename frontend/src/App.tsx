@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
-import { BrowserRouter, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { Sidebar } from './components/Sidebar';
 import { TopBar } from './components/TopBar';
-import DashboardPage from './pages/DashboardPage';
+import SuitesPage from './pages/SuitesPage';
 import LoginPage from './pages/LoginPage';
 import SuiteDetailPage from './pages/SuiteDetailPage';
 import ExecutionRunPage from './pages/ExecutionRunPage';
@@ -30,7 +30,7 @@ function ExitDetailOnContextSwitch() {
     prevBoardId.current = selectedBoard?.id;
 
     if ((projectChanged || boardChanged) && /^\/(suite|execution|batch)\//.test(location.pathname)) {
-      navigate('/');
+      navigate('/suites');
     }
   }, [selectedProject?.id, selectedBoard?.id, location.pathname, navigate]);
 
@@ -82,7 +82,8 @@ export default function App() {
             <main className="main-content">
               <TopBar />
               <Routes>
-                <Route path="/" element={<DashboardPage />} />
+                <Route path="/" element={<Navigate to="/suites" replace />} />
+                <Route path="/suites" element={<SuitesPage />} />
                 <Route path="/suite/:id" element={<SuiteDetailPage />} />
                 <Route path="/execution/:id" element={<ExecutionRunPage />} />
                 <Route path="/batch/:id" element={<BatchExecutionPage />} />
