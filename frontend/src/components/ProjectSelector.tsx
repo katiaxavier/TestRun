@@ -15,6 +15,7 @@ export function ProjectSelector({ collapsed }: { collapsed: boolean }) {
 
   return (
     <div className="sidebar-project-selector">
+      <label className="sidebar-project-selector-label">Espaço</label>
       <select
         value={selectedProject?.id ?? ''}
         onChange={(e) => {

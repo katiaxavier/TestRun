@@ -15,6 +15,7 @@ export function BoardSelector({ collapsed }: { collapsed: boolean }) {
 
   return (
     <div className="sidebar-project-selector">
+      <label className="sidebar-project-selector-label">Quadro</label>
       <select
         value={selectedBoard?.id ?? ''}
         onChange={(e) => {

@@ -347,6 +347,15 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1); curso
 .sidebar-link svg { width: 18px; height: 18px; flex-shrink: 0; }
 .sidebar-link-label { overflow: hidden; }
 .sidebar-project-selector { margin-bottom: 1rem; }
+.sidebar-project-selector-label {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-muted);
+  margin-bottom: 0.3rem;
+}
 .sidebar-project-selector select { width: 100%; font-size: 0.8rem; padding: 0.5rem 0.6rem; }
 .sidebar-project-selector--loading,
 .sidebar-project-selector--empty {
