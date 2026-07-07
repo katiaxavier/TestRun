@@ -227,7 +227,8 @@ TestRun/
 │   │   │   └── ...                     # Demais componentes reutilizáveis
 │   │   ├── pages/
 │   │   │   ├── LoginPage.tsx           # Login via OAuth Atlassian
-│   │   │   ├── DashboardPage.tsx       # Lista de suites
+│   │   │   ├── DashboardPage.tsx       # Home: execuções em andamento e últimas execuções
+│   │   │   ├── SuitesPage.tsx          # Lista de suites e lotes (cards ou tabela)
 │   │   │   ├── SuiteDetailPage.tsx     # Detalhes e execuções de uma suite
 │   │   │   ├── ExecutionRunPage.tsx    # Execução guiada de testes
 │   │   │   └── BatchExecutionPage.tsx  # Execução em lote (múltiplas suites)
@@ -241,6 +242,14 @@ TestRun/
 ---
 
 ## Funcionalidades Principais
+
+### Dashboard
+
+- Tela inicial (`/dashboard`) com visão geral das execuções do Projeto+Quadro selecionados
+- **Execuções em Andamento**: lista todas as execuções com status em andamento (suite e lote podem ter
+  execuções ativas simultâneas), atualizando automaticamente a cada 15 segundos
+- **Últimas Execuções**: as execuções concluídas mais recentes
+- Ao abrir uma execução a partir do Dashboard, o botão "Voltar" retorna para o Dashboard em vez da suite/lote
 
 ### Suites de Teste
 
