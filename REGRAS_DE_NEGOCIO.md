@@ -438,8 +438,9 @@ Não há restrição de transição; o testador pode alterar para qualquer statu
 ## 16. Dashboard (Tela Inicial)
 
 ### 16.1 Escopo
-- A tela inicial (`/`) é o Dashboard, que substituiu a antiga listagem de Suítes/Lotes como home. Essa
-  listagem migrou para `/suites` (item próprio no menu lateral).
+- A tela inicial é o Dashboard, em `/dashboard` (`/` redireciona pra lá), que substituiu a antiga
+  listagem de Suítes/Lotes como home. Essa listagem migrou para `/suites` (item próprio no menu
+  lateral).
 - Mesmo escopo de dados do restante do sistema: Projeto + Quadro selecionados na sidebar — não existe
   visão global entre quadros.
 
@@ -463,6 +464,16 @@ Não há restrição de transição; o testador pode alterar para qualquer statu
 - Segue o mesmo critério de escopo por quadro já usado em `SuitesService.findAll`/`findAllBatches` para
   suítes e lotes, incluindo o pseudo-quadro "Sem quadro" (`boardId === 'none'`, que reúne execuções cuja
   suíte/lote não está associado a nenhum quadro real).
+
+### 16.5 Histórico Completo de Execuções ("Ver todas")
+- Tela `/executions`, acessada pelo link "Ver todas" na seção "Últimas Execuções" do Dashboard — lista
+  **todas** as execuções (não só as 3 últimas concluídas), escopadas ao mesmo Projeto+Quadro.
+- Paginação real no backend (`skip`/`take` + contagem total), diferente do restante do sistema, que até
+  então só usava limites fixos sem paginação de verdade. Tamanho de página configurável (10/25/50/100),
+  máximo de 100 por página.
+- Filtros disponíveis: status (`IN_PROGRESS`/`COMPLETED`/`PENDING`) e período (`startDate`/`endDate` da
+  execução) — mudar qualquer filtro reinicia a paginação para a primeira página.
+- Mesma ordenação do Dashboard: `createdAt` decrescente (execução criada mais recentemente primeiro).
 
 ---
 
