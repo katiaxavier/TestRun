@@ -141,7 +141,7 @@ export default function DashboardPage() {
                 <div className="empty-state" style={{ padding: '2rem' }}>
                   <ClockCounterClockwiseIcon size={40} />
                   <h3>Nenhuma execução recente</h3>
-                  <p>O histórico de execuções aparece aqui assim que você iniciar a primeira.</p>
+                  <p>O histórico de execuções concluídas aparece aqui assim que você concluir a primeira.</p>
                   <button className="btn btn-primary" onClick={() => navigate('/suites')} style={{ marginTop: '0.5rem' }}>
                     <FlaskIcon size={16} /> Ver Suítes
                   </button>
