@@ -78,29 +78,27 @@ export function ExecutionCard({ execution, title, onClick }: ExecutionCardProps)
       <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem' }}>
         {/* Left: title, badge, meta */}
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
-            <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.01em', margin: 0 }}>
-              {cardTitle}
-            </h3>
-            <span
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                padding: '0.2rem 0.6rem',
-                borderRadius: '999px',
-                fontSize: '0.7rem',
-                fontWeight: 700,
-                letterSpacing: '0.04em',
-                textTransform: 'uppercase',
-                color: statusInfo.color,
-                background: statusInfo.bg,
-                border: `1px solid ${statusInfo.border}`,
-                flexShrink: 0,
-              }}
-            >
-              {statusInfo.label}
-            </span>
-          </div>
+          <span
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              padding: '0.2rem 0.6rem',
+              borderRadius: '999px',
+              fontSize: '0.7rem',
+              fontWeight: 700,
+              letterSpacing: '0.04em',
+              textTransform: 'uppercase',
+              color: statusInfo.color,
+              background: statusInfo.bg,
+              border: `1px solid ${statusInfo.border}`,
+              marginBottom: '0.5rem',
+            }}
+          >
+            {statusInfo.label}
+          </span>
+          <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.01em', margin: '0 0 0.5rem' }}>
+            {cardTitle}
+          </h3>
 
           {/* Meta row */}
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', color: 'var(--text-muted)', fontSize: '0.8rem', fontWeight: 500 }}>

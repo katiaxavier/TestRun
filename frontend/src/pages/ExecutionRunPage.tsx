@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft, X, Plus, Trash, FileXls, FilePdf,
@@ -1303,6 +1303,10 @@ function TestCaseDrawer({
 export default function ExecutionRunPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  const from = (location.state as { from?: string } | null)?.from;
+  const fromDashboard = from === 'dashboard';
+  const fromExecutionsList = from === 'executions';
   const [execution, setExecution] = useState<Execution | null>(null);
   const [batchSuites, setBatchSuites] = useState<Suite[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1340,7 +1344,7 @@ export default function ExecutionRunPage() {
           setBatchSuites([]);
         }
       }
-    } catch { navigate('/'); }
+    } catch { navigate('/suites'); }
     finally { setLoading(false); }
   }, [id, navigate]);
 
@@ -1353,7 +1357,11 @@ export default function ExecutionRunPage() {
     try {
       await executionsApi.delete(id);
       setDeleteConfirm(false);
-      navigate(execution?.batchId ? `/batch/${execution.batchId}` : `/suite/${execution?.suiteId}`);
+      navigate(
+        fromDashboard ? '/dashboard'
+        : fromExecutionsList ? '/executions'
+        : (execution?.batchId ? `/batch/${execution.batchId}` : `/suite/${execution?.suiteId}`)
+      );
     } catch {}
     setDeleting(false);
   };
@@ -1437,14 +1445,20 @@ export default function ExecutionRunPage() {
   const pageStartIndex = pageSize === 'all' ? 0 : (currentPage - 1) * pageSize;
   const pageTcs = pageSize === 'all' ? filteredTcs : filteredTcs.slice(pageStartIndex, pageStartIndex + pageSize);
   const isBatch = !!execution.batchId;
+  const backTo = fromDashboard ? '/dashboard'
+    : fromExecutionsList ? '/executions'
+    : (isBatch ? `/batch/${execution.batchId}` : `/suite/${execution.suiteId}`);
+  const backLabel = fromDashboard ? 'Voltar ao Dashboard'
+    : fromExecutionsList ? 'Voltar a Todas as Execuções'
+    : (isBatch ? 'Voltar ao Lote' : 'Voltar à Suíte');
 
   return (
     <div className="page">
       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
         <div className="page-header" style={{ alignItems: 'flex-start' }}>
           <div style={{ flex: '1 1 0', minWidth: 0 }}>
-            <button className="btn btn-ghost btn-sm" onClick={() => navigate(execution?.batchId ? `/batch/${execution.batchId}` : `/suite/${execution.suiteId}`)} style={{ marginBottom: '0.5rem', paddingLeft: 0, fontSize: '1rem' }}>
-              <ArrowLeft size={15} /> {execution?.batchId ? 'Voltar ao Lote' : 'Voltar à Suíte'}
+            <button className="btn btn-ghost btn-sm" onClick={() => navigate(backTo)} style={{ marginBottom: '0.5rem', paddingLeft: 0, fontSize: '1rem' }}>
+              <ArrowLeft size={15} /> {backLabel}
             </button>
             {isBatch ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>

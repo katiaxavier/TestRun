@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Clock } from '@phosphor-icons/react';
 import type { Execution } from '../api/client';
 import { ExecutionCard } from './ExecutionCard';
@@ -16,11 +16,13 @@ const STATUS_OPTIONS = [
   { value: 'PENDING', label: 'Pendente' },
 ];
 
+const INITIAL_VISIBLE = 3;
 
 export function ExecutionList({ executions, onExecutionClick }: ExecutionListProps) {
   const [status, setStatus] = useState('');
   const [periodStart, setPeriodStart] = useState('');
   const [periodEnd, setPeriodEnd] = useState('');
+  const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE);
 
   const filtered = useMemo(() => {
     return executions
@@ -33,7 +35,11 @@ export function ExecutionList({ executions, onExecutionClick }: ExecutionListPro
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }, [executions, status, periodStart, periodEnd]);
 
+  useEffect(() => { setVisibleCount(INITIAL_VISIBLE); }, [status, periodStart, periodEnd]);
+
   const hasFilters = status || periodStart || periodEnd;
+  const visible = filtered.slice(0, visibleCount);
+  const remaining = filtered.length - visible.length;
 
   return (
     <div>
@@ -108,15 +114,28 @@ export function ExecutionList({ executions, onExecutionClick }: ExecutionListPro
           </div>
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-          {filtered.map(exec => (
-            <ExecutionCard
-              key={exec.id}
-              execution={exec}
-              onClick={onExecutionClick ? () => onExecutionClick(exec) : undefined}
-            />
-          ))}
-        </div>
+        <>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            {visible.map(exec => (
+              <ExecutionCard
+                key={exec.id}
+                execution={exec}
+                onClick={onExecutionClick ? () => onExecutionClick(exec) : undefined}
+              />
+            ))}
+          </div>
+
+          {remaining > 0 && (
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '1.25rem 0 0' }}>
+              <button
+                className="btn btn-ghost btn-sm"
+                onClick={() => setVisibleCount(filtered.length)}
+              >
+                Ver mais ({remaining} restante{remaining !== 1 ? 's' : ''})
+              </button>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

@@ -61,6 +61,76 @@ export class UpdateScenarioDto {
 export class ExecutionsService {
   constructor(private readonly prisma: PrismaService) {}
 
+  // boardId === 'none' é o pseudo-quadro "Sem quadro" (suítes/lotes sem quadro no banco).
+  async findRecentExecutions(projectId: string, boardId?: string, status?: string, limit = 3) {
+    const boardFilterSuite =
+      boardId === 'none' ? { boards: { none: {} } } : boardId ? { boards: { some: { id: boardId } } } : {};
+    const boardFilterBatch = boardId === 'none' ? { boardId: null } : boardId ? { boardId } : {};
+
+    return this.prisma.execution.findMany({
+      where: {
+        OR: [
+          { suite: { projectId, ...boardFilterSuite } },
+          { batch: { projectId, ...boardFilterBatch } },
+        ],
+        ...(status ? { status: status.toUpperCase() } : {}),
+      },
+      orderBy: { createdAt: 'desc' },
+      take: Math.min(limit ?? 3, 50),
+      include: {
+        suite: { select: { id: true, jiraKey: true, manualKey: true, title: true } },
+        batch: { select: { id: true, name: true } },
+        testCases: { select: { status: true, scenarios: { select: { status: true } } } },
+      },
+    });
+  }
+
+  // Histórico completo e paginado de execuções (tela "Todas as Execuções"), em contraste com
+  // findRecentExecutions acima, que serve o widget de home com um limite fixo pequeno.
+  async findAllExecutions(
+    projectId: string,
+    boardId?: string,
+    status?: string,
+    periodStart?: string,
+    periodEnd?: string,
+    page = 1,
+    pageSize = 25,
+  ) {
+    const boardFilterSuite =
+      boardId === 'none' ? { boards: { none: {} } } : boardId ? { boards: { some: { id: boardId } } } : {};
+    const boardFilterBatch = boardId === 'none' ? { boardId: null } : boardId ? { boardId } : {};
+
+    const where = {
+      OR: [
+        { suite: { projectId, ...boardFilterSuite } },
+        { batch: { projectId, ...boardFilterBatch } },
+      ],
+      ...(status ? { status: status.toUpperCase() } : {}),
+      ...(periodStart ? { startDate: { gte: new Date(periodStart) } } : {}),
+      ...(periodEnd ? { endDate: { lte: new Date(periodEnd) } } : {}),
+    };
+
+    const take = Math.min(Math.max(pageSize, 1), 100);
+    const skip = (Math.max(page, 1) - 1) * take;
+
+    const [data, total] = await this.prisma.$transaction([
+      this.prisma.execution.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take,
+        include: {
+          suite: { select: { id: true, jiraKey: true, manualKey: true, title: true } },
+          batch: { select: { id: true, name: true } },
+          testCases: { select: { status: true, scenarios: { select: { status: true } } } },
+        },
+      }),
+      this.prisma.execution.count({ where }),
+    ]);
+
+    return { data, total, page: Math.max(page, 1), pageSize: take };
+  }
+
   async findOne(id: string) {
     const execution = await this.prisma.execution.findUnique({
       where: { id },

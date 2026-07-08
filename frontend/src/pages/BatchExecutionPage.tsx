@@ -69,7 +69,7 @@ export default function BatchExecutionPage() {
         setSuites(results.filter((s): s is Suite => !!s));
       }
     } catch {
-      navigate('/');
+      navigate('/suites');
     } finally {
       setLoading(false);
     }
@@ -105,7 +105,7 @@ export default function BatchExecutionPage() {
       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
         <PageHeader
           backLabel="Suítes de Teste"
-          onBack={() => navigate('/')}
+          onBack={() => navigate('/suites')}
           eyebrow="LOTE"
           title={batchTitle}
         />

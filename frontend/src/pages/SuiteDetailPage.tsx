@@ -256,7 +256,7 @@ export default function SuiteDetailPage() {
     try {
       const { data } = await suitesApi.get(id);
       setSuite(data);
-    } catch { navigate('/'); }
+    } catch { navigate('/suites'); }
     finally { setLoading(false); }
   }, [id, navigate]);
 
@@ -296,7 +296,7 @@ export default function SuiteDetailPage() {
       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
         <PageHeader
           backLabel="Suites de Teste"
-          onBack={() => navigate('/')}
+          onBack={() => navigate('/suites')}
           eyebrow={suite.jiraKey ?? (suite.isManual ? (suite.manualKey ?? 'Manual') : undefined)}
           title={suite.title}
         />
