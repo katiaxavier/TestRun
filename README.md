@@ -227,7 +227,7 @@ TestRun/
 │   │   │   └── ...                     # Demais componentes reutilizáveis
 │   │   ├── pages/
 │   │   │   ├── LoginPage.tsx           # Login via OAuth Atlassian
-│   │   │   ├── DashboardPage.tsx       # Home: execuções em andamento e últimas execuções
+│   │   │   ├── DashboardPage.tsx       # Execuções (home): execuções em andamento e últimas execuções
 │   │   │   ├── ExecutionsPage.tsx      # Todas as execuções, com filtros e paginação
 │   │   │   ├── SuitesPage.tsx          # Lista de suites e lotes (cards ou tabela)
 │   │   │   ├── SuiteDetailPage.tsx     # Detalhes e execuções de uma suite
@@ -244,17 +244,17 @@ TestRun/
 
 ## Funcionalidades Principais
 
-### Dashboard
+### Execuções
 
-- Tela inicial (`/dashboard`) com visão geral das execuções do Projeto+Quadro selecionados
+- Tela inicial (`/execucoes`) com visão geral das execuções do Projeto+Quadro selecionados
 - **Execuções em Andamento**: lista todas as execuções com status em andamento (suite e lote podem ter
   execuções ativas simultâneas), atualizando automaticamente a cada 15 segundos
 - **Últimas Execuções**: as execuções concluídas mais recentes
-- Ao abrir uma execução a partir do Dashboard, o botão "Voltar" retorna para o Dashboard em vez da suite/lote
+- Ao abrir uma execução a partir dessa tela, o botão "Voltar" retorna para ela em vez da suite/lote
 
 ### Todas as Execuções
 
-- Tela (`/executions`) acessível pela sidebar ou pelo botão "Ver mais" na seção "Últimas Execuções" do Dashboard
+- Tela (`/executions`) acessível pela sidebar ou pelo botão "Ver mais" na seção "Últimas Execuções" da tela Execuções
 - Lista todas as execuções (individuais e de lote) do Projeto+Quadro selecionado, com paginação (10/25/50/100 itens por página)
 - Filtros por **status** (Em Andamento / Concluído / Pendente) e por **período** (data início e fim)
 

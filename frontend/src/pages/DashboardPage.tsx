@@ -69,7 +69,7 @@ export default function DashboardPage() {
         <div className="empty-state" style={{ marginTop: '3rem' }}>
           <FlaskIcon size={56} />
           <h3>Nenhum projeto selecionado</h3>
-          <p>Selecione um projeto no menu lateral para ver o dashboard.</p>
+          <p>Selecione um projeto no menu lateral para ver as execuções.</p>
         </div>
       </div>
     );
@@ -92,7 +92,7 @@ export default function DashboardPage() {
       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
         <div className="page-header">
           <div>
-            <h1 className="page-title">Dashboard</h1>
+            <h1 className="page-title">Execuções</h1>
             <p className="page-subtitle">Visão geral das execuções de {selectedBoard.name}</p>
           </div>
         </div>

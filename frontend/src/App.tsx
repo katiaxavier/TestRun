@@ -33,7 +33,7 @@ function ExitDetailOnContextSwitch() {
     prevBoardId.current = selectedBoard?.id;
 
     if ((projectChanged || boardChanged) && (/^\/(suite|execution|batch)\//.test(location.pathname) || location.pathname === '/executions' || location.pathname === '/jira-issues')) {
-      navigate('/dashboard');
+      navigate('/execucoes');
     }
   }, [selectedProject?.id, selectedBoard?.id, location.pathname, navigate]);
 
@@ -86,8 +86,8 @@ export default function App() {
             <main className="main-content">
               <TopBar />
               <Routes>
-                <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                <Route path="/dashboard" element={<DashboardPage />} />
+                <Route path="/" element={<Navigate to="/execucoes" replace />} />
+                <Route path="/execucoes" element={<DashboardPage />} />
                 <Route path="/suites" element={<SuitesPage />} />
                 <Route path="/executions" element={<ExecutionsPage />} />
                 <Route path="/jira-issues" element={<JiraIssuesPage />} />

@@ -435,10 +435,10 @@ Não há restrição de transição; o testador pode alterar para qualquer statu
 
 ---
 
-## 16. Dashboard (Tela Inicial)
+## 16. Execuções (Tela Inicial)
 
 ### 16.1 Escopo
-- A tela inicial é o Dashboard, em `/dashboard` (`/` redireciona pra lá), que substituiu a antiga
+- A tela inicial é Execuções, em `/execucoes` (`/` redireciona pra lá), que substituiu a antiga
   listagem de Suítes/Lotes como home. Essa listagem migrou para `/suites` (item próprio no menu
   lateral).
 - Mesmo escopo de dados do restante do sistema: Projeto + Quadro selecionados na sidebar — não existe
@@ -453,7 +453,7 @@ Não há restrição de transição; o testador pode alterar para qualquer statu
 
 ### 16.3 Últimas Execuções
 - Lista as últimas execuções com status `COMPLETED` (limitado a 3), escopadas ao Projeto+Quadro
-  selecionados. O filtro por `COMPLETED` evita duplicar no Dashboard uma execução que já aparece no
+  selecionados. O filtro por `COMPLETED` evita duplicar na tela Execuções uma execução que já aparece no
   painel "Execuções em Andamento".
 
 ### 16.4 Resolução do Quadro de uma Execução
@@ -466,14 +466,14 @@ Não há restrição de transição; o testador pode alterar para qualquer statu
   suíte/lote não está associado a nenhum quadro real).
 
 ### 16.5 Histórico Completo de Execuções ("Ver todas")
-- Tela `/executions`, acessada pelo link "Ver todas" na seção "Últimas Execuções" do Dashboard — lista
+- Tela `/executions`, acessada pelo link "Ver todas" na seção "Últimas Execuções" da tela Execuções — lista
   **todas** as execuções (não só as 3 últimas concluídas), escopadas ao mesmo Projeto+Quadro.
 - Paginação real no backend (`skip`/`take` + contagem total), diferente do restante do sistema, que até
   então só usava limites fixos sem paginação de verdade. Tamanho de página configurável (10/25/50/100),
   máximo de 100 por página.
 - Filtros disponíveis: status (`IN_PROGRESS`/`COMPLETED`/`PENDING`) e período (`startDate`/`endDate` da
   execução) — mudar qualquer filtro reinicia a paginação para a primeira página.
-- Mesma ordenação do Dashboard: `createdAt` decrescente (execução criada mais recentemente primeiro).
+- Mesma ordenação da tela Execuções: `createdAt` decrescente (execução criada mais recentemente primeiro).
 
 ---
 

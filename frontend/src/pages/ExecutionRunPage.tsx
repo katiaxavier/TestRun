@@ -1358,7 +1358,7 @@ export default function ExecutionRunPage() {
       await executionsApi.delete(id);
       setDeleteConfirm(false);
       navigate(
-        fromDashboard ? '/dashboard'
+        fromDashboard ? '/execucoes'
         : fromExecutionsList ? '/executions'
         : (execution?.batchId ? `/batch/${execution.batchId}` : `/suite/${execution?.suiteId}`)
       );
@@ -1445,10 +1445,10 @@ export default function ExecutionRunPage() {
   const pageStartIndex = pageSize === 'all' ? 0 : (currentPage - 1) * pageSize;
   const pageTcs = pageSize === 'all' ? filteredTcs : filteredTcs.slice(pageStartIndex, pageStartIndex + pageSize);
   const isBatch = !!execution.batchId;
-  const backTo = fromDashboard ? '/dashboard'
+  const backTo = fromDashboard ? '/execucoes'
     : fromExecutionsList ? '/executions'
     : (isBatch ? `/batch/${execution.batchId}` : `/suite/${execution.suiteId}`);
-  const backLabel = fromDashboard ? 'Voltar ao Dashboard'
+  const backLabel = fromDashboard ? 'Voltar às Execuções'
     : fromExecutionsList ? 'Voltar a Todas as Execuções'
     : (isBatch ? 'Voltar ao Lote' : 'Voltar à Suíte');
 

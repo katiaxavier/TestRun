@@ -1,5 +1,5 @@
 import { useLocation } from 'react-router-dom';
-import { FlaskIcon, GaugeIcon, PlayIcon, CopyIcon, ClockCounterClockwiseIcon, BugIcon } from '@phosphor-icons/react';
+import { FlaskIcon, PlayIcon, CopyIcon, ClockCounterClockwiseIcon, BugIcon } from '@phosphor-icons/react';
 
 type RouteConfig = {
   match: (pathname: string) => boolean;
@@ -14,7 +14,7 @@ const routes: RouteConfig[] = [
   { match: p => p === '/suites',                    title: 'Suítes de Teste',  Icon: FlaskIcon },
   { match: p => p === '/executions',                title: 'Todas as Execuções', Icon: ClockCounterClockwiseIcon },
   { match: p => p === '/jira-issues',               title: 'Bugs e Melhorias', Icon: BugIcon },
-  { match: p => p === '/dashboard' || p === '/',    title: 'Dashboard',       Icon: GaugeIcon },
+  { match: p => p === '/execucoes' || p === '/',    title: 'Execuções',       Icon: PlayIcon },
 ];
 
 export function TopBar() {
