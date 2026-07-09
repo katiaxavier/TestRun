@@ -235,10 +235,18 @@ export default function SuitesPage() {
     s.title.toLowerCase().includes(search.toLowerCase())
   );
 
-  const filteredBatches = batches.filter(b =>
-    (b.name?.toLowerCase() || '').includes(search.toLowerCase()) ||
-    (b.sprint?.toLowerCase() || '').includes(search.toLowerCase())
-  );
+  const filteredBatches = batches.filter(b => {
+    const term = search.toLowerCase();
+    return (
+      (b.name?.toLowerCase() || '').includes(term) ||
+      (b.sprint?.toLowerCase() || '').includes(term) ||
+      (b.suites ?? []).some((s: any) =>
+        (s.jiraKey?.toLowerCase() || '').includes(term) ||
+        (s.manualKey?.toLowerCase() || '').includes(term) ||
+        (s.title?.toLowerCase() || '').includes(term)
+      )
+    );
+  });
 
   const combinedItems = [
     ...(filter !== 'suites' ? filteredBatches.map(b => ({ type: 'batch' as const, data: b })) : []),
@@ -448,7 +456,7 @@ export default function SuitesPage() {
           <strong style={{ color: 'var(--text-primary)' }}>{deleteTargetSuite?.jiraKey ? `${deleteTargetSuite.jiraKey} — ` : ''}{deleteTargetSuite?.title}</strong>?
           <br /><br />
           <span style={{ color: 'var(--status-failed)', fontSize: '0.85rem' }}>
-            Esta ação excluirá também todos os casos de teste e execuções vinculadas. Esta operação não pode ser desfeita.
+            Esta ação excluirá também todos os casos de teste vinculados. Suítes com execuções registradas ou que façam parte de um lote não podem ser excluídas. Esta operação não pode ser desfeita.
           </span>
         </p>
       </ConfirmModal>

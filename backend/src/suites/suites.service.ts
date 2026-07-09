@@ -240,6 +240,16 @@ export class SuitesService {
       );
     }
 
+    const executionCount = await this.prisma.execution.count({
+      where: { testCases: { some: { testCase: { suiteId: id } } } },
+    });
+    if (executionCount > 0) {
+      throw new HttpException(
+        `Esta suíte possui ${executionCount === 1 ? '1 execução' : `${executionCount} execuções`} registrada(s) e não pode ser excluída. Exclua as execuções antes de excluir a suíte.`,
+        HttpStatus.CONFLICT,
+      );
+    }
+
     await this.prisma.suite.delete({
       where: { id },
     });
