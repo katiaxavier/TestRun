@@ -11,7 +11,7 @@ import { useBoard } from '../context/BoardContext';
 const RECENT_EXECUTIONS_LIMIT = 3;
 const ACTIVE_EXECUTIONS_LIMIT = 50; // teto do endpoint; cobre o caso de várias execuções simultâneas (suíte + lote)
 
-export default function DashboardPage() {
+export default function ExecucoesPage() {
   const navigate = useNavigate();
   const { selectedProject, loading: projectLoading } = useProject();
   const { selectedBoard, loading: boardLoading } = useBoard();

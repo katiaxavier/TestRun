@@ -227,7 +227,7 @@ TestRun/
 │   │   │   └── ...                     # Demais componentes reutilizáveis
 │   │   ├── pages/
 │   │   │   ├── LoginPage.tsx           # Login via OAuth Atlassian
-│   │   │   ├── DashboardPage.tsx       # Execuções (home): execuções em andamento e últimas execuções
+│   │   │   ├── ExecucoesPage.tsx       # Execuções (home): execuções em andamento e últimas execuções
 │   │   │   ├── ExecutionsPage.tsx      # Todas as execuções, com filtros e paginação
 │   │   │   ├── SuitesPage.tsx          # Lista de suites e lotes (cards ou tabela)
 │   │   │   ├── SuiteDetailPage.tsx     # Detalhes e execuções de uma suite

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { Sidebar } from './components/Sidebar';
 import { TopBar } from './components/TopBar';
-import DashboardPage from './pages/DashboardPage';
+import ExecucoesPage from './pages/ExecucoesPage';
 import SuitesPage from './pages/SuitesPage';
 import ExecutionsPage from './pages/ExecutionsPage';
 import JiraIssuesPage from './pages/JiraIssuesPage';
@@ -87,7 +87,7 @@ export default function App() {
               <TopBar />
               <Routes>
                 <Route path="/" element={<Navigate to="/execucoes" replace />} />
-                <Route path="/execucoes" element={<DashboardPage />} />
+                <Route path="/execucoes" element={<ExecucoesPage />} />
                 <Route path="/suites" element={<SuitesPage />} />
                 <Route path="/executions" element={<ExecutionsPage />} />
                 <Route path="/jira-issues" element={<JiraIssuesPage />} />
