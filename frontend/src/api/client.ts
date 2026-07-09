@@ -124,6 +124,18 @@ export interface Issue {
   responsible?: string;
 }
 
+export interface JiraIssue {
+  key: string;
+  summary: string;
+  status: string;
+  issuetype: string;
+  priority?: string;
+  created: string;
+  updated: string;
+  assignee?: string;
+  link: string;
+}
+
 // ---- API helpers ----
 
 export const authApi = {
@@ -244,6 +256,36 @@ export const executionsApi = {
     api.patch<Issue>(`/executions/${executionId}/test-cases/${etcId}/scenarios/${scenarioId}/issues/${issueId}`, data),
   removeScenarioIssue: (executionId: string, etcId: string, scenarioId: string, issueId: string) =>
     api.delete(`/executions/${executionId}/test-cases/${etcId}/scenarios/${scenarioId}/issues/${issueId}`),
+};
+
+export interface JiraIssueFilters {
+  types: { value: string; label: string }[];
+  statuses: { id: string; name: string }[];
+  priorities: { id: string; name: string }[];
+}
+
+export const jiraIssuesApi = {
+  list: (
+    projectId: string,
+    boardId: string,
+    opts?: {
+      page?: number;
+      pageSize?: number;
+      type?: string;
+      status?: string;
+      priority?: string;
+      search?: string;
+    },
+  ) =>
+    api.get<{ data: JiraIssue[]; total: number; page: number; pageSize: number }>('/jira-issues', {
+      params: {
+        projectId, boardId,
+        page: opts?.page, pageSize: opts?.pageSize,
+        type: opts?.type, status: opts?.status, priority: opts?.priority, search: opts?.search,
+      },
+    }),
+  getFilters: (projectId: string) =>
+    api.get<JiraIssueFilters>('/jira-issues/filters', { params: { projectId } }),
 };
 
 export const reportsApi = {

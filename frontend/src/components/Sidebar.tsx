@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { FlaskIcon, GaugeIcon, CaretDoubleLeftIcon, CaretDoubleRightIcon, SignOutIcon } from '@phosphor-icons/react';
+import { FlaskIcon, GaugeIcon, BugIcon, CaretDoubleLeftIcon, CaretDoubleRightIcon, SignOutIcon } from '@phosphor-icons/react';
 import { Tooltip } from './Tooltip';
 import { ProjectSelector } from './ProjectSelector';
 import { BoardSelector } from './BoardSelector';
@@ -8,6 +8,7 @@ import type { AuthUser } from '../api/client';
 const links = [
   { to: '/dashboard', label: 'Dashboard', icon: GaugeIcon, end: true },
   { to: '/suites', label: 'Suítes de Teste', icon: FlaskIcon, end: true },
+  { to: '/jira-issues', label: 'Bugs e Melhorias', icon: BugIcon, end: true },
 ];
 
 interface SidebarProps {

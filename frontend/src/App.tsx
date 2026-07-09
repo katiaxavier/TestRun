@@ -5,6 +5,7 @@ import { TopBar } from './components/TopBar';
 import DashboardPage from './pages/DashboardPage';
 import SuitesPage from './pages/SuitesPage';
 import ExecutionsPage from './pages/ExecutionsPage';
+import JiraIssuesPage from './pages/JiraIssuesPage';
 import LoginPage from './pages/LoginPage';
 import SuiteDetailPage from './pages/SuiteDetailPage';
 import ExecutionRunPage from './pages/ExecutionRunPage';
@@ -31,7 +32,7 @@ function ExitDetailOnContextSwitch() {
     prevProjectId.current = selectedProject?.id;
     prevBoardId.current = selectedBoard?.id;
 
-    if ((projectChanged || boardChanged) && (/^\/(suite|execution|batch)\//.test(location.pathname) || location.pathname === '/executions')) {
+    if ((projectChanged || boardChanged) && (/^\/(suite|execution|batch)\//.test(location.pathname) || location.pathname === '/executions' || location.pathname === '/jira-issues')) {
       navigate('/dashboard');
     }
   }, [selectedProject?.id, selectedBoard?.id, location.pathname, navigate]);
@@ -89,6 +90,7 @@ export default function App() {
                 <Route path="/dashboard" element={<DashboardPage />} />
                 <Route path="/suites" element={<SuitesPage />} />
                 <Route path="/executions" element={<ExecutionsPage />} />
+                <Route path="/jira-issues" element={<JiraIssuesPage />} />
                 <Route path="/suite/:id" element={<SuiteDetailPage />} />
                 <Route path="/execution/:id" element={<ExecutionRunPage />} />
                 <Route path="/batch/:id" element={<BatchExecutionPage />} />

@@ -12,6 +12,25 @@ export interface JiraImportResult {
   }>;
 }
 
+export interface JiraIssueSummary {
+  key: string;
+  summary: string;
+  status: string;
+  issuetype: string;
+  priority?: string;
+  created: string;
+  updated: string;
+  assignee?: string;
+  link: string;
+}
+
+export interface JiraIssuePage {
+  issues: JiraIssueSummary[];
+  total: number;
+  startAt: number;
+  maxResults: number;
+}
+
 @Injectable()
 export class JiraService {
   constructor(private readonly authService: AuthService) {}
@@ -24,6 +43,12 @@ export class JiraService {
       siteUrl: url,
       apiBaseUrl: `https://api.atlassian.com/ex/jira/${cloudId}`,
     };
+  }
+
+  // Escapa aspas duplas e barra invertida antes de interpolar um valor não confiável
+  // (query string) dentro de um literal JQL — usado por filtros de status/priority/busca.
+  private escapeJql(value: string): string {
+    return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
   }
 
   // Retenta em 429 respeitando o header Retry-After (com backoff exponencial como
@@ -171,6 +196,147 @@ export class JiraService {
     }
 
     return keys;
+  }
+
+  // Busca, via JQL, as issues do tipo Bug/Improvement em um quadro — tela "Bugs e
+  // Melhorias" (lida direto do Jira, sem persistir no Postgres). "Melhoria" (nome em
+  // PT) não existe como issuetype neste site (confirmado via erro real do Jira:
+  // "O valor 'Melhoria' não existe para o campo 'issuetype'") — o site usa o nome
+  // padrão em inglês "Improvement" mesmo. Se outro site/projeto usar um nome
+  // diferente pra melhoria, essa lista precisa ser ajustada por site, não é universal.
+  // Paginação clássica startAt/maxResults, mas aqui uma página por chamada (quem pagina
+  // é o frontend), diferente do loop "buscar tudo" de searchSuitesByBoard.
+  async searchIssuesByBoard(
+    userId: string,
+    jiraBoardId: string,
+    opts: {
+      page?: number;
+      pageSize?: number;
+      type?: string;
+      status?: string;
+      priority?: string;
+      search?: string;
+    } = {},
+  ): Promise<JiraIssuePage> {
+    const { accessToken, apiBaseUrl, siteUrl } = await this.authContext(userId);
+
+    const clauses: string[] = [];
+    clauses.push(
+      opts.type === 'Bug' || opts.type === 'Improvement'
+        ? `issuetype = "${opts.type}"`
+        : 'issuetype in ("Bug", "Improvement")',
+    );
+    if (opts.status) {
+      // status vem como ID (não nome) do frontend — ver comentário em listIssueStatuses
+      // sobre por que nome não é confiável pro JQL. Filtra só dígitos por segurança
+      // (o ID nunca deveria ter outra coisa) antes de interpolar sem aspas no JQL.
+      const statusId = opts.status.replace(/[^0-9]/g, '');
+      if (statusId) clauses.push(`status = ${statusId}`);
+    }
+    if (opts.priority) {
+      // priority também vem como ID do frontend — mesmo motivo do status acima.
+      const priorityId = opts.priority.replace(/[^0-9]/g, '');
+      if (priorityId) clauses.push(`priority = ${priorityId}`);
+    }
+    if (opts.search) clauses.push(`text ~ "${this.escapeJql(opts.search)}*"`);
+    const jql = `${clauses.join(' AND ')} ORDER BY key DESC`;
+
+    const pageSize = Math.min(Math.max(opts.pageSize ?? 25, 1), 100);
+    const page = Math.max(opts.page ?? 1, 1);
+    const startAt = (page - 1) * pageSize;
+
+    const fields = 'key,summary,status,issuetype,priority,created,updated,assignee';
+    const url =
+      `${apiBaseUrl}/rest/agile/1.0/board/${jiraBoardId}/issue` +
+      `?jql=${encodeURIComponent(jql)}&fields=${fields}&startAt=${startAt}&maxResults=${pageSize}`;
+
+    const response = await this.fetchWithRetry(url, {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${accessToken}`, Accept: 'application/json' },
+    });
+
+    if (!response.ok) {
+      const body = await response.text().catch(() => '');
+      throw new HttpException(
+        `Erro ao buscar issues (bugs/melhorias) do quadro no Jira (${response.statusText}): ${body}`,
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    const data = await response.json();
+    const issues: JiraIssueSummary[] = (data.issues ?? []).map((issue: any) => ({
+      key: issue.key,
+      summary: issue.fields?.summary || issue.key,
+      status: issue.fields?.status?.name || '—',
+      issuetype: issue.fields?.issuetype?.name || '—',
+      priority: issue.fields?.priority?.name,
+      created: issue.fields?.created,
+      updated: issue.fields?.updated,
+      assignee: issue.fields?.assignee?.displayName,
+      link: `${siteUrl}/browse/${issue.key}`,
+    }));
+
+    return { issues, total: data.total ?? issues.length, startAt, maxResults: pageSize };
+  }
+
+  // Status possíveis pros tipos Bug/Improvement dentro do workflow do projeto — não é
+  // lista fixa no app, cada projeto Jira define seu próprio workflow de status. Bug e
+  // Improvement podem ter workflows diferentes com nomes de status parecidos mas não
+  // idênticos (confirmado com erro real do Jira: "Fechada" não existe pro campo status,
+  // só "Fechado" — provavelmente duas telas de workflow com nomes levemente diferentes).
+  // Por isso o JQL usa o ID do status (estável), não o nome (que pode não bater com o
+  // valor literal aceito pelo JQL).
+  async listIssueStatuses(
+    userId: string,
+    jiraProjectKey: string,
+  ): Promise<Array<{ id: string; name: string }>> {
+    const { accessToken, apiBaseUrl } = await this.authContext(userId);
+
+    const response = await this.fetchWithRetry(
+      `${apiBaseUrl}/rest/api/3/project/${encodeURIComponent(jiraProjectKey)}/statuses`,
+      {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${accessToken}`, Accept: 'application/json' },
+      },
+    );
+
+    if (!response.ok) {
+      throw new HttpException(
+        `Erro ao listar status do projeto no Jira (${response.statusText}).`,
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    const data: Array<{ name: string; statuses: Array<{ id: string; name: string }> }> = await response.json();
+    const statuses = data
+      .filter((entry) => entry.name === 'Bug' || entry.name === 'Improvement')
+      .flatMap((entry) => entry.statuses);
+
+    const byId = new Map(statuses.map((s) => [s.id, s]));
+    return Array.from(byId.values());
+  }
+
+  // Prioridades globais do site — não é escopado por projeto no Jira.
+  // Mesmo motivo do ID em listIssueStatuses: o nome da prioridade devolvido aqui pode não
+  // ser o valor literal aceito pelo JQL (confirmado com erro real do Jira: "Gravíssima"
+  // não existe pro campo priority) — o JQL usa o ID, estável independente de nome/locale.
+  async listIssuePriorities(userId: string): Promise<Array<{ id: string; name: string }>> {
+    const { accessToken, apiBaseUrl } = await this.authContext(userId);
+
+    const response = await this.fetchWithRetry(`${apiBaseUrl}/rest/api/3/priority`, {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${accessToken}`, Accept: 'application/json' },
+    });
+
+    if (!response.ok) {
+      throw new HttpException(
+        `Erro ao listar prioridades do Jira (${response.statusText}).`,
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    const data: Array<{ id: string; name: string }> = await response.json();
+    return data.map((p) => ({ id: p.id, name: p.name }));
   }
 
   async testConnection(userId: string): Promise<boolean> {

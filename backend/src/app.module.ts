@@ -12,6 +12,7 @@ import { ExecutionsModule } from './executions/executions.module';
 import { ReportsModule } from './reports/reports.module';
 import { ProjectsModule } from './projects/projects.module';
 import { BoardsModule } from './boards/boards.module';
+import { JiraIssuesModule } from './jira-issues/jira-issues.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { BoardsModule } from './boards/boards.module';
     SuitesModule,
     ExecutionsModule,
     ReportsModule,
+    JiraIssuesModule,
   ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_GUARD, useClass: JwtAuthGuard }],
