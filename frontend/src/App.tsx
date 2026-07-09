@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { Sidebar } from './components/Sidebar';
 import { TopBar } from './components/TopBar';
+import HomePage from './pages/HomePage';
 import ExecucoesPage from './pages/ExecucoesPage';
 import SuitesPage from './pages/SuitesPage';
 import ExecutionsPage from './pages/ExecutionsPage';
@@ -33,7 +34,7 @@ function ExitDetailOnContextSwitch() {
     prevBoardId.current = selectedBoard?.id;
 
     if ((projectChanged || boardChanged) && (/^\/(suite|execution|batch)\//.test(location.pathname) || location.pathname === '/executions' || location.pathname === '/jira-issues')) {
-      navigate('/execucoes');
+      navigate('/dashboard');
     }
   }, [selectedProject?.id, selectedBoard?.id, location.pathname, navigate]);
 
@@ -86,7 +87,8 @@ export default function App() {
             <main className="main-content">
               <TopBar />
               <Routes>
-                <Route path="/" element={<Navigate to="/execucoes" replace />} />
+                <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                <Route path="/dashboard" element={<HomePage />} />
                 <Route path="/execucoes" element={<ExecucoesPage />} />
                 <Route path="/suites" element={<SuitesPage />} />
                 <Route path="/executions" element={<ExecutionsPage />} />

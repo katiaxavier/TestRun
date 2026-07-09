@@ -1305,6 +1305,7 @@ export default function ExecutionRunPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const from = (location.state as { from?: string } | null)?.from;
+  const fromHome = from === 'home';
   const fromDashboard = from === 'dashboard';
   const fromExecutionsList = from === 'executions';
   const [execution, setExecution] = useState<Execution | null>(null);
@@ -1358,7 +1359,8 @@ export default function ExecutionRunPage() {
       await executionsApi.delete(id);
       setDeleteConfirm(false);
       navigate(
-        fromDashboard ? '/execucoes'
+        fromHome ? '/dashboard'
+        : fromDashboard ? '/execucoes'
         : fromExecutionsList ? '/executions'
         : (execution?.batchId ? `/batch/${execution.batchId}` : `/suite/${execution?.suiteId}`)
       );
@@ -1445,10 +1447,12 @@ export default function ExecutionRunPage() {
   const pageStartIndex = pageSize === 'all' ? 0 : (currentPage - 1) * pageSize;
   const pageTcs = pageSize === 'all' ? filteredTcs : filteredTcs.slice(pageStartIndex, pageStartIndex + pageSize);
   const isBatch = !!execution.batchId;
-  const backTo = fromDashboard ? '/execucoes'
+  const backTo = fromHome ? '/dashboard'
+    : fromDashboard ? '/execucoes'
     : fromExecutionsList ? '/executions'
     : (isBatch ? `/batch/${execution.batchId}` : `/suite/${execution.suiteId}`);
-  const backLabel = fromDashboard ? 'Voltar às Execuções'
+  const backLabel = fromHome ? 'Voltar ao Dashboard'
+    : fromDashboard ? 'Voltar às Execuções'
     : fromExecutionsList ? 'Voltar a Todas as Execuções'
     : (isBatch ? 'Voltar ao Lote' : 'Voltar à Suíte');
 

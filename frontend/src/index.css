@@ -637,14 +637,19 @@ tbody tr:last-child td { border-bottom: none; }
 .drawer-section-title { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); margin-bottom: 0.75rem; }
 
 /* ─── Stat Cards ─── */
-.stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
 .stat-card {
   background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius);
   padding: 1.1rem 1.25rem;
+  min-width: 0; /* permite o label truncar em vez de esticar a coluna */
 }
-.stat-label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-bottom: 0.4rem; }
+.stat-label {
+  font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em;
+  color: var(--text-muted); margin-bottom: 0.4rem;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
 .stat-value { font-size: 1.75rem; font-weight: 800; letter-spacing: -0.03em; }
 .stat-value.passed   { color: var(--status-passed); }
 .stat-value.failed   { color: var(--status-failed); }

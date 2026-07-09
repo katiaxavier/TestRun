@@ -5,24 +5,10 @@ import { jiraIssuesApi } from '../api/client';
 import type { JiraIssue, JiraIssueFilters } from '../api/client';
 import { useProject } from '../context/ProjectContext';
 import { useBoard } from '../context/BoardContext';
-import { PRIORITY_COLORS, priorityLabel } from '../utils/priority';
+import { PRIORITY_COLORS, priorityLabel, typeColor } from '../utils/priority';
 
 const PAGE_SIZES = [10, 25, 50, 100] as const;
 const EMPTY_FILTERS: JiraIssueFilters = { types: [], statuses: [], priorities: [] };
-
-// Mesmas variáveis de cor já usadas no resto do app pro tipo de issue (Bug = vermelho
-// de falha, Melhoria/Improvement = azul de "em andamento" — igual ao badge exibido ao
-// registrar uma melhoria num caso de teste em execução, ExecutionRunPage.tsx). O Jira
-// pode devolver "issuetype.name" já traduzido pro idioma da conta (ex.: "Melhoria" em
-// vez de "Improvement"), então a checagem aceita as duas grafias em vez de comparar só
-// com o nome usado no JQL.
-function typeColor(issuetype: string): { color: string; bg: string } | undefined {
-  if (issuetype === 'Bug') return { color: 'var(--status-failed)', bg: 'var(--status-failed-bg)' };
-  if (issuetype === 'Improvement' || issuetype === 'Melhoria') {
-    return { color: 'var(--status-inprogress)', bg: 'var(--status-inprogress-bg)' };
-  }
-  return undefined;
-}
 
 export default function JiraIssuesPage() {
   const { selectedProject, loading: projectLoading } = useProject();

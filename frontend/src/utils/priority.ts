@@ -33,3 +33,14 @@ export function priorityLabel(priority?: string | null): string {
   };
   return map[n] ?? priority;
 }
+
+// O Jira pode devolver "issuetype.name" já traduzido pro idioma da conta (ex.: "Melhoria" em
+// vez de "Improvement"), então a checagem aceita as duas grafias em vez de comparar só
+// com o nome usado no JQL.
+export function typeColor(issuetype: string): { color: string; bg: string } | undefined {
+  if (issuetype === 'Bug') return { color: 'var(--status-failed)', bg: 'var(--status-failed-bg)' };
+  if (issuetype === 'Improvement' || issuetype === 'Melhoria') {
+    return { color: 'var(--status-inprogress)', bg: 'var(--status-inprogress-bg)' };
+  }
+  return undefined;
+}
