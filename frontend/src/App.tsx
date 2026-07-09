@@ -62,6 +62,7 @@ export default function App() {
   const handleLogout = async () => {
     await authApi.logout().catch(() => {});
     setUser(null);
+    window.history.replaceState(null, '', '/');
   };
 
   if (user === undefined) {
