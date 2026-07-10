@@ -429,6 +429,13 @@ export class ExecutionsService {
       },
     });
 
+    if (dto.responsible !== undefined) {
+      await this.prisma.executionTestCase.updateMany({
+        where: { executionId: id },
+        data: { responsible: dto.responsible },
+      });
+    }
+
     return this.findOne(id);
   }
 
