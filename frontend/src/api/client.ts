@@ -197,6 +197,8 @@ export const executionsApi = {
       },
     }),
   get: (id: string) => api.get<Execution>(`/executions/${id}`),
+  update: (id: string, data: { sprint?: string; version?: string; startDate?: string; endDate?: string; responsible?: string }) =>
+    api.patch<Execution>(`/executions/${id}`, data),
   delete: (id: string) => api.delete(`/executions/${id}`),
   getBatch: (id: string) => api.get<any>(`/batch/${id}`),
   getAllBatches: (projectId?: string, boardId?: string) =>

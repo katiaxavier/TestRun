@@ -5,13 +5,14 @@ import {
   ArrowLeft, X, Plus, Trash, FileXls, FilePdf,
   ArrowSquareOut, CheckCircle, MagnifyingGlass,
   CaretLeft, CaretRight, Pencil, FolderOpen,
-  CheckSquare, Square,
+  CheckSquare, Square, Check,
 } from '@phosphor-icons/react';
 import { executionsApi, reportsApi, suitesApi, jiraApi } from '../api/client';
 import type { Execution, ExecutionTestCase, Issue, Suite, Scenario } from '../api/client';
 import { StatusBadge } from '../components/StatusBadge';
 import { Modal } from '../components/Modal';
 import { Tooltip } from '../components/Tooltip';
+import { ExecutionFormModal, type ExecutionFormData } from '../components/ExecutionFormModal';
 import { PRIORITY_COLORS, SEVERITY_COLORS, priorityLabel, normalize } from '../utils/priority';
 
 const STATUS_OPTIONS = ['PENDING', 'PASSED', 'FAILED', 'BLOCKED'];
@@ -1315,6 +1316,7 @@ export default function ExecutionRunPage() {
   const [exporting, setExporting] = useState<'xlsx' | 'pdf' | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<StatusFilterKey>('all');
   const [search, setSearch] = useState('');
   const [priorityFilter, setPriorityFilter] = useState<string>('all');
@@ -1366,6 +1368,12 @@ export default function ExecutionRunPage() {
       );
     } catch {}
     setDeleting(false);
+  };
+
+  const handleUpdateExecution = async (form: ExecutionFormData) => {
+    if (!execution) return;
+    const { data } = await executionsApi.update(execution.id, form);
+    setExecution(data);
   };
 
   const handleUpdated = (updated: ExecutionTestCase) => {
@@ -1511,8 +1519,11 @@ export default function ExecutionRunPage() {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '1rem', marginBottom: '1rem' }}>
           {/* Metadata Card */}
           <div className="card" style={{ padding: '1rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.875rem', paddingBottom: '0.75rem', borderBottom: '1px solid var(--border-subtle)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', marginBottom: '0.875rem', paddingBottom: '0.75rem', borderBottom: '1px solid var(--border-subtle)' }}>
               <span style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)' }}>Detalhes da Execução</span>
+              <button className="btn btn-ghost btn-sm" onClick={() => setEditModalOpen(true)} style={{ padding: '0.2rem 0.4rem' }} title="Editar detalhes da execução">
+                <Pencil size={14} />
+              </button>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1740,6 +1751,25 @@ export default function ExecutionRunPage() {
           Tem certeza que deseja excluir esta execução? Esta ação não pode ser desfeita.
         </p>
       </Modal>
+
+      {execution && (
+        <ExecutionFormModal
+          open={editModalOpen}
+          onClose={() => setEditModalOpen(false)}
+          title="Editar Execução"
+          submitLabel="Salvar Alterações"
+          submitIcon={<Check size={16} />}
+          errorFallback="Erro ao atualizar execução."
+          initialData={{
+            sprint: execution.sprint,
+            version: execution.version ?? '',
+            startDate: execution.startDate.slice(0, 10),
+            endDate: execution.endDate.slice(0, 10),
+            responsible: execution.responsible,
+          }}
+          onSubmit={handleUpdateExecution}
+        />
+      )}
     </div>
   );
 }

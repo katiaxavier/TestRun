@@ -13,6 +13,7 @@ import {
 import {
   ExecutionsService,
   CreateExecutionDto,
+  UpdateExecutionDto,
   UpdateTestCaseDto,
   CreateIssueDto,
   UpdateIssueDto,
@@ -87,6 +88,12 @@ export class ExecutionsController {
   @ProjectAccess('execution')
   async updateStatus(@Param('id') id: string, @Body('status') status: string) {
     return this.executionsService.updateStatus(id, status);
+  }
+
+  @Patch(':id')
+  @ProjectAccess('execution')
+  async update(@Param('id') id: string, @Body() dto: UpdateExecutionDto) {
+    return this.executionsService.update(id, dto);
   }
 
   @Patch(':executionId/test-cases/:id')

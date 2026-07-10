@@ -10,25 +10,35 @@ export interface ExecutionFormData {
   responsible: string;
 }
 
+function blankForm(): ExecutionFormData {
+  const n = new Date();
+  const t = `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`;
+  return { sprint: '', version: '', startDate: t, endDate: t, responsible: '' };
+}
+
 interface ExecutionFormModalProps {
   open: boolean;
   onClose: () => void;
   onSubmit: (form: ExecutionFormData) => Promise<void>;
   title?: string;
+  initialData?: ExecutionFormData;
+  submitLabel?: string;
+  submitIcon?: React.ReactNode;
+  errorFallback?: string;
 }
 
-export function ExecutionFormModal({ open, onClose, onSubmit, title = 'Novo Ciclo de Execução' }: ExecutionFormModalProps) {
-  const now = new Date();
-  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-  const [form, setForm] = useState<ExecutionFormData>({ sprint: '', version: '', startDate: today, endDate: today, responsible: '' });
+export function ExecutionFormModal({
+  open, onClose, onSubmit, title = 'Novo Ciclo de Execução',
+  initialData, submitLabel = 'Iniciar Execução', submitIcon = <Play size={16} />,
+  errorFallback = 'Erro ao criar execução.',
+}: ExecutionFormModalProps) {
+  const [form, setForm] = useState<ExecutionFormData>(initialData ?? blankForm());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (!open) {
-      const n = new Date();
-      const t = `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`;
-      setForm({ sprint: '', version: '', startDate: t, endDate: t, responsible: '' });
+    if (open) {
+      setForm(initialData ?? blankForm());
       setError('');
     }
   }, [open]);
@@ -44,7 +54,7 @@ export function ExecutionFormModal({ open, onClose, onSubmit, title = 'Novo Cicl
       await onSubmit({ ...form, version: form.version || undefined });
       onClose();
     } catch (err: any) {
-      const msg = err?.response?.data?.message ?? 'Erro ao criar execução.';
+      const msg = err?.response?.data?.message ?? errorFallback;
       setError(Array.isArray(msg) ? msg.join(' ') : msg);
     } finally { setLoading(false); }
   };
@@ -64,8 +74,8 @@ export function ExecutionFormModal({ open, onClose, onSubmit, title = 'Novo Cicl
         <>
           <button className="btn btn-secondary" onClick={onClose}>Cancelar</button>
           <button className="btn btn-primary" onClick={handleSubmit as any} disabled={loading}>
-            {loading ? <div className="spinner" style={{ width: 14, height: 14 }} /> : <Play size={16} />}
-            Iniciar Execução
+            {loading ? <div className="spinner" style={{ width: 14, height: 14 }} /> : submitIcon}
+            {submitLabel}
           </button>
         </>
       }

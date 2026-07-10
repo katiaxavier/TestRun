@@ -10,6 +10,14 @@ export class CreateExecutionDto {
   responsible!: string;
 }
 
+export class UpdateExecutionDto {
+  sprint?: string;
+  version?: string;
+  startDate?: string;
+  endDate?: string;
+  responsible?: string;
+}
+
 export class CreateBatchExecutionDto {
   suiteIds!: string[];
   name?: string;
@@ -398,6 +406,30 @@ export class ExecutionsService {
       where: { id },
       data: { status: status.toUpperCase() },
     });
+  }
+
+  async update(id: string, dto: UpdateExecutionDto) {
+    const execution = await this.prisma.execution.findUnique({
+      where: { id },
+    });
+
+    if (!execution) {
+      throw new HttpException(
+        'Ciclo de execução não encontrado.',
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    await this.prisma.execution.update({
+      where: { id },
+      data: {
+        ...dto,
+        ...(dto.startDate ? { startDate: new Date(dto.startDate) } : {}),
+        ...(dto.endDate ? { endDate: new Date(dto.endDate) } : {}),
+      },
+    });
+
+    return this.findOne(id);
   }
 
   async createBatch(dto: CreateBatchExecutionDto) {
