@@ -18,6 +18,9 @@ export interface JiraIssueSummary {
   key: string;
   summary: string;
   status: string;
+  // Categoria padrão do Jira (new/indeterminate/done) — independe de idioma/nome de
+  // status customizado, ao contrário de comparar o texto de `status` diretamente.
+  statusCategory?: string;
   issuetype: string;
   priority?: string;
   labels?: string[];
@@ -237,11 +240,7 @@ export class JiraService {
     const { accessToken, apiBaseUrl, siteUrl } = await this.authContext(userId);
 
     const clauses: string[] = [];
-    clauses.push(
-      opts.type === 'Bug' || opts.type === 'Improvement'
-        ? `issuetype = "${opts.type}"`
-        : 'issuetype in ("Bug", "Improvement")',
-    );
+    clauses.push(opts.type ? `issuetype = "${opts.type}"` : 'issuetype in ("Bug", "Improvement")');
     if (opts.status) {
       // status vem como ID (não nome) do frontend — ver comentário em listIssueStatuses
       // sobre por que nome não é confiável pro JQL. Filtra só dígitos por segurança
@@ -284,6 +283,7 @@ export class JiraService {
       key: issue.key,
       summary: issue.fields?.summary || issue.key,
       status: issue.fields?.status?.name || '—',
+      statusCategory: issue.fields?.status?.statusCategory?.key,
       issuetype: issue.fields?.issuetype?.name || '—',
       priority: issue.fields?.priority?.name,
       labels: issue.fields?.labels ?? [],
@@ -364,6 +364,7 @@ export class JiraService {
           key: issue.key,
           summary: issue.fields?.summary || issue.key,
           status: issue.fields?.status?.name || '—',
+          statusCategory: issue.fields?.status?.statusCategory?.key,
           issuetype: issue.fields?.issuetype?.name || '—',
           priority: issue.fields?.priority?.name,
           labels: issue.fields?.labels ?? [],

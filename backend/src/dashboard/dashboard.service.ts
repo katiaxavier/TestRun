@@ -110,8 +110,12 @@ export class DashboardService {
     });
 
     // ── Cobertura de requisitos + automação ──────────────────────────────────
-    // Épico é conceito de projeto (não de quadro) — cobertura sempre no projeto
-    // inteiro, mesmo que um board esteja selecionado no resto do dashboard.
+    // Épicos ficam sempre no projeto inteiro — confirmado com o usuário que, neste
+    // Jira, quadros não têm Épico associado de jeito nenhum (nem o próprio Jira
+    // mostra Épico no Backlog/Roadmap de um quadro), então não há como calcular
+    // "épicos do quadro" com sentido: numerador (épicos com suíte) e denominador
+    // (total de épicos) precisam estar no mesmo escopo, senão a fração fica
+    // artificialmente pequena/errada.
     const suites = await this.prisma.suite.findMany({
       where: { projectId },
       select: { epicKey: true },
@@ -123,9 +127,13 @@ export class DashboardService {
       totalEpics = await this.jiraService.countIssuesByProject(userId, project.jiraProjectKey, { type: 'Epic' });
     }
 
+    // Casos de teste/automação já são um dado nosso (Prisma), então esse sim dá
+    // pra filtrar por quadro real com sentido — mesmo filtro de findCompletedExecutionsWindow.
+    const boardFilterSuite =
+      boardId === 'none' ? { boards: { none: {} } } : boardId ? { boards: { some: { id: boardId } } } : {};
     const [totalTestCases, automatedTestCases] = await Promise.all([
-      this.prisma.testCase.count({ where: { suite: { projectId } } }),
-      this.prisma.testCase.count({ where: { suite: { projectId }, automated: true } }),
+      this.prisma.testCase.count({ where: { suite: { projectId, ...boardFilterSuite } } }),
+      this.prisma.testCase.count({ where: { suite: { projectId, ...boardFilterSuite }, automated: true } }),
     ]);
 
     return {
@@ -157,20 +165,27 @@ export class DashboardService {
     if (boardId && boardId !== 'none') {
       const board = await this.prisma.board.findUnique({ where: { id: boardId } });
       if (!board) return [];
-      const issues: JiraIssueSummary[] = [];
-      let page = 1;
       const pageSize = 100;
       // searchIssuesByBoard só pagina uma página por chamada (quem pagina normalmente é
-      // o frontend) — laço aqui pra trazer todos os bugs do quadro, não só a 1ª página.
-      while (true) {
-        const result = await this.jiraService.searchIssuesByBoard(userId, board.jiraBoardId, {
-          type: 'Bug',
-          page,
-          pageSize,
-        });
-        issues.push(...result.issues);
-        if (result.issues.length === 0 || issues.length >= result.total) break;
-        page += 1;
+      // o frontend) — busca a 1ª página pra saber o total, depois todas as páginas
+      // restantes em paralelo (startAt/maxResults dá pra pular direto pra qualquer
+      // página, diferente do cursor de searchIssuesByProject). Quadros com centenas de
+      // bugs (várias páginas) ficam sequenciais e lentos sem isso.
+      const first = await this.jiraService.searchIssuesByBoard(userId, board.jiraBoardId, {
+        type: 'Bug',
+        page: 1,
+        pageSize,
+      });
+      const issues = [...first.issues];
+      const totalPages = Math.ceil(first.total / pageSize);
+      if (totalPages > 1) {
+        const remainingPages = Array.from({ length: totalPages - 1 }, (_, i) => i + 2);
+        const results = await Promise.all(
+          remainingPages.map((page) =>
+            this.jiraService.searchIssuesByBoard(userId, board.jiraBoardId, { type: 'Bug', page, pageSize }),
+          ),
+        );
+        for (const result of results) issues.push(...result.issues);
       }
       return issues;
     }
@@ -194,20 +209,33 @@ export class DashboardService {
     const now = Date.now();
     const resolvedDurationsDays: number[] = [];
     const openAgesDays: number[] = [];
-    const slaViolations: Array<{ key: string; link: string; priority?: string; ageDays: number }> = [];
+    const slaViolations: Array<{ key: string; link: string; title: string; priority?: string; ageDays: number }> = [];
 
     for (const bug of bugs) {
       if (!bug.created) continue;
       const createdMs = new Date(bug.created).getTime();
-      if (bug.resolutiondate) {
-        const resolvedMs = new Date(bug.resolutiondate).getTime();
+      // resolutiondate só é setado quando o campo Resolução do Jira é preenchido —
+      // muitos projetos (este incluso) fecham bugs só trocando o status, sem tocar
+      // nesse campo, e resolutiondate fica sempre vazio. statusCategory "done" é a
+      // forma confiável (e independente de idioma) de saber que o bug foi encerrado;
+      // na ausência de resolutiondate, usa `updated` como aproximação da data de
+      // fechamento.
+      const resolvedAt = bug.resolutiondate ?? (bug.statusCategory === 'done' ? bug.updated : undefined);
+      if (resolvedAt) {
+        const resolvedMs = new Date(resolvedAt).getTime();
         resolvedDurationsDays.push((resolvedMs - createdMs) / 86_400_000);
       } else {
         const ageDays = (now - createdMs) / 86_400_000;
         openAgesDays.push(ageDays);
         const slaDays = bug.priority ? SLA_DAYS_BY_PRIORITY[bug.priority] : undefined;
         if (slaDays !== undefined && ageDays > slaDays) {
-          slaViolations.push({ key: bug.key, link: bug.link, priority: bug.priority, ageDays: Math.round(ageDays) });
+          slaViolations.push({
+            key: bug.key,
+            link: bug.link,
+            title: bug.summary,
+            priority: bug.priority,
+            ageDays: Math.round(ageDays),
+          });
         }
       }
     }
