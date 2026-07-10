@@ -65,8 +65,10 @@ export class JiraIssuesService {
     if (project.jiraProjectId === MANUAL_PROJECT_JIRA_ID) {
       return { data: [] };
     }
+    // Sem tipo escolhido (fluxo atual: Jira vem primeiro, Tipo é derivado da issue
+    // selecionada depois), busca Bug e Melhoria juntos — nunca outros tipos do Jira.
     const result = await this.jiraService.searchIssuesByProject(userId, project.jiraProjectKey, {
-      type: opts.type,
+      type: opts.type ?? ['Bug', 'Improvement'],
       search: opts.search,
       pageSize: 8,
     });

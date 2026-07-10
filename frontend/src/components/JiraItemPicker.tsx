@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { MagnifyingGlass, X } from '@phosphor-icons/react';
 import { jiraIssuesApi, type JiraIssue } from '../api/client';
 import { typeColor } from '../utils/priority';
+import { Tooltip } from './Tooltip';
 
 export interface JiraItemPickerValue {
   key: string;
@@ -10,7 +11,9 @@ export interface JiraItemPickerValue {
 
 interface JiraItemPickerProps {
   projectId: string;
-  type: 'Bug' | 'Improvement';
+  // Sem `type`, busca todos os tipos aceitos pelo endpoint de picker (hoje Bug+Melhoria
+  // juntos) — usado quando o Tipo ainda não é conhecido (derivado da issue escolhida).
+  type?: 'Bug' | 'Improvement';
   value: JiraItemPickerValue | null;
   onChange: (issue: JiraIssue | null) => void;
   placeholder?: string;
@@ -19,6 +22,11 @@ interface JiraItemPickerProps {
 // Combobox de busca/seleção de issue real do Jira — reaproveita o mesmo padrão de
 // debounce (400ms) de JiraIssuesPage.tsx. Usado para vincular bug/melhoria a uma issue
 // real (ExecutionRunPage.tsx), em vez do antigo input de texto livre.
+//
+// Continua sendo um <input> normal mesmo depois de selecionar (não vira uma "tag"/badge
+// somente-leitura): ao focar de novo, reabre a busca prontа com a chave atual, deixando
+// trocar a seleção sem precisar limpar primeiro — só o campo mostra o ID (o resumo já
+// aparece no campo Título, preenchido a partir da mesma seleção).
 export function JiraItemPicker({ projectId, type, value, onChange, placeholder }: JiraItemPickerProps) {
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
@@ -55,46 +63,26 @@ export function JiraItemPicker({ projectId, type, value, onChange, placeholder }
     };
   }, [projectId, type, search]);
 
+  // Fecha a busca ao clicar fora. Só faz algo se a busca estava de fato aberta (senão
+  // qualquer clique na página — inclusive no botão Salvar do formulário — dispararia
+  // isso e apagaria uma seleção que a pessoa nunca tocou). Se o campo ficou vazio (a
+  // pessoa apagou tudo), entende como "quero desvincular"; caso contrário, só volta a
+  // mostrar a seleção existente (não descarta por engano só por ter digitado e clicado
+  // fora sem escolher nada novo).
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
+      if (!open) return;
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setOpen(false);
+        if (value && searchInput.trim() === '') onChange(null);
+        setSearchInput('');
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  }, [open, value, searchInput, onChange]);
 
-  if (value) {
-    return (
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-        <span
-          className="tag"
-          style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', maxWidth: '100%' }}
-        >
-          <span style={{ fontFamily: 'monospace' }}>{value.key}</span>
-          <span
-            style={{
-              color: 'var(--text-secondary)',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {value.summary}
-          </span>
-        </span>
-        <button
-          type="button"
-          className="btn btn-ghost btn-icon btn-sm"
-          onClick={() => onChange(null)}
-          aria-label="Limpar seleção"
-        >
-          <X size={14} />
-        </button>
-      </div>
-    );
-  }
+  const displayValue = open ? searchInput : value ? value.key : searchInput;
 
   return (
     <div ref={containerRef} style={{ position: 'relative' }}>
@@ -111,15 +99,41 @@ export function JiraItemPicker({ projectId, type, value, onChange, placeholder }
           }}
         />
         <input
-          value={searchInput}
+          value={displayValue}
+          onFocus={() => {
+            setOpen(true);
+            if (value) setSearchInput(value.key);
+          }}
           onChange={(e) => {
             setSearchInput(e.target.value);
             setOpen(true);
           }}
-          onFocus={() => setOpen(true)}
           placeholder={placeholder ?? 'Buscar issue no Jira...'}
-          style={{ width: '100%', paddingLeft: '2.1rem' }}
+          style={{ width: '100%', paddingLeft: '2.1rem', paddingRight: value && !open ? '2.1rem' : undefined }}
         />
+        {value && !open && (
+          <button
+            type="button"
+            onClick={() => {
+              onChange(null);
+              setSearchInput('');
+            }}
+            style={{
+              position: 'absolute',
+              right: '0.5rem',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              display: 'flex',
+              color: 'var(--text-muted)',
+            }}
+            aria-label="Limpar seleção"
+          >
+            <X size={14} />
+          </button>
+        )}
       </div>
       {open && search.length >= 2 && (
         <div
@@ -172,18 +186,22 @@ export function JiraItemPicker({ projectId, type, value, onChange, placeholder }
                   <span style={{ fontFamily: 'monospace', fontSize: '0.8rem', color: 'var(--accent)' }}>
                     {issue.key}
                   </span>
-                  <span
-                    style={{
-                      flex: 1,
-                      fontSize: '0.85rem',
-                      color: 'var(--text-secondary)',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {issue.summary}
-                  </span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <Tooltip content={issue.summary} placement="top" display="block">
+                      <span
+                        style={{
+                          display: 'block',
+                          fontSize: '0.85rem',
+                          color: 'var(--text-secondary)',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {issue.summary}
+                      </span>
+                    </Tooltip>
+                  </div>
                   {c && (
                     <span className="tag" style={{ background: c.bg, color: c.color, fontSize: '0.7rem' }}>
                       {issue.issuetype}

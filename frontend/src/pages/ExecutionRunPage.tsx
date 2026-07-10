@@ -53,8 +53,10 @@ function formatVersion(version?: string | null) {
 // Fallback só pra exibir bugs/melhorias antigos, criados antes da mudança pra vincular a
 // uma issue real do Jira (quando só existia o campo de severidade manual).
 const SEVERITY_PT: Record<string, string> = { Trivial: 'Trivial', Normal: 'Normal', Low: 'Trivial', Medium: 'Média', High: 'Alta', Critical: 'Crítica', Gravissima: 'Gravíssima' };
+// Fallback só pra exibir bugs/melhorias antigos (status manual em EN, antes da mudança
+// pra vincular a uma issue real do Jira). Bugs novos guardam o status real do Jira, que
+// pode ser qualquer string (varia por workflow) — não passa mais por essa tradução.
 const ISSUE_STATUS_PT: Record<string, string> = { Open: 'Aberto', 'In Progress': 'Em Andamento', Resolved: 'Resolvido', Cancelled: 'Cancelado' };
-const ISSUE_STATUS_EN: Record<string, string> = { Aberto: 'Open', 'Em Andamento': 'In Progress', Resolvido: 'Resolved', Cancelado: 'Cancelled' };
 
 const ISSUE_STATUS_STYLE: Record<string, { color: string; bg: string }> = {
   Aberto:        { color: 'var(--status-blocked)',   bg: 'var(--status-blocked-bg)' },
@@ -62,6 +64,9 @@ const ISSUE_STATUS_STYLE: Record<string, { color: string; bg: string }> = {
   Resolvido:     { color: 'var(--status-passed)',    bg: 'var(--status-passed-bg)' },
   Cancelado:     { color: 'var(--status-pending)',   bg: 'var(--status-pending-bg)' },
 };
+// Status reais do Jira variam por workflow/projeto e não têm cor definida acima —
+// usa um estilo neutro em vez de simplesmente esconder o badge.
+const DEFAULT_ISSUE_STATUS_STYLE = { color: 'var(--text-secondary)', bg: 'var(--bg-elevated)' };
 
 type IssueFormState = {
   type: string;
@@ -73,6 +78,14 @@ type IssueFormState = {
   status: string;
 };
 const EMPTY_ISSUE_FORM: IssueFormState = { type: 'BUG', jiraKey: '', jiraSummary: '', title: '', status: 'Aberto' };
+
+// Tipo interno é sempre derivado do issuetype real da issue selecionada — a busca do
+// picker já restringe a Bug/Melhoria, então qualquer coisa que não seja literalmente
+// "Bug" é tratada como Melhoria (mesma convenção de `typeColor()` em utils/priority.ts,
+// que trata "Improvement"/"Melhoria" como equivalentes).
+function issueTypeToInternal(issuetype: string): 'BUG' | 'IMPROVEMENT' {
+  return issuetype === 'Bug' ? 'BUG' : 'IMPROVEMENT';
+}
 
 function IssueForm({ form, onChange, onSubmit, onCancel, loading, submitLabel, projectId }: {
   form: IssueFormState;
@@ -86,43 +99,40 @@ function IssueForm({ form, onChange, onSubmit, onCancel, loading, submitLabel, p
   return (
     <div className="card" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
       <div>
-        <label className="form-label">Tipo</label>
-        <select
-          value={form.type}
-          onChange={e => onChange({
-            ...form, type: e.target.value,
+        <label className="form-label">ID Issue *</label>
+        <JiraItemPicker
+          projectId={projectId}
+          value={form.jiraKey ? { key: form.jiraKey, summary: form.jiraSummary } : null}
+          onChange={issue => onChange(issue ? {
+            ...form,
+            jiraKey: issue.key,
+            jiraSummary: issue.summary,
+            jiraPriority: issue.priority,
+            jiraLabels: issue.labels,
+            title: issue.summary,
+            type: issueTypeToInternal(issue.issuetype),
+            status: issue.status,
+          } : {
+            ...form,
             jiraKey: '', jiraSummary: '', jiraPriority: undefined, jiraLabels: undefined,
+            title: '', type: 'BUG', status: 'Aberto',
           })}
-        >
-          <option value="BUG">Bug</option>
-          <option value="IMPROVEMENT">Melhoria</option>
-        </select>
+        />
       </div>
       <div>
-        <label className="form-label">Título *</label>
-        <input placeholder="Descreva o bug ou melhoria" value={form.title} onChange={e => onChange({ ...form, title: e.target.value })} />
+        <label className="form-label">Título</label>
+        <Tooltip content={form.title || 'Selecione uma issue do Jira acima'} placement="top" display="block">
+          <input value={form.title} disabled placeholder="Selecione uma issue do Jira acima" />
+        </Tooltip>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
         <div>
-          <label className="form-label">Jira *</label>
-          <JiraItemPicker
-            projectId={projectId}
-            type={form.type === 'BUG' ? 'Bug' : 'Improvement'}
-            value={form.jiraKey ? { key: form.jiraKey, summary: form.jiraSummary } : null}
-            onChange={issue => onChange({
-              ...form,
-              jiraKey: issue?.key ?? '',
-              jiraSummary: issue?.summary ?? '',
-              jiraPriority: issue?.priority,
-              jiraLabels: issue?.labels,
-            })}
-          />
+          <label className="form-label">Tipo</label>
+          <input value={form.type === 'BUG' ? 'Bug' : 'Melhoria'} disabled />
         </div>
         <div>
           <label className="form-label">Status</label>
-          <select value={form.status} onChange={e => onChange({ ...form, status: e.target.value })}>
-            <option>Aberto</option><option>Em Andamento</option><option>Resolvido</option><option>Cancelado</option>
-          </select>
+          <input value={form.status || '—'} disabled />
         </div>
       </div>
       <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -151,7 +161,7 @@ function IssueCard({ issue, jiraUrl, onEdit, onDelete, confirmDelete, onConfirmD
   const statusPt = ISSUE_STATUS_PT[issue.status ?? ''] ?? issue.status;
   const jiraHref = issue.jiraKey && jiraUrl ? `${jiraUrl.replace(/\/$/, '')}/browse/${issue.jiraKey}` : null;
   const severityStyle = severityPt ? SEVERITY_COLORS[severityPt] : undefined;
-  const statusStyle = statusPt ? ISSUE_STATUS_STYLE[statusPt] : undefined;
+  const statusStyle = statusPt ? (ISSUE_STATUS_STYLE[statusPt] ?? DEFAULT_ISSUE_STATUS_STYLE) : undefined;
   return (
     <div style={{ padding: '0.65rem 0.85rem', background: 'var(--bg-elevated)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
@@ -248,7 +258,7 @@ function IssuePanel({
         title: issueForm.title,
         jiraPriority: issueForm.jiraPriority,
         jiraLabels: issueForm.jiraLabels,
-        status: ISSUE_STATUS_EN[issueForm.status] ?? issueForm.status,
+        status: issueForm.status,
       });
       setIssueForm(EMPTY_ISSUE_FORM);
       setShowIssueForm(false);
@@ -268,7 +278,7 @@ function IssuePanel({
         title: editForm.title,
         jiraPriority: editForm.jiraPriority,
         jiraLabels: editForm.jiraLabels,
-        status: ISSUE_STATUS_EN[editForm.status] ?? editForm.status,
+        status: editForm.status,
       });
       setEditingIssueId(null);
       addToast(editForm.type === 'BUG' ? 'Bug atualizado' : 'Melhoria atualizada');
@@ -339,7 +349,7 @@ function IssuePanel({
                       jiraPriority: issue.jiraPriority,
                       jiraLabels: issue.jiraLabels,
                       title: issue.title,
-                      status: ISSUE_STATUS_PT[issue.status ?? ''] ?? issue.status ?? 'Aberto',
+                      status: issue.status ?? 'Aberto',
                     });
                   }}
                   onDelete={() => setDeleteConfirmId(issue.id)}

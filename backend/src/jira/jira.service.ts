@@ -55,6 +55,18 @@ export class JiraService {
     return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
   }
 
+  // `text ~` (full-text) não pesquisa o campo `key` — buscar "PD-20790" com `text ~`
+  // não acha a issue PD-20790 (o hífen/números não batem como texto livre). Se o termo
+  // parece uma chave de issue (LETRAS-NÚMEROS), busca por `key =` (exata); senão, cai
+  // no full-text de sempre.
+  private buildSearchClause(search: string): string {
+    const trimmed = search.trim();
+    const looksLikeKey = /^[A-Za-z][A-Za-z0-9]*-\d+$/.test(trimmed);
+    return looksLikeKey
+      ? `key = "${this.escapeJql(trimmed.toUpperCase())}"`
+      : `text ~ "${this.escapeJql(trimmed)}*"`;
+  }
+
   // Retenta em 429 respeitando o header Retry-After (com backoff exponencial como
   // fallback) — usado principalmente pela sincronização em lote (Fase 4), que faz
   // várias chamadas seguidas e é o cenário mais provável de esbarrar em rate limit.
@@ -242,7 +254,7 @@ export class JiraService {
       const priorityId = opts.priority.replace(/[^0-9]/g, '');
       if (priorityId) clauses.push(`priority = ${priorityId}`);
     }
-    if (opts.search) clauses.push(`text ~ "${this.escapeJql(opts.search)}*"`);
+    if (opts.search) clauses.push(this.buildSearchClause(opts.search));
     const jql = `${clauses.join(' AND ')} ORDER BY key DESC`;
 
     const pageSize = Math.min(Math.max(opts.pageSize ?? 25, 1), 100);
@@ -299,7 +311,10 @@ export class JiraService {
     userId: string,
     jiraProjectKey: string,
     opts: {
-      type?: 'Bug' | 'Improvement' | 'Epic';
+      // Aceita um tipo único (`'Bug'`) ou uma lista (`['Bug', 'Improvement']`) — o picker
+      // de bug/melhoria busca os dois tipos juntos numa única caixa de busca, sem forçar
+      // a pessoa a escolher o tipo antes de saber o que é o ticket.
+      type?: 'Bug' | 'Improvement' | 'Epic' | Array<'Bug' | 'Improvement'>;
       search?: string;
       pageSize?: number;
       all?: boolean;
@@ -308,8 +323,15 @@ export class JiraService {
     const { accessToken, apiBaseUrl, siteUrl } = await this.authContext(userId);
 
     const clauses = [`project = "${this.escapeJql(jiraProjectKey)}"`];
-    if (opts.type) clauses.push(`issuetype = "${opts.type}"`);
-    if (opts.search) clauses.push(`text ~ "${this.escapeJql(opts.search)}*"`);
+    if (opts.type) {
+      const types = Array.isArray(opts.type) ? opts.type : [opts.type];
+      clauses.push(
+        types.length === 1
+          ? `issuetype = "${types[0]}"`
+          : `issuetype in (${types.map((t) => `"${t}"`).join(', ')})`,
+      );
+    }
+    if (opts.search) clauses.push(this.buildSearchClause(opts.search));
     const jql = `${clauses.join(' AND ')} ORDER BY updated DESC`;
 
     const fields = 'key,summary,status,issuetype,priority,labels,created,updated,assignee,resolutiondate';
