@@ -381,6 +381,49 @@ export class JiraService {
     return { issues, total: issues.length, startAt: 0, maxResults: pageSize };
   }
 
+  // Conta issues do projeto sem paginar/trazer o payload completo — usa
+  // /search/approximate-count (só JQL no corpo, devolve { count }), pra casos como
+  // o dashboard de qualidade que só precisa do total de épicos, não dos dados deles.
+  async countIssuesByProject(
+    userId: string,
+    jiraProjectKey: string,
+    opts: { type?: 'Bug' | 'Improvement' | 'Epic' | Array<'Bug' | 'Improvement'> } = {},
+  ): Promise<number> {
+    const { accessToken, apiBaseUrl } = await this.authContext(userId);
+
+    const clauses = [`project = "${this.escapeJql(jiraProjectKey)}"`];
+    if (opts.type) {
+      const types = Array.isArray(opts.type) ? opts.type : [opts.type];
+      clauses.push(
+        types.length === 1
+          ? `issuetype = "${types[0]}"`
+          : `issuetype in (${types.map((t) => `"${t}"`).join(', ')})`,
+      );
+    }
+    const jql = clauses.join(' AND ');
+
+    const response = await this.fetchWithRetry(`${apiBaseUrl}/rest/api/3/search/approximate-count`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ jql }),
+    });
+
+    if (!response.ok) {
+      const body = await response.text().catch(() => '');
+      throw new HttpException(
+        `Erro ao contar issues do projeto no Jira (${response.statusText}): ${body}`,
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    const data = await response.json();
+    return data.count ?? 0;
+  }
+
   // Status possíveis pros tipos Bug/Improvement dentro do workflow do projeto — não é
   // lista fixa no app, cada projeto Jira define seu próprio workflow de status. Bug e
   // Improvement podem ter workflows diferentes com nomes de status parecidos mas não

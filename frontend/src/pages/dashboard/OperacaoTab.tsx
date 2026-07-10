@@ -44,7 +44,11 @@ function QualityTooltip({ active, payload }: { active?: boolean; payload?: { pay
 
 // Conteúdo original do Dashboard, movido para uma aba própria ("Operação") sem
 // alteração de comportamento — ver PLANO-DASHBOARD-QUALIDADE-V2.md.
-export function OperacaoTab() {
+interface OperacaoTabProps {
+  active: boolean;
+}
+
+export function OperacaoTab({ active }: OperacaoTabProps) {
   const navigate = useNavigate();
   const { selectedProject } = useProject();
   const { selectedBoard } = useBoard();
@@ -139,11 +143,11 @@ export function OperacaoTab() {
   }, [selectedProject, selectedBoard, fetchData]);
 
   useEffect(() => {
-    if (!selectedProject || !selectedBoard) return;
+    if (!active || !selectedProject || !selectedBoard) return;
     if (activeExecutions.length === 0) return;
     const interval = setInterval(() => fetchData(selectedProject.id, selectedBoard.id), 15_000);
     return () => clearInterval(interval);
-  }, [selectedProject, selectedBoard, activeExecutions.length, fetchData]);
+  }, [active, selectedProject, selectedBoard, activeExecutions.length, fetchData]);
 
   const navigateToExecution = (execution: Execution) =>
     navigate(`/execution/${execution.id}`, { state: { from: 'home' } });

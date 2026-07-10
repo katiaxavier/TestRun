@@ -20,6 +20,14 @@ export default function HomePage() {
   const { selectedProject, loading: projectLoading } = useProject();
   const { selectedBoard, loading: boardLoading } = useBoard();
   const [activeTab, setActiveTab] = useState<TabKey>('operacao');
+  // Abas já visitadas ficam montadas (só escondidas via CSS) pra trocar de aba não
+  // refazer o fetch inteiro de novo — ver PLANO em .claude/plans (fix de reload ao trocar de aba).
+  const [visitedTabs, setVisitedTabs] = useState<Set<TabKey>>(() => new Set(['operacao']));
+
+  const selectTab = (key: TabKey) => {
+    setActiveTab(key);
+    setVisitedTabs(prev => (prev.has(key) ? prev : new Set(prev).add(key)));
+  };
 
   if (projectLoading || boardLoading) {
     return <div className="loading-page"><div className="spinner" /> Carregando...</div>;
@@ -63,16 +71,28 @@ export default function HomePage() {
           <button
             key={tab.key}
             className={`filter-item ${activeTab === tab.key ? 'active' : ''}`}
-            onClick={() => setActiveTab(tab.key)}
+            onClick={() => selectTab(tab.key)}
           >
             {tab.label}
           </button>
         ))}
       </div>
 
-      {activeTab === 'operacao' && <OperacaoTab />}
-      {activeTab === 'qualidade' && <QualidadeTab projectId={selectedProject.id} boardId={selectedBoard.id} />}
-      {activeTab === 'eficiencia' && <EficienciaTab projectId={selectedProject.id} boardId={selectedBoard.id} />}
+      {visitedTabs.has('operacao') && (
+        <div style={{ display: activeTab === 'operacao' ? undefined : 'none' }}>
+          <OperacaoTab active={activeTab === 'operacao'} />
+        </div>
+      )}
+      {visitedTabs.has('qualidade') && (
+        <div style={{ display: activeTab === 'qualidade' ? undefined : 'none' }}>
+          <QualidadeTab projectId={selectedProject.id} boardId={selectedBoard.id} />
+        </div>
+      )}
+      {visitedTabs.has('eficiencia') && (
+        <div style={{ display: activeTab === 'eficiencia' ? undefined : 'none' }}>
+          <EficienciaTab projectId={selectedProject.id} boardId={selectedBoard.id} />
+        </div>
+      )}
     </div>
   );
 }

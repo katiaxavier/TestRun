@@ -120,11 +120,7 @@ export class DashboardService {
 
     let totalEpics = 0;
     if (project.jiraProjectId !== MANUAL_PROJECT_JIRA_ID) {
-      const epics = await this.jiraService.searchIssuesByProject(userId, project.jiraProjectKey, {
-        type: 'Epic',
-        all: true,
-      });
-      totalEpics = epics.total;
+      totalEpics = await this.jiraService.countIssuesByProject(userId, project.jiraProjectKey, { type: 'Epic' });
     }
 
     const [totalTestCases, automatedTestCases] = await Promise.all([
