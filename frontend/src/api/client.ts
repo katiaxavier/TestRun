@@ -318,7 +318,7 @@ export interface DashboardEfficiency {
   avgAgeDays: number | null;
   openBugsCount: number;
   resolvedBugsCount: number;
-  slaViolations: { key: string; link: string; priority?: string; ageDays: number }[];
+  slaViolations: { key: string; link: string; title: string; priority?: string; ageDays: number }[];
 }
 
 export const dashboardApi = {

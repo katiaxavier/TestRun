@@ -5,6 +5,7 @@ import { dashboardApi } from '../../api/client';
 import type { DashboardQuality } from '../../api/client';
 import { priorityLabel, PRIORITY_COLORS } from '../../utils/priority';
 import { bandColor } from './shared';
+import { InfoTooltip } from '../../components/InfoTooltip';
 
 interface QualidadeTabProps {
   projectId: string;
@@ -94,6 +95,10 @@ export function QualidadeTab({ projectId, boardId }: QualidadeTabProps) {
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
           <ChartBarIcon size={18} weight="duotone" style={{ color: 'var(--status-failed)' }} />
           <h2 style={{ fontSize: '1.1rem', fontWeight: 700, letterSpacing: '-0.01em' }}>Densidade de Defeitos por Label</h2>
+          <InfoTooltip>
+            Quantidade de bugs/melhorias distintos (das últimas execuções concluídas) agrupados pela combinação
+            exata de labels do Jira — cada issue conta uma única vez, no grupo do conjunto de labels que ela tem.
+          </InfoTooltip>
         </div>
         {sortedDensity.length === 0 ? (
           <div className="empty-state" style={{ padding: '2rem' }}>
@@ -125,6 +130,11 @@ export function QualidadeTab({ projectId, boardId }: QualidadeTabProps) {
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
           <GaugeIcon size={18} weight="duotone" style={{ color: 'var(--text-muted)' }} />
           <h2 style={{ fontSize: '1.1rem', fontWeight: 700, letterSpacing: '-0.01em' }}>Taxa de Sucesso × Severidade</h2>
+          <InfoTooltip>
+            Uma barra por execução concluída, mostrando quantos bugs/melhorias distintos de cada severidade
+            apareceram naquela execução — dá pra ver se as execuções mais recentes estão trazendo defeitos
+            mais ou menos graves que as anteriores.
+          </InfoTooltip>
         </div>
         {severityChartData.length === 0 ? (
           <div className="empty-state" style={{ padding: '2rem' }}>
@@ -161,6 +171,10 @@ export function QualidadeTab({ projectId, boardId }: QualidadeTabProps) {
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
           <TargetIcon size={18} weight="duotone" style={{ color: 'var(--secondary)' }} />
           <h2 style={{ fontSize: '1.1rem', fontWeight: 700, letterSpacing: '-0.01em' }}>Cobertura de Requisitos + Automação</h2>
+          <InfoTooltip>
+            Épicos são sempre do projeto inteiro, mesmo com um quadro selecionado no resto do dashboard.
+            Casos de Teste e Automação já são filtrados pelo quadro selecionado.
+          </InfoTooltip>
         </div>
         <div className="stats-grid">
           <div className="stat-card">

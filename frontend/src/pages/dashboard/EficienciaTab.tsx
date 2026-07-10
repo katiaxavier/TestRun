@@ -3,11 +3,24 @@ import { ClockIcon, ArrowSquareOutIcon, HourglassIcon } from '@phosphor-icons/re
 import { dashboardApi } from '../../api/client';
 import type { DashboardEfficiency } from '../../api/client';
 import { priorityLabel, PRIORITY_COLORS } from '../../utils/priority';
+import { InfoTooltip } from '../../components/InfoTooltip';
 
 interface EficienciaTabProps {
   projectId: string;
   boardId: string;
 }
+
+// Mesmos prazos de backend/src/dashboard/dashboard.constants.ts (SLA_DAYS_BY_PRIORITY,
+// lado em português) — mantidos em sincronia manual, sem fonte única compartilhada
+// front/back neste repo (mesmo padrão de COMPLETED_EXECUTIONS_LIMIT).
+const SLA_DAYS_BY_SEVERITY: { label: string; days: number }[] = [
+  { label: 'Gravíssima', days: 3 },
+  { label: 'Crítica', days: 7 },
+  { label: 'Alta', days: 15 },
+  { label: 'Média', days: 21 },
+  { label: 'Normal', days: 30 },
+  { label: 'Trivial', days: 45 },
+];
 
 export function EficienciaTab({ projectId, boardId }: EficienciaTabProps) {
   const [data, setData] = useState<DashboardEfficiency | null>(null);
@@ -42,6 +55,11 @@ export function EficienciaTab({ projectId, boardId }: EficienciaTabProps) {
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
           <ClockIcon size={18} weight="duotone" style={{ color: 'var(--secondary)' }} />
           <h2 style={{ fontSize: '1.1rem', fontWeight: 700, letterSpacing: '-0.01em' }}>MTTR / Idade dos Defeitos / SLA</h2>
+          <InfoTooltip>
+            <strong>MTTR:</strong> tempo médio, em dias, entre a criação e a resolução dos bugs já corrigidos.<br />
+            <strong>Idade Média:</strong> há quanto tempo, em média, os bugs ainda abertos estão parados.<br />
+            <strong>Bugs Acima do SLA:</strong> quantos bugs abertos já ultrapassaram o prazo esperado para a severidade deles.
+          </InfoTooltip>
         </div>
         <div className="stats-grid">
           <div className="stat-card">
@@ -68,6 +86,14 @@ export function EficienciaTab({ projectId, boardId }: EficienciaTabProps) {
           <HourglassIcon size={18} weight="duotone" style={{ color: 'var(--status-failed)' }} />
           <h2 style={{ fontSize: '1.1rem', fontWeight: 700, letterSpacing: '-0.01em' }}>Bugs Acima do SLA</h2>
         </div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem 1.25rem', marginBottom: '1rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+          {SLA_DAYS_BY_SEVERITY.map(({ label, days }) => (
+            <span key={label} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <span style={{ width: 8, height: 8, borderRadius: 99, background: PRIORITY_COLORS[label] }} />
+              {label}: {days} dias
+            </span>
+          ))}
+        </div>
         {data.slaViolations.length === 0 ? (
           <div className="empty-state" style={{ padding: '2rem' }}>
             <HourglassIcon size={40} />
@@ -81,6 +107,7 @@ export function EficienciaTab({ projectId, boardId }: EficienciaTabProps) {
                 <thead>
                   <tr>
                     <th style={{ width: 130 }}>Chave</th>
+                    <th>Título</th>
                     <th style={{ width: 130 }}>Severidade</th>
                     <th>Dias em aberto</th>
                   </tr>
@@ -99,6 +126,9 @@ export function EficienciaTab({ projectId, boardId }: EficienciaTabProps) {
                           >
                             {bug.key} <ArrowSquareOutIcon size={11} />
                           </a>
+                        </td>
+                        <td style={{ fontSize: '0.85rem', maxWidth: 360, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={bug.title}>
+                          {bug.title}
                         </td>
                         <td>
                           {severity === '—' ? (

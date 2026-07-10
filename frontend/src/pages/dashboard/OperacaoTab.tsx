@@ -22,6 +22,7 @@ import { useProject } from '../../context/ProjectContext';
 import { useBoard } from '../../context/BoardContext';
 import { typeColor } from '../../utils/priority';
 import { progressOf, bandColor, executionTitle, COMPLETED_EXECUTIONS_LIMIT } from './shared';
+import { InfoTooltip } from '../../components/InfoTooltip';
 
 const ACTIVE_EXECUTIONS_LIMIT = 50; // teto do endpoint; cobre o caso de várias execuções simultâneas
 const RECENT_COMPLETED_DISPLAY = 3; // quantas aparecem na lista "Últimas Execuções Concluídas"
@@ -507,6 +508,11 @@ export function OperacaoTab({ active }: OperacaoTabProps) {
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
           <ChartLineUpIcon size={18} weight="duotone" style={{ color: 'var(--text-muted)' }} />
           <h2 style={{ fontSize: '1.1rem', fontWeight: 700, letterSpacing: '-0.01em' }}>Qualidade</h2>
+          <InfoTooltip>
+            Taxa de aprovação de cada uma das últimas {COMPLETED_EXECUTIONS_LIMIT} execuções concluídas — casos
+            de teste (ou cenários, quando existem) marcados como Aprovado dividido pelo total já executado
+            (Aprovado + Reprovado + Bloqueado) naquela execução.
+          </InfoTooltip>
         </div>
         {chartData.length === 0 ? (
           <div className="empty-state" style={{ padding: '2rem' }}>
