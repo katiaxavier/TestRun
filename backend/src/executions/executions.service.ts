@@ -44,6 +44,8 @@ export class CreateIssueDto {
   jiraKey?: string;
   title!: string;
   severity?: string;
+  jiraPriority?: string;
+  jiraLabels?: string[];
   status?: string;
 }
 
@@ -52,6 +54,8 @@ export class UpdateIssueDto {
   jiraKey?: string | null;
   title?: string;
   severity?: string;
+  jiraPriority?: string;
+  jiraLabels?: string[];
   status?: string;
 }
 
@@ -313,13 +317,21 @@ export class ExecutionsService {
       );
     }
 
+    if (!dto.jiraKey?.trim()) {
+      throw new HttpException(
+        'Vincule uma issue real do Jira para registrar o bug/melhoria.',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
     const issue = await this.prisma.issue.create({
       data: {
         executionTestCaseId: execTestCaseId,
         type: dto.type.toUpperCase(),
-        jiraKey: dto.jiraKey || null,
+        jiraKey: dto.jiraKey,
         title: dto.title,
-        severity: dto.severity || null,
+        jiraPriority: dto.jiraPriority || null,
+        jiraLabels: dto.jiraLabels ?? [],
         status: dto.status || 'Open',
       },
     });
@@ -364,6 +376,12 @@ export class ExecutionsService {
     const issue = await this.prisma.issue.findUnique({ where: { id: issueId } });
     if (!issue) {
       throw new HttpException('Issue não encontrada.', HttpStatus.NOT_FOUND);
+    }
+    if (dto.jiraKey !== undefined && !dto.jiraKey?.trim()) {
+      throw new HttpException(
+        'Não é possível desvincular o bug/melhoria de uma issue do Jira.',
+        HttpStatus.BAD_REQUEST,
+      );
     }
     return this.prisma.issue.update({ where: { id: issueId }, data: dto });
   }
@@ -884,13 +902,20 @@ export class ExecutionsService {
   async addScenarioIssue(scenarioId: string, dto: CreateIssueDto) {
     const scenario = await this.prisma.scenario.findUnique({ where: { id: scenarioId } });
     if (!scenario) throw new HttpException('Cenário não encontrado.', HttpStatus.NOT_FOUND);
+    if (!dto.jiraKey?.trim()) {
+      throw new HttpException(
+        'Vincule uma issue real do Jira para registrar o bug/melhoria.',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
     return this.prisma.issue.create({
       data: {
         scenarioId,
         type: dto.type.toUpperCase(),
-        jiraKey: dto.jiraKey || null,
+        jiraKey: dto.jiraKey,
         title: dto.title,
-        severity: dto.severity || null,
+        jiraPriority: dto.jiraPriority || null,
+        jiraLabels: dto.jiraLabels ?? [],
         status: dto.status || 'Open',
       },
     });
@@ -900,6 +925,12 @@ export class ExecutionsService {
     const issue = await this.prisma.issue.findUnique({ where: { id: issueId } });
     if (!issue || issue.scenarioId !== scenarioId)
       throw new HttpException('Issue não encontrada.', HttpStatus.NOT_FOUND);
+    if (dto.jiraKey !== undefined && !dto.jiraKey?.trim()) {
+      throw new HttpException(
+        'Não é possível desvincular o bug/melhoria de uma issue do Jira.',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
     return this.prisma.issue.update({ where: { id: issueId }, data: dto });
   }
 

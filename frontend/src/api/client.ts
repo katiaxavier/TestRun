@@ -51,6 +51,8 @@ export interface Suite {
   manualKey?: string;
   title: string;
   isManual?: boolean;
+  epicKey?: string;
+  epicSummary?: string;
   createdAt: string;
   updatedAt: string;
   _count?: { testCases: number; executions: number };
@@ -71,6 +73,7 @@ export interface TestCase {
   title: string;
   link?: string;
   priority?: string;
+  automated?: boolean;
   suiteId: string;
   scenarioTemplates?: TestCaseScenario[];
 }
@@ -120,6 +123,8 @@ export interface Issue {
   jiraKey?: string;
   title: string;
   severity?: string;
+  jiraPriority?: string;
+  jiraLabels?: string[];
   status?: string;
   responsible?: string;
 }
@@ -130,6 +135,7 @@ export interface JiraIssue {
   status: string;
   issuetype: string;
   priority?: string;
+  labels?: string[];
   created: string;
   updated: string;
   assignee?: string;
@@ -172,6 +178,8 @@ export const suitesApi = {
   delete: (id: string) => api.delete(`/suites/${id}`),
   addTestCase: (suiteId: string, jiraKey: string) =>
     api.post<TestCase>(`/suites/${suiteId}/test-cases`, { jiraKey }),
+  updateTestCase: (id: string, data: { automated?: boolean }) =>
+    api.patch<TestCase>(`/suites/test-cases/${id}`, data),
   deleteTestCase: (id: string) => api.delete(`/suites/test-cases/${id}`),
   addScenarioTemplate: (tcId: string, name: string) =>
     api.post<TestCaseScenario>(`/suites/test-cases/${tcId}/scenarios`, { name }),
@@ -230,7 +238,7 @@ export const executionsApi = {
     etcId: string,
     data: { status?: string; responsible?: string; comments?: string }
   ) => api.patch(`/executions/${executionId}/test-cases/${etcId}`, data),
-  addIssue: (executionId: string, etcId: string, data: { type: string; jiraKey?: string; title: string; severity?: string; status?: string; responsible?: string }) =>
+  addIssue: (executionId: string, etcId: string, data: { type: string; jiraKey?: string; title: string; jiraPriority?: string; jiraLabels?: string[]; status?: string; responsible?: string }) =>
     api.post(`/executions/${executionId}/test-cases/${etcId}/issues`, data),
   removeTestCase: (executionId: string, etcId: string) =>
     api.delete(`/executions/${executionId}/test-cases/${etcId}`),
@@ -238,7 +246,7 @@ export const executionsApi = {
     api.delete(`/batch/${batchId}/test-cases/${testCaseId}`),
   removeIssue: (executionId: string, etcId: string, issueId: string) =>
     api.delete(`/executions/${executionId}/test-cases/${etcId}/issues/${issueId}`),
-  updateIssue: (executionId: string, etcId: string, issueId: string, data: { type?: string; jiraKey?: string | null; title?: string; severity?: string; status?: string }) =>
+  updateIssue: (executionId: string, etcId: string, issueId: string, data: { type?: string; jiraKey?: string | null; title?: string; jiraPriority?: string; jiraLabels?: string[]; status?: string }) =>
     api.patch<Issue>(`/executions/${executionId}/test-cases/${etcId}/issues/${issueId}`, data),
 
   createScenario: (executionId: string, etcId: string, name: string) =>
@@ -252,9 +260,9 @@ export const executionsApi = {
   deleteScenarioBatch: (executionId: string, etcId: string, ids: string[]) =>
     api.delete(`/executions/${executionId}/test-cases/${etcId}/scenarios`, { data: { ids } }),
 
-  addScenarioIssue: (executionId: string, etcId: string, scenarioId: string, data: { type: string; jiraKey?: string; title: string; severity?: string; status?: string }) =>
+  addScenarioIssue: (executionId: string, etcId: string, scenarioId: string, data: { type: string; jiraKey?: string; title: string; jiraPriority?: string; jiraLabels?: string[]; status?: string }) =>
     api.post<Issue>(`/executions/${executionId}/test-cases/${etcId}/scenarios/${scenarioId}/issues`, data),
-  updateScenarioIssue: (executionId: string, etcId: string, scenarioId: string, issueId: string, data: { type?: string; jiraKey?: string | null; title?: string; severity?: string; status?: string }) =>
+  updateScenarioIssue: (executionId: string, etcId: string, scenarioId: string, issueId: string, data: { type?: string; jiraKey?: string | null; title?: string; jiraPriority?: string; jiraLabels?: string[]; status?: string }) =>
     api.patch<Issue>(`/executions/${executionId}/test-cases/${etcId}/scenarios/${scenarioId}/issues/${issueId}`, data),
   removeScenarioIssue: (executionId: string, etcId: string, scenarioId: string, issueId: string) =>
     api.delete(`/executions/${executionId}/test-cases/${etcId}/scenarios/${scenarioId}/issues/${issueId}`),
@@ -288,6 +296,36 @@ export const jiraIssuesApi = {
     }),
   getFilters: (projectId: string) =>
     api.get<JiraIssueFilters>('/jira-issues/filters', { params: { projectId } }),
+  searchPicker: (projectId: string, opts: { type?: 'Bug' | 'Improvement'; search?: string }) =>
+    api.get<{ data: JiraIssue[] }>('/jira-issues/picker', {
+      params: { projectId, type: opts.type, search: opts.search },
+    }),
+};
+
+export interface DashboardQuality {
+  density: { key: string; labels: string[]; count: number }[];
+  severityByExecution: { executionId: string; bySeverity: { severity: string; count: number }[] }[];
+  coverage: {
+    epicsWithSuite: number;
+    totalEpics: number;
+    totalTestCases: number;
+    automatedTestCases: number;
+  };
+}
+
+export interface DashboardEfficiency {
+  mttrDays: number | null;
+  avgAgeDays: number | null;
+  openBugsCount: number;
+  resolvedBugsCount: number;
+  slaViolations: { key: string; link: string; priority?: string; ageDays: number }[];
+}
+
+export const dashboardApi = {
+  getQuality: (projectId: string, boardId?: string) =>
+    api.get<DashboardQuality>('/dashboard/quality', { params: { projectId, boardId } }),
+  getEfficiency: (projectId: string, boardId?: string) =>
+    api.get<DashboardEfficiency>('/dashboard/efficiency', { params: { projectId, boardId } }),
 };
 
 export const reportsApi = {

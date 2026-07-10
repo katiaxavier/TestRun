@@ -152,11 +152,15 @@ export class SuitesService {
       where: { projectId_jiraKey: { projectId, jiraKey: key } },
       update: {
         title: jiraData.suiteTitle,
+        epicKey: jiraData.epicKey,
+        epicSummary: jiraData.epicSummary,
         ...(boardId ? { boards: { connect: { id: boardId } } } : {}),
       },
       create: {
         jiraKey: key,
         title: jiraData.suiteTitle,
+        epicKey: jiraData.epicKey,
+        epicSummary: jiraData.epicSummary,
         projectId,
         ...(boardId ? { boards: { connect: { id: boardId } } } : {}),
       },
@@ -254,6 +258,17 @@ export class SuitesService {
       where: { id },
     });
     return { success: true, message: 'Suíte excluída com sucesso!' };
+  }
+
+  async updateTestCase(id: string, data: { automated?: boolean }) {
+    const tc = await this.prisma.testCase.findUnique({ where: { id } });
+    if (!tc) {
+      throw new HttpException('Caso de teste não encontrado.', HttpStatus.NOT_FOUND);
+    }
+    return this.prisma.testCase.update({
+      where: { id },
+      data: { automated: data.automated },
+    });
   }
 
   async deleteTestCase(id: string) {

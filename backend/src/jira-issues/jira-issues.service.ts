@@ -50,6 +50,29 @@ export class JiraIssuesService {
     };
   }
 
+  // Busca usada pelo picker de vínculo de bug/melhoria (ExecutionRunPage.tsx) — projeto
+  // inteiro, não escopada a um quadro (uma Suíte pode ter 0/N boards, então não há um
+  // boardId único e confiável disponível ali). Página pequena, sem paginação de UI.
+  async searchForPicker(
+    userId: string,
+    projectId: string,
+    opts: { type?: 'Bug' | 'Improvement'; search?: string } = {},
+  ) {
+    const project = await this.prisma.project.findUnique({ where: { id: projectId } });
+    if (!project) {
+      throw new HttpException('Projeto não encontrado.', HttpStatus.NOT_FOUND);
+    }
+    if (project.jiraProjectId === MANUAL_PROJECT_JIRA_ID) {
+      return { data: [] };
+    }
+    const result = await this.jiraService.searchIssuesByProject(userId, project.jiraProjectKey, {
+      type: opts.type,
+      search: opts.search,
+      pageSize: 8,
+    });
+    return { data: result.issues };
+  }
+
   // Opções pros três filtros da tela: tipo é fixo (só Bug/Improvement existem nesta
   // busca), status/priority vêm do Jira (workflow por projeto / lista global do site).
   async listFilters(userId: string, projectId: string) {

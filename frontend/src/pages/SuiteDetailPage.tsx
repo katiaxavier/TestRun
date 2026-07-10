@@ -285,6 +285,11 @@ export default function SuiteDetailPage() {
     } : prev);
   };
 
+  const handleToggleAutomated = async (tcId: string, automated: boolean) => {
+    const { data } = await suitesApi.updateTestCase(tcId, { automated });
+    handleTcUpdate(data);
+  };
+
   if (loading) return <div className="page"><div className="loading-page"><div className="spinner" /> Carregando...</div></div>;
   if (!suite) return null;
 
@@ -328,6 +333,7 @@ export default function SuiteDetailPage() {
           <TestCaseList
             testCases={testCases}
             onDelete={handleDeleteTestCase}
+            onToggleAutomated={handleToggleAutomated}
             renderExtra={tc => <ScenarioTemplatePanel tc={tc} onUpdate={handleTcUpdate} />}
             isManual={suite.isManual}
           />

@@ -8,8 +8,8 @@ generator client {
 }
 
 model User {
-  id                 String    @id @default(uuid())
-  atlassianAccountId String    @unique
+  id                 String              @id @default(uuid())
+  atlassianAccountId String              @unique
   email              String?
   displayName        String
   avatarUrl          String?
@@ -17,8 +17,8 @@ model User {
   refreshToken       String?
   accessTokenExpires DateTime?
   memberships        ProjectMembership[]
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
 }
 
 model Project {
@@ -36,16 +36,16 @@ model Project {
 }
 
 model Board {
-  id          String   @id @default(uuid())
-  jiraBoardId String   @unique
+  id          String           @id @default(uuid())
+  jiraBoardId String           @unique
   name        String
   type        String
   projectId   String
-  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project     Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
   suites      Suite[]
   batches     ExecutionBatch[]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
 }
 
 model ProjectMembership {
@@ -60,18 +60,20 @@ model ProjectMembership {
 }
 
 model Suite {
-  id         String      @id @default(uuid())
-  projectId  String
-  project    Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  boards     Board[]
-  jiraKey    String?
-  manualKey  String?
-  title      String
-  isManual   Boolean     @default(false)
-  testCases  TestCase[]
-  executions Execution[]
-  createdAt  DateTime    @default(now())
-  updatedAt  DateTime    @updatedAt
+  id          String      @id @default(uuid())
+  projectId   String
+  project     Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  boards      Board[]
+  jiraKey     String?
+  manualKey   String?
+  title       String
+  isManual    Boolean     @default(false)
+  epicKey     String?
+  epicSummary String?
+  testCases   TestCase[]
+  executions  Execution[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
 
   @@unique([projectId, jiraKey])
   @@unique([projectId, manualKey])
@@ -83,6 +85,7 @@ model TestCase {
   title              String
   link               String?
   priority           String?
+  automated          Boolean             @default(false)
   suiteId            String
   suite              Suite               @relation(fields: [suiteId], references: [id], onDelete: Cascade)
   executionTestCases ExecutionTestCase[]
@@ -156,7 +159,7 @@ model ExecutionTestCase {
 model Scenario {
   id                  String            @id @default(uuid())
   executionTestCaseId String
-  executionTestCase   ExecutionTestCase  @relation(fields: [executionTestCaseId], references: [id], onDelete: Cascade)
+  executionTestCase   ExecutionTestCase @relation(fields: [executionTestCaseId], references: [id], onDelete: Cascade)
   templateId          String?
   template            TestCaseScenario? @relation(fields: [templateId], references: [id])
   name                String
@@ -170,13 +173,15 @@ model Scenario {
 model Issue {
   id                  String             @id @default(uuid())
   executionTestCaseId String?
-  executionTestCase   ExecutionTestCase?  @relation(fields: [executionTestCaseId], references: [id], onDelete: Cascade)
+  executionTestCase   ExecutionTestCase? @relation(fields: [executionTestCaseId], references: [id], onDelete: Cascade)
   scenarioId          String?
   scenario            Scenario?          @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
   type                String
   jiraKey             String?
   title               String
   severity            String?
+  jiraPriority        String?
+  jiraLabels          String[]           @default([])
   status              String?
   createdAt           DateTime           @default(now())
   updatedAt           DateTime           @updatedAt

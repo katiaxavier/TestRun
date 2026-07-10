@@ -13,6 +13,7 @@ import { StatusBadge } from '../components/StatusBadge';
 import { Modal } from '../components/Modal';
 import { Tooltip } from '../components/Tooltip';
 import { ExecutionFormModal, type ExecutionFormData } from '../components/ExecutionFormModal';
+import { JiraItemPicker } from '../components/JiraItemPicker';
 import { PRIORITY_COLORS, SEVERITY_COLORS, priorityLabel, normalize } from '../utils/priority';
 
 const STATUS_OPTIONS = ['PENDING', 'PASSED', 'FAILED', 'BLOCKED'];
@@ -49,8 +50,9 @@ function formatVersion(version?: string | null) {
 }
 
 // ── Issue helpers ────────────────────────────────────────────────────────────
+// Fallback só pra exibir bugs/melhorias antigos, criados antes da mudança pra vincular a
+// uma issue real do Jira (quando só existia o campo de severidade manual).
 const SEVERITY_PT: Record<string, string> = { Trivial: 'Trivial', Normal: 'Normal', Low: 'Trivial', Medium: 'Média', High: 'Alta', Critical: 'Crítica', Gravissima: 'Gravíssima' };
-const SEVERITY_EN: Record<string, string> = { Trivial: 'Trivial', Normal: 'Normal', Média: 'Medium', Alta: 'High', Crítica: 'Critical', 'Gravíssima': 'Gravissima' };
 const ISSUE_STATUS_PT: Record<string, string> = { Open: 'Aberto', 'In Progress': 'Em Andamento', Resolved: 'Resolvido', Cancelled: 'Cancelado' };
 const ISSUE_STATUS_EN: Record<string, string> = { Aberto: 'Open', 'Em Andamento': 'In Progress', Resolvido: 'Resolved', Cancelado: 'Cancelled' };
 
@@ -61,33 +63,40 @@ const ISSUE_STATUS_STYLE: Record<string, { color: string; bg: string }> = {
   Cancelado:     { color: 'var(--status-pending)',   bg: 'var(--status-pending-bg)' },
 };
 
-type IssueFormState = { type: string; jiraKey: string; title: string; severity: string; status: string };
-const EMPTY_ISSUE_FORM: IssueFormState = { type: 'BUG', jiraKey: '', title: '', severity: 'Média', status: 'Aberto' };
+type IssueFormState = {
+  type: string;
+  jiraKey: string;
+  jiraSummary: string;
+  jiraPriority?: string;
+  jiraLabels?: string[];
+  title: string;
+  status: string;
+};
+const EMPTY_ISSUE_FORM: IssueFormState = { type: 'BUG', jiraKey: '', jiraSummary: '', title: '', status: 'Aberto' };
 
-function IssueForm({ form, onChange, onSubmit, onCancel, loading, submitLabel }: {
+function IssueForm({ form, onChange, onSubmit, onCancel, loading, submitLabel, projectId }: {
   form: IssueFormState;
   onChange: (f: IssueFormState) => void;
   onSubmit: () => void;
   onCancel: () => void;
   loading: boolean;
   submitLabel: string;
+  projectId: string;
 }) {
   return (
     <div className="card" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-        <div>
-          <label className="form-label">Tipo</label>
-          <select value={form.type} onChange={e => onChange({ ...form, type: e.target.value })}>
-            <option value="BUG">Bug</option>
-            <option value="IMPROVEMENT">Melhoria</option>
-          </select>
-        </div>
-        <div>
-          <label className="form-label">Severidade</label>
-          <select value={form.severity} onChange={e => onChange({ ...form, severity: e.target.value })}>
-            <option>Trivial</option><option>Normal</option><option>Média</option><option>Alta</option><option>Crítica</option><option>Gravíssima</option>
-          </select>
-        </div>
+      <div>
+        <label className="form-label">Tipo</label>
+        <select
+          value={form.type}
+          onChange={e => onChange({
+            ...form, type: e.target.value,
+            jiraKey: '', jiraSummary: '', jiraPriority: undefined, jiraLabels: undefined,
+          })}
+        >
+          <option value="BUG">Bug</option>
+          <option value="IMPROVEMENT">Melhoria</option>
+        </select>
       </div>
       <div>
         <label className="form-label">Título *</label>
@@ -95,8 +104,19 @@ function IssueForm({ form, onChange, onSubmit, onCancel, loading, submitLabel }:
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
         <div>
-          <label className="form-label">ID Jira (opcional)</label>
-          <input placeholder="PROJ-999" value={form.jiraKey} onChange={e => onChange({ ...form, jiraKey: e.target.value.toUpperCase() })} />
+          <label className="form-label">Jira *</label>
+          <JiraItemPicker
+            projectId={projectId}
+            type={form.type === 'BUG' ? 'Bug' : 'Improvement'}
+            value={form.jiraKey ? { key: form.jiraKey, summary: form.jiraSummary } : null}
+            onChange={issue => onChange({
+              ...form,
+              jiraKey: issue?.key ?? '',
+              jiraSummary: issue?.summary ?? '',
+              jiraPriority: issue?.priority,
+              jiraLabels: issue?.labels,
+            })}
+          />
         </div>
         <div>
           <label className="form-label">Status</label>
@@ -106,7 +126,7 @@ function IssueForm({ form, onChange, onSubmit, onCancel, loading, submitLabel }:
         </div>
       </div>
       <div style={{ display: 'flex', gap: '0.5rem' }}>
-        <button className="btn btn-primary btn-sm" onClick={onSubmit} disabled={loading || !form.title.trim()} style={{ justifyContent: 'center', flex: 1 }}>
+        <button className="btn btn-primary btn-sm" onClick={onSubmit} disabled={loading || !form.title.trim() || !form.jiraKey} style={{ justifyContent: 'center', flex: 1 }}>
           {loading ? <div className="spinner" style={{ width: 13, height: 13 }} /> : <CheckCircle size={14} />}
           {submitLabel}
         </button>
@@ -125,7 +145,9 @@ function IssueCard({ issue, jiraUrl, onEdit, onDelete, confirmDelete, onConfirmD
   onConfirmDelete: () => void;
   onCancelDelete: () => void;
 }) {
-  const severityPt = SEVERITY_PT[issue.severity ?? ''] ?? issue.severity;
+  const severityPt = issue.jiraPriority
+    ? priorityLabel(issue.jiraPriority)
+    : (SEVERITY_PT[issue.severity ?? ''] ?? issue.severity);
   const statusPt = ISSUE_STATUS_PT[issue.status ?? ''] ?? issue.status;
   const jiraHref = issue.jiraKey && jiraUrl ? `${jiraUrl.replace(/\/$/, '')}/browse/${issue.jiraKey}` : null;
   const severityStyle = severityPt ? SEVERITY_COLORS[severityPt] : undefined;
@@ -158,6 +180,13 @@ function IssueCard({ issue, jiraUrl, onEdit, onDelete, confirmDelete, onConfirmD
             )}
           </div>
           <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>{issue.title}</p>
+          {issue.jiraLabels && issue.jiraLabels.length > 0 && (
+            <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap', marginTop: '0.35rem' }}>
+              {issue.jiraLabels.map(label => (
+                <span key={label} className="tag" style={{ fontSize: '0.65rem', padding: '0.05rem 0.35rem' }}>{label}</span>
+              ))}
+            </div>
+          )}
         </div>
         <div style={{ display: 'flex', gap: '0.1rem', flexShrink: 0 }}>
           <Tooltip content="Editar" placement="top">
@@ -185,12 +214,13 @@ function IssueCard({ issue, jiraUrl, onEdit, onDelete, confirmDelete, onConfirmD
 
 // ── Issue panel (reusable for test case and scenario) ────────────────────────
 function IssuePanel({
-  issues, jiraUrl, onAdd, onUpdate, onRemove,
+  issues, jiraUrl, projectId, onAdd, onUpdate, onRemove,
 }: {
   issues: Issue[];
   jiraUrl: string;
-  onAdd: (data: { type: string; jiraKey?: string; title: string; severity?: string; status?: string }) => Promise<void>;
-  onUpdate: (issueId: string, data: { type?: string; jiraKey?: string | null; title?: string; severity?: string; status?: string }) => Promise<void>;
+  projectId: string;
+  onAdd: (data: { type: string; jiraKey: string; title: string; jiraPriority?: string; jiraLabels?: string[]; status?: string }) => Promise<void>;
+  onUpdate: (issueId: string, data: { type?: string; jiraKey?: string | null; title?: string; jiraPriority?: string; jiraLabels?: string[]; status?: string }) => Promise<void>;
   onRemove: (issueId: string) => Promise<void>;
 }) {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
@@ -209,14 +239,15 @@ function IssuePanel({
   };
 
   const handleAdd = async () => {
-    if (!issueForm.title.trim()) return;
+    if (!issueForm.title.trim() || !issueForm.jiraKey) return;
     setAddingIssue(true);
     try {
       await onAdd({
         type: issueForm.type,
-        jiraKey: issueForm.jiraKey || undefined,
+        jiraKey: issueForm.jiraKey,
         title: issueForm.title,
-        severity: SEVERITY_EN[issueForm.severity] ?? issueForm.severity,
+        jiraPriority: issueForm.jiraPriority,
+        jiraLabels: issueForm.jiraLabels,
         status: ISSUE_STATUS_EN[issueForm.status] ?? issueForm.status,
       });
       setIssueForm(EMPTY_ISSUE_FORM);
@@ -235,7 +266,8 @@ function IssuePanel({
         type: editForm.type,
         jiraKey: editForm.jiraKey || null,
         title: editForm.title,
-        severity: SEVERITY_EN[editForm.severity] ?? editForm.severity,
+        jiraPriority: editForm.jiraPriority,
+        jiraLabels: editForm.jiraLabels,
         status: ISSUE_STATUS_EN[editForm.status] ?? editForm.status,
       });
       setEditingIssueId(null);
@@ -273,7 +305,7 @@ function IssuePanel({
         {showIssueForm && (
           <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
             style={{ overflow: 'hidden', marginBottom: '0.75rem' }}>
-            <IssueForm form={issueForm} onChange={setIssueForm} onSubmit={handleAdd} onCancel={() => setShowIssueForm(false)} loading={addingIssue} submitLabel="Adicionar" />
+            <IssueForm form={issueForm} onChange={setIssueForm} onSubmit={handleAdd} onCancel={() => setShowIssueForm(false)} loading={addingIssue} submitLabel="Adicionar" projectId={projectId} />
           </motion.div>
         )}
       </AnimatePresence>
@@ -291,6 +323,7 @@ function IssuePanel({
                     onSubmit={() => handleUpdate(issue.id)}
                     onCancel={() => setEditingIssueId(null)}
                     loading={updatingIssue} submitLabel="Salvar"
+                    projectId={projectId}
                   />
                 </motion.div>
               ) : (
@@ -302,8 +335,10 @@ function IssuePanel({
                     setEditForm({
                       type: issue.type,
                       jiraKey: issue.jiraKey ?? '',
+                      jiraSummary: issue.title,
+                      jiraPriority: issue.jiraPriority,
+                      jiraLabels: issue.jiraLabels,
                       title: issue.title,
-                      severity: SEVERITY_PT[issue.severity ?? ''] ?? issue.severity ?? 'Média',
                       status: ISSUE_STATUS_PT[issue.status ?? ''] ?? issue.status ?? 'Aberto',
                     });
                   }}
@@ -334,11 +369,12 @@ function IssuePanel({
 
 // ── Scenario view inside drawer ───────────────────────────────────────────────
 function ScenarioView({
-  executionId, etcId, scenario, onBack, onUpdated, onDeleted, allScenarios, currentScenarioIndex, onNavigate,
+  executionId, etcId, scenario, projectId, onBack, onUpdated, onDeleted, allScenarios, currentScenarioIndex, onNavigate,
 }: {
   executionId: string;
   etcId: string;
   scenario: Scenario;
+  projectId: string;
   onBack: () => void;
   onUpdated: (s: Scenario) => void;
   onDeleted: (issues?: Issue[]) => void;
@@ -553,6 +589,7 @@ function ScenarioView({
         <IssuePanel
           issues={issues}
           jiraUrl={jiraUrl}
+          projectId={projectId}
           onAdd={async (d) => {
             const { data } = await executionsApi.addScenarioIssue(executionId, etcId, scenario.id, d);
             const newIssues = [...issues, data];
@@ -632,10 +669,11 @@ function ScenarioView({
 
 // ── Drawer ──────────────────────────────────────────────────────────────────
 function TestCaseDrawer({
-  executionId, etc, allTestCases, currentIndex, onClose, onUpdated, onNavigate, onRemoved,
+  executionId, etc, projectId, allTestCases, currentIndex, onClose, onUpdated, onNavigate, onRemoved,
 }: {
   executionId: string;
   etc: ExecutionTestCase;
+  projectId: string;
   allTestCases: ExecutionTestCase[];
   currentIndex: number;
   onClose: () => void;
@@ -873,6 +911,7 @@ function TestCaseDrawer({
             executionId={executionId}
             etcId={etc.id}
             scenario={activeScenario}
+            projectId={projectId}
             onBack={() => setActiveScenario(null)}
             onUpdated={handleScenarioUpdated}
             onDeleted={handleScenarioDeleted}
@@ -1092,6 +1131,7 @@ function TestCaseDrawer({
                 <IssuePanel
                   issues={issues}
                   jiraUrl={jiraUrl}
+                  projectId={projectId}
                   onAdd={async (d) => {
                     const { data } = await executionsApi.addIssue(executionId, etc.id, d);
                     const newIssues = [...issues, data];
@@ -1720,6 +1760,7 @@ export default function ExecutionRunPage() {
           <TestCaseDrawer
             executionId={execution.id}
             etc={selectedEtc}
+            projectId={execution.suite?.projectId ?? ''}
             allTestCases={filteredTcs}
             currentIndex={filteredTcs.findIndex(tc => tc.id === selectedEtc.id)}
             onClose={() => setSelectedEtc(null)}

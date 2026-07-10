@@ -4,6 +4,8 @@ import { AuthService } from '../auth/auth.service';
 export interface JiraImportResult {
   suiteKey: string;
   suiteTitle: string;
+  epicKey?: string;
+  epicSummary?: string;
   testCases: Array<{
     key: string;
     title: string;
@@ -18,8 +20,10 @@ export interface JiraIssueSummary {
   status: string;
   issuetype: string;
   priority?: string;
+  labels?: string[];
   created: string;
   updated: string;
+  resolutiondate?: string;
   assignee?: string;
   link: string;
 }
@@ -245,7 +249,7 @@ export class JiraService {
     const page = Math.max(opts.page ?? 1, 1);
     const startAt = (page - 1) * pageSize;
 
-    const fields = 'key,summary,status,issuetype,priority,created,updated,assignee';
+    const fields = 'key,summary,status,issuetype,priority,labels,created,updated,assignee,resolutiondate';
     const url =
       `${apiBaseUrl}/rest/agile/1.0/board/${jiraBoardId}/issue` +
       `?jql=${encodeURIComponent(jql)}&fields=${fields}&startAt=${startAt}&maxResults=${pageSize}`;
@@ -270,13 +274,89 @@ export class JiraService {
       status: issue.fields?.status?.name || '—',
       issuetype: issue.fields?.issuetype?.name || '—',
       priority: issue.fields?.priority?.name,
+      labels: issue.fields?.labels ?? [],
       created: issue.fields?.created,
       updated: issue.fields?.updated,
+      resolutiondate: issue.fields?.resolutiondate ?? undefined,
       assignee: issue.fields?.assignee?.displayName,
       link: `${siteUrl}/browse/${issue.key}`,
     }));
 
     return { issues, total: data.total ?? issues.length, startAt, maxResults: pageSize };
+  }
+
+  // Busca issues por projeto inteiro (não escopado a um quadro) via a API de busca
+  // aprimorada do Jira (/rest/api/3/search/jql — a clássica /rest/api/3/search foi
+  // desativada pela Atlassian, ver CHANGE-2046). Paginação por `nextPageToken`, não
+  // por `startAt`/`total` (a API nova não devolve contagem total). Necessário porque
+  // nem ExecutionRunPage.tsx nem o form de Suíte têm um boardId único e confiável (uma
+  // Suíte pode ter 0, N boards) — o picker de bug/melhoria e a listagem de
+  // Épicos/MTTR precisam buscar no projeto todo. Com `all: true`, pagina em loop até
+  // esgotar (usado para listar todos os Épicos do projeto e todos os bugs para MTTR) —
+  // `total` no retorno é a contagem real só quando `all: true`; sem `all`, é só a
+  // quantidade trazida na página (usado pelo picker, que já limita por `search`).
+  async searchIssuesByProject(
+    userId: string,
+    jiraProjectKey: string,
+    opts: {
+      type?: 'Bug' | 'Improvement' | 'Epic';
+      search?: string;
+      pageSize?: number;
+      all?: boolean;
+    } = {},
+  ): Promise<JiraIssuePage> {
+    const { accessToken, apiBaseUrl, siteUrl } = await this.authContext(userId);
+
+    const clauses = [`project = "${this.escapeJql(jiraProjectKey)}"`];
+    if (opts.type) clauses.push(`issuetype = "${opts.type}"`);
+    if (opts.search) clauses.push(`text ~ "${this.escapeJql(opts.search)}*"`);
+    const jql = `${clauses.join(' AND ')} ORDER BY updated DESC`;
+
+    const fields = 'key,summary,status,issuetype,priority,labels,created,updated,assignee,resolutiondate';
+    const pageSize = Math.min(Math.max(opts.pageSize ?? 8, 1), 100);
+
+    const issues: JiraIssueSummary[] = [];
+    let nextPageToken: string | undefined;
+
+    do {
+      const params = new URLSearchParams({ jql, fields, maxResults: String(pageSize) });
+      if (nextPageToken) params.set('nextPageToken', nextPageToken);
+      const url = `${apiBaseUrl}/rest/api/3/search/jql?${params.toString()}`;
+      const response = await this.fetchWithRetry(url, {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${accessToken}`, Accept: 'application/json' },
+      });
+
+      if (!response.ok) {
+        const body = await response.text().catch(() => '');
+        throw new HttpException(
+          `Erro ao buscar issues do projeto no Jira (${response.statusText}): ${body}`,
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+
+      const data = await response.json();
+      const pageIssues = data.issues ?? [];
+      for (const issue of pageIssues) {
+        issues.push({
+          key: issue.key,
+          summary: issue.fields?.summary || issue.key,
+          status: issue.fields?.status?.name || '—',
+          issuetype: issue.fields?.issuetype?.name || '—',
+          priority: issue.fields?.priority?.name,
+          labels: issue.fields?.labels ?? [],
+          created: issue.fields?.created,
+          updated: issue.fields?.updated,
+          resolutiondate: issue.fields?.resolutiondate ?? undefined,
+          assignee: issue.fields?.assignee?.displayName,
+          link: `${siteUrl}/browse/${issue.key}`,
+        });
+      }
+
+      nextPageToken = data.nextPageToken;
+    } while (opts.all && nextPageToken);
+
+    return { issues, total: issues.length, startAt: 0, maxResults: pageSize };
   }
 
   // Status possíveis pros tipos Bug/Improvement dentro do workflow do projeto — não é
@@ -416,6 +496,11 @@ export class JiraService {
 
       const issueData = await response.json();
       const suiteTitle = issueData.fields?.summary || `Suíte ${suiteKey}`;
+      // Campo padrão "Pai" do Jira (issue.fields.parent) — quando a suíte está sob um
+      // Épico na hierarquia do projeto, isso já vem de graça nesta mesma resposta (a
+      // issue é buscada sem restringir `fields`), sem precisar de nenhuma chamada extra.
+      const epicKey: string | undefined = issueData.fields?.parent?.key;
+      const epicSummary: string | undefined = issueData.fields?.parent?.fields?.summary;
 
       const testCases: Array<{ key: string; title: string; link: string; priority?: string }> = [];
 
@@ -504,6 +589,8 @@ if (targetIssue && targetIssue.key !== suiteKey) {
       return {
         suiteKey,
         suiteTitle,
+        epicKey,
+        epicSummary,
         testCases,
       };
     } catch (error) {
