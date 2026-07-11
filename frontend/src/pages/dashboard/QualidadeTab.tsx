@@ -73,8 +73,8 @@ export function QualidadeTab({ projectId, boardId }: QualidadeTabProps) {
   const maxDensity = Math.max(1, ...data.density.map(d => d.count));
   const sortedDensity = [...data.density].sort((a, b) => b.count - a.count);
 
-  const severityChartData = [...data.severityByExecution].reverse().map((exec, i) => {
-    const row: Record<string, number | string> = { id: exec.executionId, name: `Execução ${i + 1}` };
+  const severityChartData = [...data.severityByExecution].reverse().map((exec) => {
+    const row: Record<string, number | string> = { id: exec.executionId, name: exec.title };
     for (const key of SEVERITY_KEYS) row[key] = 0;
     for (const { severity, count } of exec.bySeverity) {
       const key = severity === 'Sem severidade' ? 'Sem severidade' : priorityLabel(severity);

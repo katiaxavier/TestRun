@@ -41,6 +41,8 @@ export class DashboardService {
       take: COMPLETED_EXECUTIONS_LIMIT,
       select: {
         id: true,
+        suite: { select: { jiraKey: true, title: true } },
+        batch: { select: { name: true } },
         testCases: {
           select: {
             issues: { select: { jiraKey: true, jiraPriority: true, jiraLabels: true } },
@@ -51,6 +53,23 @@ export class DashboardService {
         },
       },
     });
+  }
+
+  // Mesma lógica de frontend/src/pages/dashboard/shared.ts (executionTitle) —
+  // duplicada aqui porque não há pacote compartilhado front/back neste repo (mesmo
+  // padrão de COMPLETED_EXECUTIONS_LIMIT/SLA_DAYS_BY_PRIORITY).
+  private executionTitle(execution: {
+    id: string;
+    suite: { jiraKey: string | null; title: string } | null;
+    batch: { name: string | null } | null;
+  }): string {
+    if (execution.suite) {
+      return `${execution.suite.jiraKey ? `${execution.suite.jiraKey} — ` : ''}${execution.suite.title}`;
+    }
+    if (execution.batch?.name) {
+      return `Lote — ${execution.batch.name}`;
+    }
+    return `Execução ${execution.id.slice(0, 8)}`;
   }
 
   private issuesOf(execution: {
@@ -105,6 +124,7 @@ export class DashboardService {
       }
       return {
         executionId: execution.id,
+        title: this.executionTitle(execution),
         bySeverity: Array.from(bySeverity.entries()).map(([severity, count]) => ({ severity, count })),
       };
     });

@@ -304,7 +304,7 @@ export const jiraIssuesApi = {
 
 export interface DashboardQuality {
   density: { key: string; labels: string[]; count: number }[];
-  severityByExecution: { executionId: string; bySeverity: { severity: string; count: number }[] }[];
+  severityByExecution: { executionId: string; title: string; bySeverity: { severity: string; count: number }[] }[];
   coverage: {
     epicsWithSuite: number;
     totalEpics: number;
