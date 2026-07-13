@@ -309,7 +309,7 @@ export interface DashboardQuality {
     title: string;
     totalTests: number;
     failedTests: number;
-    bySeverity: { severity: string; count: number; bugs: number; improvements: number }[];
+    bySeverity: { severity: string; count: number }[];
   }[];
   coverage: {
     epicsWithSuite: number;

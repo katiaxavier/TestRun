@@ -117,6 +117,8 @@ export class DashboardService {
     const executions = await this.findCompletedExecutionsWindow(projectId, boardId);
 
     // ── Densidade por combinação de labels ──────────────────────────────────
+    // Só bugs — melhorias não são "defeitos", ficam de fora desta seção (diferente
+    // da Taxa de Sucesso × Severidade, onde os dois entram juntos por outro motivo).
     // Bug distinto (por jiraKey) conta uma vez, no grupo correspondente ao conjunto
     // exato de labels da issue — não distingue programaticamente módulo x
     // funcionalidade (decisão do usuário: uma segunda label é opcional, não
@@ -125,7 +127,7 @@ export class DashboardService {
     const densityByLabelCombo = new Map<string, { labels: string[]; count: number }>();
     for (const execution of executions) {
       for (const issue of this.issuesOf(execution)) {
-        if (!issue.jiraKey || seenGlobally.has(issue.jiraKey)) continue;
+        if (issue.type !== 'BUG' || !issue.jiraKey || seenGlobally.has(issue.jiraKey)) continue;
         seenGlobally.add(issue.jiraKey);
         const labels = [...issue.jiraLabels].sort();
         const key = labels.length > 0 ? labels.join(' + ') : 'Sem label';
@@ -136,22 +138,18 @@ export class DashboardService {
     }
 
     // ── Taxa de sucesso × severidade ─────────────────────────────────────────
-    // Por execução, bugs/melhorias distintos (dedupe só dentro da própria execução)
-    // agrupados pela severidade real do Jira (jiraPriority), com a quebra bug×melhoria
-    // guardada por entrada (`type`) e o total/reprovado de testes daquela execução, pro
-    // tooltip do gráfico dar mais contexto do que só a contagem por severidade.
+    // Só bugs — mesmo critério da Densidade por Label (melhorias não são "defeitos").
+    // Por execução, bugs distintos (dedupe só dentro da própria execução) agrupados
+    // pela severidade real do Jira (jiraPriority), com o total/reprovado de testes
+    // daquela execução, pro tooltip do gráfico dar mais contexto do que só a contagem.
     const severityByExecution = executions.map((execution) => {
       const seenInExecution = new Set<string>();
-      const bySeverity = new Map<string, { count: number; bugs: number; improvements: number }>();
+      const bySeverity = new Map<string, number>();
       for (const issue of this.issuesOf(execution)) {
-        if (!issue.jiraKey || seenInExecution.has(issue.jiraKey)) continue;
+        if (issue.type !== 'BUG' || !issue.jiraKey || seenInExecution.has(issue.jiraKey)) continue;
         seenInExecution.add(issue.jiraKey);
         const severity = issue.jiraPriority ?? 'Sem severidade';
-        const entry = bySeverity.get(severity) ?? { count: 0, bugs: 0, improvements: 0 };
-        entry.count += 1;
-        if (issue.type === 'IMPROVEMENT') entry.improvements += 1;
-        else entry.bugs += 1;
-        bySeverity.set(severity, entry);
+        bySeverity.set(severity, (bySeverity.get(severity) ?? 0) + 1);
       }
       const { total, failed } = this.testCounts(execution);
       return {
@@ -159,12 +157,7 @@ export class DashboardService {
         title: this.executionTitle(execution),
         totalTests: total,
         failedTests: failed,
-        bySeverity: Array.from(bySeverity.entries()).map(([severity, value]) => ({
-          severity,
-          count: value.count,
-          bugs: value.bugs,
-          improvements: value.improvements,
-        })),
+        bySeverity: Array.from(bySeverity.entries()).map(([severity, count]) => ({ severity, count })),
       };
     });
 
