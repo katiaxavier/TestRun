@@ -9,7 +9,7 @@ import { EficienciaTab } from './dashboard/EficienciaTab';
 const TABS = [
   { key: 'operacao', label: 'Operação' },
   { key: 'qualidade', label: 'Qualidade' },
-  { key: 'eficiencia', label: 'Eficiência' },
+  { key: 'eficiencia', label: 'Performance' },
 ] as const;
 type TabKey = typeof TABS[number]['key'];
 

@@ -26,6 +26,22 @@ export function bandColor(rate: number) {
   return 'var(--status-failed)';
 }
 
+// Taxa de sucesso agregada: soma de passou / soma de executado nas execuções informadas
+// (não é a média das % por execução, pra não pesar igual uma execução pequena e uma grande).
+// Reaproveitado em OperacaoTab (KPI "Taxa de Sucesso") e QualidadeTab (KPI "Taxa de Aprovação").
+export function computeSuccessRate(executions: Execution[]): number | null {
+  const totals = executions.reduce(
+    (acc, ex) => {
+      const p = progressOf(ex);
+      acc.passed += p.passed;
+      acc.executed += p.executed;
+      return acc;
+    },
+    { passed: 0, executed: 0 },
+  );
+  return totals.executed > 0 ? Math.round((totals.passed / totals.executed) * 100) : null;
+}
+
 export function executionTitle(execution: Execution) {
   return execution.suite
     ? `${execution.suite.jiraKey ? `${execution.suite.jiraKey} — ` : ''}${execution.suite.title}`

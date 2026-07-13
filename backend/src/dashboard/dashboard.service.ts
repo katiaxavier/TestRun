@@ -2,7 +2,12 @@ import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import type { Project } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { JiraService, type JiraIssueSummary } from '../jira/jira.service';
-import { COMPLETED_EXECUTIONS_LIMIT, SLA_DAYS_BY_PRIORITY } from './dashboard.constants';
+import {
+  COMPLETED_EXECUTIONS_LIMIT,
+  SLA_DAYS_BY_PRIORITY,
+  SLA_WARNING_THRESHOLD,
+  MTTR_TARGET_DAYS,
+} from './dashboard.constants';
 
 // Mesmo sentinela do backfill de projetos (suítes manuais, sem projeto real no Jira) —
 // ver MANUAL_PROJECT_JIRA_ID em boards.service.ts.
@@ -12,6 +17,7 @@ interface IssueLite {
   jiraKey: string | null;
   jiraPriority: string | null;
   jiraLabels: string[];
+  type: string;
 }
 
 @Injectable()
@@ -45,14 +51,33 @@ export class DashboardService {
         batch: { select: { name: true } },
         testCases: {
           select: {
-            issues: { select: { jiraKey: true, jiraPriority: true, jiraLabels: true } },
+            status: true,
+            issues: { select: { jiraKey: true, jiraPriority: true, jiraLabels: true, type: true } },
             scenarios: {
-              select: { issues: { select: { jiraKey: true, jiraPriority: true, jiraLabels: true } } },
+              select: {
+                status: true,
+                issues: { select: { jiraKey: true, jiraPriority: true, jiraLabels: true, type: true } },
+              },
             },
           },
         },
       },
     });
+  }
+
+  // Mesma lógica de frontend/src/pages/dashboard/shared.ts (progressOf) — reimplementada
+  // aqui porque não há pacote compartilhado front/back neste repo (mesmo padrão já usado
+  // para executionTitle/COMPLETED_EXECUTIONS_LIMIT/SLA_DAYS_BY_PRIORITY).
+  private testCounts(execution: {
+    testCases: Array<{ status: string; scenarios: Array<{ status: string }> }>;
+  }): { total: number; failed: number } {
+    const effectiveItems = execution.testCases.flatMap((tc) =>
+      tc.scenarios.length > 0 ? tc.scenarios : [tc],
+    );
+    return {
+      total: effectiveItems.length,
+      failed: effectiveItems.filter((item) => item.status === 'FAILED').length,
+    };
   }
 
   // Mesma lógica de frontend/src/pages/dashboard/shared.ts (executionTitle) —
@@ -112,20 +137,34 @@ export class DashboardService {
 
     // ── Taxa de sucesso × severidade ─────────────────────────────────────────
     // Por execução, bugs/melhorias distintos (dedupe só dentro da própria execução)
-    // agrupados pela severidade real do Jira (jiraPriority).
+    // agrupados pela severidade real do Jira (jiraPriority), com a quebra bug×melhoria
+    // guardada por entrada (`type`) e o total/reprovado de testes daquela execução, pro
+    // tooltip do gráfico dar mais contexto do que só a contagem por severidade.
     const severityByExecution = executions.map((execution) => {
       const seenInExecution = new Set<string>();
-      const bySeverity = new Map<string, number>();
+      const bySeverity = new Map<string, { count: number; bugs: number; improvements: number }>();
       for (const issue of this.issuesOf(execution)) {
         if (!issue.jiraKey || seenInExecution.has(issue.jiraKey)) continue;
         seenInExecution.add(issue.jiraKey);
         const severity = issue.jiraPriority ?? 'Sem severidade';
-        bySeverity.set(severity, (bySeverity.get(severity) ?? 0) + 1);
+        const entry = bySeverity.get(severity) ?? { count: 0, bugs: 0, improvements: 0 };
+        entry.count += 1;
+        if (issue.type === 'IMPROVEMENT') entry.improvements += 1;
+        else entry.bugs += 1;
+        bySeverity.set(severity, entry);
       }
+      const { total, failed } = this.testCounts(execution);
       return {
         executionId: execution.id,
         title: this.executionTitle(execution),
-        bySeverity: Array.from(bySeverity.entries()).map(([severity, count]) => ({ severity, count })),
+        totalTests: total,
+        failedTests: failed,
+        bySeverity: Array.from(bySeverity.entries()).map(([severity, value]) => ({
+          severity,
+          count: value.count,
+          bugs: value.bugs,
+          improvements: value.improvements,
+        })),
       };
     });
 
@@ -229,7 +268,19 @@ export class DashboardService {
     const now = Date.now();
     const resolvedDurationsDays: number[] = [];
     const openAgesDays: number[] = [];
-    const slaViolations: Array<{ key: string; link: string; title: string; priority?: string; ageDays: number }> = [];
+    const slaViolations: Array<{
+      key: string;
+      link: string;
+      title: string;
+      priority?: string;
+      ageDays: number;
+      openedAt: string;
+      percentOfSla: number;
+    }> = [];
+    const openBugsBySeverityMap = new Map<string, number>();
+    let withinSlaCount = 0;
+    let nearSlaCount = 0;
+    let noSlaDefinedCount = 0;
 
     for (const bug of bugs) {
       if (!bug.created) continue;
@@ -247,15 +298,26 @@ export class DashboardService {
       } else {
         const ageDays = (now - createdMs) / 86_400_000;
         openAgesDays.push(ageDays);
+        const severityKey = bug.priority ?? 'Sem severidade';
+        openBugsBySeverityMap.set(severityKey, (openBugsBySeverityMap.get(severityKey) ?? 0) + 1);
+
         const slaDays = bug.priority ? SLA_DAYS_BY_PRIORITY[bug.priority] : undefined;
-        if (slaDays !== undefined && ageDays > slaDays) {
+        if (slaDays === undefined) {
+          noSlaDefinedCount += 1;
+        } else if (ageDays > slaDays) {
           slaViolations.push({
             key: bug.key,
             link: bug.link,
             title: bug.summary,
             priority: bug.priority,
             ageDays: Math.round(ageDays),
+            openedAt: bug.created,
+            percentOfSla: Math.round((ageDays / slaDays) * 100),
           });
+        } else if (ageDays > slaDays * SLA_WARNING_THRESHOLD) {
+          nearSlaCount += 1;
+        } else {
+          withinSlaCount += 1;
         }
       }
     }
@@ -265,9 +327,22 @@ export class DashboardService {
 
     return {
       mttrDays: average(resolvedDurationsDays),
+      mttrTargetDays: MTTR_TARGET_DAYS,
       avgAgeDays: average(openAgesDays),
+      maxAgeDays: openAgesDays.length > 0 ? Math.round(Math.max(...openAgesDays)) : null,
+      minAgeDays: openAgesDays.length > 0 ? Math.round(Math.min(...openAgesDays)) : null,
       openBugsCount: openAgesDays.length,
       resolvedBugsCount: resolvedDurationsDays.length,
+      openBugsBySeverity: Array.from(openBugsBySeverityMap.entries()).map(([priority, count]) => ({
+        priority,
+        count,
+      })),
+      slaBuckets: {
+        withinSla: withinSlaCount,
+        nearSla: nearSlaCount,
+        aboveSla: slaViolations.length,
+        noSlaDefined: noSlaDefinedCount,
+      },
       slaViolations: slaViolations.sort((a, b) => b.ageDays - a.ageDays),
     };
   }

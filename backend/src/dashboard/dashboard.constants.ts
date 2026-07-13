@@ -25,3 +25,13 @@ export const SLA_DAYS_BY_PRIORITY: Record<string, number> = {
   Low: 30,
   Lowest: 45,
 };
+
+// Fração do prazo de SLA a partir da qual um bug em aberto (ainda dentro do prazo) já conta
+// como "próximo do SLA" em vez de "dentro do SLA" — ex. 0.8 = últimos 20% do prazo. Editável,
+// mesmo padrão de constante ajustável de SLA_DAYS_BY_PRIORITY.
+export const SLA_WARNING_THRESHOLD = 0.8;
+
+// Meta de MTTR (aba Eficiência), em dias. Valor placeholder (mesmo exemplo do documento de
+// proposta do stakeholder) — AINDA NÃO CONFIRMADO com o usuário/time; ajustar antes de
+// considerar essa métrica validada, mesmo risco já assumido para SLA_DAYS_BY_PRIORITY.
+export const MTTR_TARGET_DAYS = 20;

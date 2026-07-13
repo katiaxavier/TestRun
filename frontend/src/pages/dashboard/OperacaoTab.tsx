@@ -21,7 +21,7 @@ import type { Execution, JiraIssue } from '../../api/client';
 import { useProject } from '../../context/ProjectContext';
 import { useBoard } from '../../context/BoardContext';
 import { typeColor } from '../../utils/priority';
-import { progressOf, bandColor, executionTitle, COMPLETED_EXECUTIONS_LIMIT } from './shared';
+import { progressOf, bandColor, executionTitle, computeSuccessRate, COMPLETED_EXECUTIONS_LIMIT } from './shared';
 import { InfoTooltip } from '../../components/InfoTooltip';
 
 const ACTIVE_EXECUTIONS_LIMIT = 50; // teto do endpoint; cobre o caso de várias execuções simultâneas
@@ -153,18 +153,7 @@ export function OperacaoTab({ active }: OperacaoTabProps) {
   const navigateToExecution = (execution: Execution) =>
     navigate(`/execution/${execution.id}`, { state: { from: 'home' } });
 
-  // Taxa de sucesso agregada: soma de passou / soma de executado nas últimas N concluídas
-  // (não é a média das % por execução, pra não pesar igual uma execução pequena e uma grande).
-  const successTotals = completedExecutions.reduce(
-    (acc, ex) => {
-      const p = progressOf(ex);
-      acc.passed += p.passed;
-      acc.executed += p.executed;
-      return acc;
-    },
-    { passed: 0, executed: 0 }
-  );
-  const successRate = successTotals.executed > 0 ? Math.round((successTotals.passed / successTotals.executed) * 100) : null;
+  const successRate = computeSuccessRate(completedExecutions);
 
   const failedExecutionsCount = completedExecutions.filter(ex => progressOf(ex).failed > 0).length;
   const blockedExecutionsCount = completedExecutions.filter(ex => progressOf(ex).blocked > 0).length;
@@ -211,6 +200,10 @@ export function OperacaoTab({ active }: OperacaoTabProps) {
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
           <WarningIcon size={18} weight="duotone" style={{ color: 'var(--status-blocked)' }} />
           <h2 style={{ fontSize: '1.1rem', fontWeight: 700, letterSpacing: '-0.01em' }}>Atenção</h2>
+          <InfoTooltip>
+            Alertas que pedem ação agora: bugs Ready for Test aguardando validação, e execuções concluídas
+            (das últimas {COMPLETED_EXECUTIONS_LIMIT}) com item(ns) reprovado(s) ou bloqueado(s).
+          </InfoTooltip>
         </div>
         {alerts.length === 0 ? (
           <div className="empty-state" style={{ padding: '2rem' }}>
@@ -264,6 +257,10 @@ export function OperacaoTab({ active }: OperacaoTabProps) {
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
           <BugIcon size={18} weight="duotone" style={{ color: 'var(--status-failed)' }} />
           <h2 style={{ fontSize: '1.1rem', fontWeight: 700, letterSpacing: '-0.01em' }}>Ready for Test</h2>
+          <InfoTooltip>
+            Bugs e melhorias do quadro selecionado cujo status no Jira é "Ready for Test" — itens já
+            corrigidos/implementados, aguardando validação.
+          </InfoTooltip>
           <button className="btn btn-ghost btn-sm" style={{ marginLeft: 'auto' }} onClick={() => navigate('/jira-issues')}>
             Ver todas
           </button>
@@ -349,6 +346,10 @@ export function OperacaoTab({ active }: OperacaoTabProps) {
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
           <PlusCircleIcon size={18} weight="duotone" style={{ color: 'var(--text-muted)' }} />
           <h2 style={{ fontSize: '1.1rem', fontWeight: 700, letterSpacing: '-0.01em' }}>Últimos Bugs e Melhorias Criados</h2>
+          <InfoTooltip>
+            Os {RECENT_ISSUES_LIMIT} bugs/melhorias mais recentes do quadro selecionado, ordenados pela
+            data de criação no Jira (não é uma janela por dias, é sempre a quantidade mais recente).
+          </InfoTooltip>
           <button className="btn btn-ghost btn-sm" style={{ marginLeft: 'auto' }} onClick={() => navigate('/jira-issues')}>
             Ver todas
           </button>
@@ -420,6 +421,10 @@ export function OperacaoTab({ active }: OperacaoTabProps) {
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
           <PlayIcon size={18} weight="duotone" style={{ color: 'var(--secondary)' }} />
           <h2 style={{ fontSize: '1.1rem', fontWeight: 700, letterSpacing: '-0.01em' }}>Execuções em Andamento</h2>
+          <InfoTooltip>
+            Execuções com status "Em Andamento". A barra mostra o percentual de casos de teste (ou
+            cenários, quando existem) já executados em relação ao total da execução.
+          </InfoTooltip>
         </div>
         {activeExecutions.length === 0 ? (
           <div className="empty-state" style={{ padding: '2rem' }}>
@@ -465,6 +470,10 @@ export function OperacaoTab({ active }: OperacaoTabProps) {
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
           <ClockCounterClockwiseIcon size={18} weight="duotone" style={{ color: 'var(--text-muted)' }} />
           <h2 style={{ fontSize: '1.1rem', fontWeight: 700, letterSpacing: '-0.01em' }}>Últimas Execuções Concluídas</h2>
+          <InfoTooltip>
+            As {RECENT_COMPLETED_DISPLAY} execuções concluídas mais recentes. O ícone indica se a execução
+            teve algum item reprovado (✖ vermelho), bloqueado (⊘ amarelo), ou se tudo foi aprovado (✔ verde).
+          </InfoTooltip>
           <button className="btn btn-ghost btn-sm" style={{ marginLeft: 'auto' }} onClick={() => navigate('/executions')}>
             Ver todas
           </button>

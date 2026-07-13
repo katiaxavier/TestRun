@@ -304,7 +304,13 @@ export const jiraIssuesApi = {
 
 export interface DashboardQuality {
   density: { key: string; labels: string[]; count: number }[];
-  severityByExecution: { executionId: string; title: string; bySeverity: { severity: string; count: number }[] }[];
+  severityByExecution: {
+    executionId: string;
+    title: string;
+    totalTests: number;
+    failedTests: number;
+    bySeverity: { severity: string; count: number; bugs: number; improvements: number }[];
+  }[];
   coverage: {
     epicsWithSuite: number;
     totalEpics: number;
@@ -315,10 +321,23 @@ export interface DashboardQuality {
 
 export interface DashboardEfficiency {
   mttrDays: number | null;
+  mttrTargetDays: number;
   avgAgeDays: number | null;
+  maxAgeDays: number | null;
+  minAgeDays: number | null;
   openBugsCount: number;
   resolvedBugsCount: number;
-  slaViolations: { key: string; link: string; title: string; priority?: string; ageDays: number }[];
+  openBugsBySeverity: { priority: string; count: number }[];
+  slaBuckets: { withinSla: number; nearSla: number; aboveSla: number; noSlaDefined: number };
+  slaViolations: {
+    key: string;
+    link: string;
+    title: string;
+    priority?: string;
+    ageDays: number;
+    openedAt: string;
+    percentOfSla: number;
+  }[];
 }
 
 export const dashboardApi = {

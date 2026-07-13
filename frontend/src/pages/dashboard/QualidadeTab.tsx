@@ -1,16 +1,19 @@
 import { useState, useEffect } from 'react';
 import { BarChart, Bar, ResponsiveContainer, Tooltip as RechartsTooltip, XAxis } from 'recharts';
-import { ChartBarIcon, GaugeIcon, TargetIcon } from '@phosphor-icons/react';
-import { dashboardApi } from '../../api/client';
-import type { DashboardQuality } from '../../api/client';
+import { ChartBarIcon, GaugeIcon, TargetIcon, HeartbeatIcon } from '@phosphor-icons/react';
+import { dashboardApi, executionsApi } from '../../api/client';
+import type { DashboardQuality, DashboardEfficiency } from '../../api/client';
 import { priorityLabel, PRIORITY_COLORS } from '../../utils/priority';
-import { bandColor } from './shared';
+import { bandColor, computeSuccessRate, COMPLETED_EXECUTIONS_LIMIT } from './shared';
 import { InfoTooltip } from '../../components/InfoTooltip';
 
 interface QualidadeTabProps {
   projectId: string;
   boardId: string;
 }
+
+// Mesmas duas faixas de topo usadas em SLA_DAYS_BY_PRIORITY/PRIORITY_COLORS pra "crítico".
+const CRITICAL_SEVERITIES = ['Gravíssima', 'Crítica'];
 
 const SEVERITY_KEYS = ['Gravíssima', 'Crítica', 'Alta', 'Média', 'Normal', 'Trivial', 'Sem severidade'] as const;
 const SEVERITY_KEY_COLORS: Record<string, string> = { ...PRIORITY_COLORS, 'Sem severidade': '#555e76' };
@@ -19,39 +22,76 @@ function pct(part: number, total: number): number | null {
   return total > 0 ? Math.round((part / total) * 100) : null;
 }
 
+interface SeverityDetail { bugs: number; improvements: number }
+
 function SeverityTooltip({ active, payload, label }: {
   active?: boolean;
   label?: string;
-  payload?: { dataKey: string; value: number; color: string }[];
+  payload?: {
+    dataKey: string;
+    value: number;
+    color: string;
+    payload: { totalTests: number; failedTests: number; detail: Record<string, SeverityDetail> };
+  }[];
 }) {
   if (!active || !payload?.length) return null;
   const nonZero = payload.filter(p => p.value > 0);
   if (nonZero.length === 0) return null;
+  const { totalTests, failedTests, detail } = payload[0].payload;
   return (
     <div style={{
       background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius)',
-      padding: '0.5rem 0.75rem', fontSize: '0.8rem', maxWidth: 220,
+      padding: '0.5rem 0.75rem', fontSize: '0.8rem', maxWidth: 240,
     }}>
-      <div style={{ color: 'var(--text-primary)', fontWeight: 600, marginBottom: '0.3rem' }}>{label}</div>
-      {nonZero.map(p => (
-        <div key={p.dataKey} style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', color: p.color }}>
-          <span>{p.dataKey}</span>
-          <strong>{p.value}</strong>
-        </div>
-      ))}
+      <div style={{ color: 'var(--text-primary)', fontWeight: 600, marginBottom: '0.2rem' }}>{label}</div>
+      <div style={{ color: 'var(--text-muted)', fontSize: '0.72rem', marginBottom: '0.4rem' }}>
+        {totalTests} teste(s) · {failedTests} reprovado(s)
+      </div>
+      {nonZero.map(p => {
+        const d = detail[p.dataKey];
+        return (
+          <div key={p.dataKey} style={{ marginBottom: '0.25rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', color: p.color }}>
+              <span>{p.dataKey}</span>
+              <strong>{p.value}</strong>
+            </div>
+            {d && (d.bugs > 0 || d.improvements > 0) && (
+              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                {[d.bugs > 0 ? `${d.bugs} bug(s)` : null, d.improvements > 0 ? `${d.improvements} melhoria(s)` : null]
+                  .filter(Boolean)
+                  .join(' · ')}
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
 
 export function QualidadeTab({ projectId, boardId }: QualidadeTabProps) {
   const [data, setData] = useState<DashboardQuality | null>(null);
+  const [efficiency, setEfficiency] = useState<DashboardEfficiency | null>(null);
+  const [successRate, setSuccessRate] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    dashboardApi.getQuality(projectId, boardId)
-      .then(({ data }) => { if (!cancelled) setData(data); })
+    Promise.all([
+      dashboardApi.getQuality(projectId, boardId),
+      // Chamadas independentes só pra alimentar os KPIs do topo — getEfficiency já é
+      // usado pela aba Eficiência, reaproveitado aqui em vez de duplicar a busca ao
+      // vivo de bugs no Jira dentro de getQuality.
+      dashboardApi.getEfficiency(projectId, boardId).catch(() => ({ data: null })),
+      executionsApi.getRecent(projectId, boardId, { status: 'COMPLETED', limit: COMPLETED_EXECUTIONS_LIMIT }).catch(() => ({ data: [] })),
+    ])
+      .then(([qualityRes, efficiencyRes, executionsRes]) => {
+        if (cancelled) return;
+        setData(qualityRes.data);
+        setEfficiency(efficiencyRes.data);
+        setSuccessRate(computeSuccessRate(executionsRes.data));
+      })
       .catch(() => { if (!cancelled) setData(null); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
@@ -74,12 +114,26 @@ export function QualidadeTab({ projectId, boardId }: QualidadeTabProps) {
   const sortedDensity = [...data.density].sort((a, b) => b.count - a.count);
 
   const severityChartData = [...data.severityByExecution].reverse().map((exec) => {
-    const row: Record<string, number | string> = { id: exec.executionId, name: exec.title };
-    for (const key of SEVERITY_KEYS) row[key] = 0;
-    for (const { severity, count } of exec.bySeverity) {
+    const row: Record<string, unknown> = {
+      id: exec.executionId,
+      name: exec.title,
+      totalTests: exec.totalTests,
+      failedTests: exec.failedTests,
+    };
+    const detail: Record<string, SeverityDetail> = {};
+    for (const key of SEVERITY_KEYS) {
+      row[key] = 0;
+      detail[key] = { bugs: 0, improvements: 0 };
+    }
+    for (const { severity, count, bugs, improvements } of exec.bySeverity) {
       const key = severity === 'Sem severidade' ? 'Sem severidade' : priorityLabel(severity);
       row[key] = (row[key] as number) + count;
+      detail[key] = {
+        bugs: detail[key].bugs + bugs,
+        improvements: detail[key].improvements + improvements,
+      };
     }
+    row.detail = detail;
     return row;
   });
   const severitiesPresent = SEVERITY_KEYS.filter(key => severityChartData.some(row => (row[key] as number) > 0));
@@ -88,8 +142,51 @@ export function QualidadeTab({ projectId, boardId }: QualidadeTabProps) {
   const coveragePct = pct(epicsWithSuite, totalEpics);
   const automationPct = pct(automatedTestCases, totalTestCases);
 
+  const criticalOpenBugs = (efficiency?.openBugsBySeverity ?? [])
+    .filter(({ priority }) => CRITICAL_SEVERITIES.includes(priorityLabel(priority)))
+    .reduce((sum, { count }) => sum + count, 0);
+
   return (
     <div>
+      {/* Health KPIs */}
+      <section style={{ marginBottom: '2.5rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+          <HeartbeatIcon size={18} weight="duotone" style={{ color: 'var(--status-passed)' }} />
+          <h2 style={{ fontSize: '1.1rem', fontWeight: 700, letterSpacing: '-0.01em' }}>Resumo</h2>
+          <InfoTooltip>
+            Estado geral da qualidade antes de entrar no detalhe dos gráficos abaixo. Taxa de Aprovação e
+            Bugs Críticos consideram as últimas {COMPLETED_EXECUTIONS_LIMIT} execuções/bugs em aberto no
+            Jira; Cobertura de Requisitos e Automação são os mesmos dados detalhados mais abaixo.
+          </InfoTooltip>
+        </div>
+        <div className="stats-grid">
+          <div className="stat-card">
+            <p className="stat-label" title="Taxa de Aprovação">Taxa de Aprovação</p>
+            <p className="stat-value" style={{ color: successRate !== null ? bandColor(successRate) : undefined }}>
+              {successRate !== null ? `${successRate}%` : '—'}
+            </p>
+          </div>
+          <div className="stat-card">
+            <p className="stat-label" title="Bugs Críticos em Aberto">Bugs Críticos em Aberto</p>
+            <p className="stat-value" style={{ color: criticalOpenBugs > 0 ? 'var(--status-failed)' : undefined }}>
+              {efficiency ? criticalOpenBugs : '—'}
+            </p>
+          </div>
+          <div className="stat-card">
+            <p className="stat-label" title="Cobertura de Requisitos">Cobertura de Requisitos</p>
+            <p className="stat-value" style={{ color: coveragePct !== null ? bandColor(coveragePct) : undefined }}>
+              {coveragePct !== null ? `${coveragePct}%` : '—'}
+            </p>
+          </div>
+          <div className="stat-card">
+            <p className="stat-label" title="Cobertura de Automação">Cobertura de Automação</p>
+            <p className="stat-value" style={{ color: automationPct !== null ? bandColor(automationPct) : undefined }}>
+              {automationPct !== null ? `${automationPct}%` : '—'}
+            </p>
+          </div>
+        </div>
+      </section>
+
       {/* Densidade de defeitos por combinação de labels */}
       <section style={{ marginBottom: '2.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
@@ -114,7 +211,7 @@ export function QualidadeTab({ projectId, boardId }: QualidadeTabProps) {
                   {group.key}
                 </span>
                 <div style={{ flex: 1, height: 10, background: 'var(--border)', borderRadius: 99, overflow: 'hidden' }}>
-                  <div style={{ width: `${(group.count / maxDensity) * 100}%`, height: '100%', background: 'var(--status-failed)', borderRadius: 99 }} />
+                  <div style={{ width: `${(group.count / maxDensity) * 100}%`, height: '100%', background: 'var(--accent)', borderRadius: 99 }} />
                 </div>
                 <span style={{ flex: '0 0 auto', minWidth: 24, textAlign: 'right', fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)', fontFamily: "'JetBrains Mono', monospace" }}>
                   {group.count}

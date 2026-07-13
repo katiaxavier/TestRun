@@ -22,6 +22,10 @@ const SLA_DAYS_BY_SEVERITY: { label: string; days: number }[] = [
   { label: 'Trivial', days: 45 },
 ];
 
+// Mesmo limiar de backend/src/dashboard/dashboard.constants.ts (SLA_WARNING_THRESHOLD) —
+// mesma sincronia manual front/back já usada acima.
+const SLA_WARNING_THRESHOLD_PCT = 80;
+
 export function EficienciaTab({ projectId, boardId }: EficienciaTabProps) {
   const [data, setData] = useState<DashboardEfficiency | null>(null);
   const [loading, setLoading] = useState(true);
@@ -49,42 +53,94 @@ export function EficienciaTab({ projectId, boardId }: EficienciaTabProps) {
     );
   }
 
+  const mttrOverTarget = data.mttrDays !== null && data.mttrDays > data.mttrTargetDays;
+
   return (
     <div>
       <section style={{ marginBottom: '2.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
           <ClockIcon size={18} weight="duotone" style={{ color: 'var(--secondary)' }} />
-          <h2 style={{ fontSize: '1.1rem', fontWeight: 700, letterSpacing: '-0.01em' }}>MTTR / Idade dos Defeitos / SLA</h2>
+          <h2 style={{ fontSize: '1.1rem', fontWeight: 700, letterSpacing: '-0.01em' }}>MTTR / Idade dos Defeitos</h2>
           <InfoTooltip>
-            <strong>MTTR:</strong> tempo médio, em dias, entre a criação e a resolução dos bugs já corrigidos.<br />
-            <strong>Idade Média:</strong> há quanto tempo, em média, os bugs ainda abertos estão parados.<br />
-            <strong>Bugs Acima do SLA:</strong> quantos bugs abertos já ultrapassaram o prazo esperado para a severidade deles.
+            <strong>MTTR:</strong> tempo médio, em dias, entre a criação e a resolução dos bugs já corrigidos,
+            comparado com a meta configurada.<br />
+            <strong>Idade Média:</strong> há quanto tempo, em média, os bugs ainda abertos estão parados,
+            junto com o mais antigo e o mais recente.
           </InfoTooltip>
         </div>
         <div className="stats-grid">
           <div className="stat-card">
             <p className="stat-label" title="MTTR">MTTR</p>
-            <p className="stat-value">{data.mttrDays !== null ? `${data.mttrDays} dias` : '—'}</p>
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{data.resolvedBugsCount} bug(s) resolvido(s)</p>
+            <p className="stat-value" style={{ color: data.mttrDays !== null ? (mttrOverTarget ? 'var(--status-failed)' : 'var(--status-passed)') : undefined }}>
+              {data.mttrDays !== null ? `${data.mttrDays} dias` : '—'}
+            </p>
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+              Meta: {data.mttrTargetDays} dias · {data.resolvedBugsCount} bug(s) resolvido(s)
+            </p>
           </div>
           <div className="stat-card">
             <p className="stat-label" title="Idade Média dos Bugs Abertos">Idade Média (Abertos)</p>
             <p className="stat-value">{data.avgAgeDays !== null ? `${data.avgAgeDays} dias` : '—'}</p>
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{data.openBugsCount} bug(s) em aberto</p>
-          </div>
-          <div className="stat-card">
-            <p className="stat-label" title="Bugs Acima do SLA">Bugs Acima do SLA</p>
-            <p className="stat-value" style={{ color: data.slaViolations.length > 0 ? 'var(--status-failed)' : undefined }}>
-              {data.slaViolations.length}
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+              {data.openBugsCount} bug(s) em aberto
+              {data.minAgeDays !== null && data.maxAgeDays !== null && (
+                <> · menor {data.minAgeDays}d · maior {data.maxAgeDays}d</>
+              )}
             </p>
           </div>
         </div>
+      </section>
+
+      <section style={{ marginBottom: '2.5rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+          <HourglassIcon size={18} weight="duotone" style={{ color: 'var(--status-failed)' }} />
+          <h2 style={{ fontSize: '1.1rem', fontWeight: 700, letterSpacing: '-0.01em' }}>SLA</h2>
+          <InfoTooltip>
+            <strong>SLA:</strong> prazo máximo esperado para resolver um bug, de acordo com a severidade
+            dele (bugs mais graves têm prazos mais curtos) — ver as faixas de dias por severidade
+            logo abaixo do gráfico.<br />
+            <strong>🟢 Dentro do SLA:</strong> bugs abertos cuja idade ainda não passou de{' '}
+            {SLA_WARNING_THRESHOLD_PCT}% do prazo esperado para a severidade deles.<br />
+            <strong>🟡 Próximo do SLA:</strong> já passou de {SLA_WARNING_THRESHOLD_PCT}% do prazo, mas
+            ainda não ultrapassou.<br />
+            <strong>🔴 Acima do SLA:</strong> já ultrapassou o prazo esperado para a severidade.<br />
+            <strong>Sem SLA definido:</strong> severidade do bug não tem prazo configurado — não entra em
+            nenhuma das faixas acima, em vez de simplesmente sumir da contagem.
+          </InfoTooltip>
+        </div>
+        <div className="stats-grid">
+          <div className="stat-card">
+            <p className="stat-label" title="Dentro do SLA">🟢 Dentro do SLA</p>
+            <p className="stat-value" style={{ color: 'var(--status-passed)' }}>{data.slaBuckets.withinSla}</p>
+          </div>
+          <div className="stat-card">
+            <p className="stat-label" title="Próximo do SLA">🟡 Próximo do SLA</p>
+            <p className="stat-value" style={{ color: data.slaBuckets.nearSla > 0 ? 'var(--status-blocked)' : undefined }}>
+              {data.slaBuckets.nearSla}
+            </p>
+          </div>
+          <div className="stat-card">
+            <p className="stat-label" title="Acima do SLA">🔴 Acima do SLA</p>
+            <p className="stat-value" style={{ color: data.slaBuckets.aboveSla > 0 ? 'var(--status-failed)' : undefined }}>
+              {data.slaBuckets.aboveSla}
+            </p>
+          </div>
+        </div>
+        {data.slaBuckets.noSlaDefined > 0 && (
+          <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.75rem' }}>
+            {data.slaBuckets.noSlaDefined} bug(s) sem SLA definido para a severidade (não entram nas faixas acima).
+          </p>
+        )}
       </section>
 
       <section>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
           <HourglassIcon size={18} weight="duotone" style={{ color: 'var(--status-failed)' }} />
           <h2 style={{ fontSize: '1.1rem', fontWeight: 700, letterSpacing: '-0.01em' }}>Bugs Acima do SLA</h2>
+          <InfoTooltip>
+            Bugs abertos cujo tempo decorrido desde a criação já passou do prazo esperado para a
+            severidade deles. "% do SLA" acima de 100% indica quanto o prazo foi ultrapassado.
+          </InfoTooltip>
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem 1.25rem', marginBottom: '1rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
           {SLA_DAYS_BY_SEVERITY.map(({ label, days }) => (
@@ -109,7 +165,9 @@ export function EficienciaTab({ projectId, boardId }: EficienciaTabProps) {
                     <th style={{ width: 130 }}>Chave</th>
                     <th>Título</th>
                     <th style={{ width: 130 }}>Severidade</th>
+                    <th style={{ width: 130 }}>Data de Abertura</th>
                     <th>Dias em aberto</th>
+                    <th style={{ width: 100 }}>% do SLA</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -139,7 +197,11 @@ export function EficienciaTab({ projectId, boardId }: EficienciaTabProps) {
                             </span>
                           )}
                         </td>
+                        <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                          {new Date(bug.openedAt).toLocaleDateString('pt-BR')}
+                        </td>
                         <td style={{ fontSize: '0.875rem', color: 'var(--status-failed)', fontWeight: 700 }}>{bug.ageDays}</td>
+                        <td style={{ fontSize: '0.875rem', color: 'var(--status-failed)', fontWeight: 700 }}>{bug.percentOfSla}%</td>
                       </tr>
                     );
                   })}
