@@ -5,11 +5,12 @@ import { useBoard } from '../context/BoardContext';
 import { OperacaoTab } from './dashboard/OperacaoTab';
 import { QualidadeTab } from './dashboard/QualidadeTab';
 import { EficienciaTab } from './dashboard/EficienciaTab';
+import { InfoTooltip } from '../components/InfoTooltip';
 
 const TABS = [
-  { key: 'operacao', label: 'Operação' },
-  { key: 'qualidade', label: 'Qualidade' },
-  { key: 'eficiencia', label: 'Performance' },
+  { key: 'operacao', label: 'Operação', question: 'O que está acontecendo agora?' },
+  { key: 'qualidade', label: 'Qualidade', question: 'Qual a saúde do produto?' },
+  { key: 'eficiencia', label: 'Eficiência', question: 'Estamos resolvendo os problemas no tempo esperado?' },
 ] as const;
 type TabKey = typeof TABS[number]['key'];
 
@@ -74,6 +75,7 @@ export default function HomePage() {
             onClick={() => selectTab(tab.key)}
           >
             {tab.label}
+            <InfoTooltip>{tab.question}</InfoTooltip>
           </button>
         ))}
       </div>
