@@ -523,6 +523,8 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1); curso
 .btn-icon { padding: 0.45rem; }
 .btn:disabled { opacity: 0.45; cursor: not-allowed; pointer-events: none; }
 
+.picker-option:hover { background: var(--bg-elevated); }
+
 /* ─── Cards ─── */
 .card {
   background: var(--bg-surface);

@@ -38,4 +38,15 @@ export class JiraIssuesController {
   async filters(@Query('projectId') projectId: string, @CurrentUser() user: User) {
     return this.jiraIssuesService.listFilters(user.id, projectId);
   }
+
+  @Get('picker')
+  @ProjectAccess('direct')
+  async picker(
+    @Query('projectId') projectId: string,
+    @Query('type') type: 'Bug' | 'Improvement' | undefined,
+    @Query('search') search: string | undefined,
+    @CurrentUser() user: User,
+  ) {
+    return this.jiraIssuesService.searchForPicker(user.id, projectId, { type, search });
+  }
 }

@@ -4,6 +4,8 @@ import { AuthService } from '../auth/auth.service';
 export interface JiraImportResult {
   suiteKey: string;
   suiteTitle: string;
+  epicKey?: string;
+  epicSummary?: string;
   testCases: Array<{
     key: string;
     title: string;
@@ -16,10 +18,15 @@ export interface JiraIssueSummary {
   key: string;
   summary: string;
   status: string;
+  // Categoria padrão do Jira (new/indeterminate/done) — independe de idioma/nome de
+  // status customizado, ao contrário de comparar o texto de `status` diretamente.
+  statusCategory?: string;
   issuetype: string;
   priority?: string;
+  labels?: string[];
   created: string;
   updated: string;
+  resolutiondate?: string;
   assignee?: string;
   link: string;
 }
@@ -49,6 +56,18 @@ export class JiraService {
   // (query string) dentro de um literal JQL — usado por filtros de status/priority/busca.
   private escapeJql(value: string): string {
     return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+  }
+
+  // `text ~` (full-text) não pesquisa o campo `key` — buscar "PD-20790" com `text ~`
+  // não acha a issue PD-20790 (o hífen/números não batem como texto livre). Se o termo
+  // parece uma chave de issue (LETRAS-NÚMEROS), busca por `key =` (exata); senão, cai
+  // no full-text de sempre.
+  private buildSearchClause(search: string): string {
+    const trimmed = search.trim();
+    const looksLikeKey = /^[A-Za-z][A-Za-z0-9]*-\d+$/.test(trimmed);
+    return looksLikeKey
+      ? `key = "${this.escapeJql(trimmed.toUpperCase())}"`
+      : `text ~ "${this.escapeJql(trimmed)}*"`;
   }
 
   // Retenta em 429 respeitando o header Retry-After (com backoff exponencial como
@@ -221,11 +240,7 @@ export class JiraService {
     const { accessToken, apiBaseUrl, siteUrl } = await this.authContext(userId);
 
     const clauses: string[] = [];
-    clauses.push(
-      opts.type === 'Bug' || opts.type === 'Improvement'
-        ? `issuetype = "${opts.type}"`
-        : 'issuetype in ("Bug", "Improvement")',
-    );
+    clauses.push(opts.type ? `issuetype = "${opts.type}"` : 'issuetype in ("Bug", "Improvement")');
     if (opts.status) {
       // status vem como ID (não nome) do frontend — ver comentário em listIssueStatuses
       // sobre por que nome não é confiável pro JQL. Filtra só dígitos por segurança
@@ -238,14 +253,14 @@ export class JiraService {
       const priorityId = opts.priority.replace(/[^0-9]/g, '');
       if (priorityId) clauses.push(`priority = ${priorityId}`);
     }
-    if (opts.search) clauses.push(`text ~ "${this.escapeJql(opts.search)}*"`);
+    if (opts.search) clauses.push(this.buildSearchClause(opts.search));
     const jql = `${clauses.join(' AND ')} ORDER BY key DESC`;
 
     const pageSize = Math.min(Math.max(opts.pageSize ?? 25, 1), 100);
     const page = Math.max(opts.page ?? 1, 1);
     const startAt = (page - 1) * pageSize;
 
-    const fields = 'key,summary,status,issuetype,priority,created,updated,assignee';
+    const fields = 'key,summary,status,issuetype,priority,labels,created,updated,assignee,resolutiondate';
     const url =
       `${apiBaseUrl}/rest/agile/1.0/board/${jiraBoardId}/issue` +
       `?jql=${encodeURIComponent(jql)}&fields=${fields}&startAt=${startAt}&maxResults=${pageSize}`;
@@ -268,15 +283,146 @@ export class JiraService {
       key: issue.key,
       summary: issue.fields?.summary || issue.key,
       status: issue.fields?.status?.name || '—',
+      statusCategory: issue.fields?.status?.statusCategory?.key,
       issuetype: issue.fields?.issuetype?.name || '—',
       priority: issue.fields?.priority?.name,
+      labels: issue.fields?.labels ?? [],
       created: issue.fields?.created,
       updated: issue.fields?.updated,
+      resolutiondate: issue.fields?.resolutiondate ?? undefined,
       assignee: issue.fields?.assignee?.displayName,
       link: `${siteUrl}/browse/${issue.key}`,
     }));
 
     return { issues, total: data.total ?? issues.length, startAt, maxResults: pageSize };
+  }
+
+  // Busca issues por projeto inteiro (não escopado a um quadro) via a API de busca
+  // aprimorada do Jira (/rest/api/3/search/jql — a clássica /rest/api/3/search foi
+  // desativada pela Atlassian, ver CHANGE-2046). Paginação por `nextPageToken`, não
+  // por `startAt`/`total` (a API nova não devolve contagem total). Necessário porque
+  // nem ExecutionRunPage.tsx nem o form de Suíte têm um boardId único e confiável (uma
+  // Suíte pode ter 0, N boards) — o picker de bug/melhoria e a listagem de
+  // Épicos/MTTR precisam buscar no projeto todo. Com `all: true`, pagina em loop até
+  // esgotar (usado para listar todos os Épicos do projeto e todos os bugs para MTTR) —
+  // `total` no retorno é a contagem real só quando `all: true`; sem `all`, é só a
+  // quantidade trazida na página (usado pelo picker, que já limita por `search`).
+  async searchIssuesByProject(
+    userId: string,
+    jiraProjectKey: string,
+    opts: {
+      // Aceita um tipo único (`'Bug'`) ou uma lista (`['Bug', 'Improvement']`) — o picker
+      // de bug/melhoria busca os dois tipos juntos numa única caixa de busca, sem forçar
+      // a pessoa a escolher o tipo antes de saber o que é o ticket.
+      type?: 'Bug' | 'Improvement' | 'Epic' | Array<'Bug' | 'Improvement'>;
+      search?: string;
+      pageSize?: number;
+      all?: boolean;
+    } = {},
+  ): Promise<JiraIssuePage> {
+    const { accessToken, apiBaseUrl, siteUrl } = await this.authContext(userId);
+
+    const clauses = [`project = "${this.escapeJql(jiraProjectKey)}"`];
+    if (opts.type) {
+      const types = Array.isArray(opts.type) ? opts.type : [opts.type];
+      clauses.push(
+        types.length === 1
+          ? `issuetype = "${types[0]}"`
+          : `issuetype in (${types.map((t) => `"${t}"`).join(', ')})`,
+      );
+    }
+    if (opts.search) clauses.push(this.buildSearchClause(opts.search));
+    const jql = `${clauses.join(' AND ')} ORDER BY updated DESC`;
+
+    const fields = 'key,summary,status,issuetype,priority,labels,created,updated,assignee,resolutiondate';
+    const pageSize = Math.min(Math.max(opts.pageSize ?? 8, 1), 100);
+
+    const issues: JiraIssueSummary[] = [];
+    let nextPageToken: string | undefined;
+
+    do {
+      const params = new URLSearchParams({ jql, fields, maxResults: String(pageSize) });
+      if (nextPageToken) params.set('nextPageToken', nextPageToken);
+      const url = `${apiBaseUrl}/rest/api/3/search/jql?${params.toString()}`;
+      const response = await this.fetchWithRetry(url, {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${accessToken}`, Accept: 'application/json' },
+      });
+
+      if (!response.ok) {
+        const body = await response.text().catch(() => '');
+        throw new HttpException(
+          `Erro ao buscar issues do projeto no Jira (${response.statusText}): ${body}`,
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+
+      const data = await response.json();
+      const pageIssues = data.issues ?? [];
+      for (const issue of pageIssues) {
+        issues.push({
+          key: issue.key,
+          summary: issue.fields?.summary || issue.key,
+          status: issue.fields?.status?.name || '—',
+          statusCategory: issue.fields?.status?.statusCategory?.key,
+          issuetype: issue.fields?.issuetype?.name || '—',
+          priority: issue.fields?.priority?.name,
+          labels: issue.fields?.labels ?? [],
+          created: issue.fields?.created,
+          updated: issue.fields?.updated,
+          resolutiondate: issue.fields?.resolutiondate ?? undefined,
+          assignee: issue.fields?.assignee?.displayName,
+          link: `${siteUrl}/browse/${issue.key}`,
+        });
+      }
+
+      nextPageToken = data.nextPageToken;
+    } while (opts.all && nextPageToken);
+
+    return { issues, total: issues.length, startAt: 0, maxResults: pageSize };
+  }
+
+  // Conta issues do projeto sem paginar/trazer o payload completo — usa
+  // /search/approximate-count (só JQL no corpo, devolve { count }), pra casos como
+  // o dashboard de qualidade que só precisa do total de épicos, não dos dados deles.
+  async countIssuesByProject(
+    userId: string,
+    jiraProjectKey: string,
+    opts: { type?: 'Bug' | 'Improvement' | 'Epic' | Array<'Bug' | 'Improvement'> } = {},
+  ): Promise<number> {
+    const { accessToken, apiBaseUrl } = await this.authContext(userId);
+
+    const clauses = [`project = "${this.escapeJql(jiraProjectKey)}"`];
+    if (opts.type) {
+      const types = Array.isArray(opts.type) ? opts.type : [opts.type];
+      clauses.push(
+        types.length === 1
+          ? `issuetype = "${types[0]}"`
+          : `issuetype in (${types.map((t) => `"${t}"`).join(', ')})`,
+      );
+    }
+    const jql = clauses.join(' AND ');
+
+    const response = await this.fetchWithRetry(`${apiBaseUrl}/rest/api/3/search/approximate-count`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ jql }),
+    });
+
+    if (!response.ok) {
+      const body = await response.text().catch(() => '');
+      throw new HttpException(
+        `Erro ao contar issues do projeto no Jira (${response.statusText}): ${body}`,
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    const data = await response.json();
+    return data.count ?? 0;
   }
 
   // Status possíveis pros tipos Bug/Improvement dentro do workflow do projeto — não é
@@ -416,6 +562,11 @@ export class JiraService {
 
       const issueData = await response.json();
       const suiteTitle = issueData.fields?.summary || `Suíte ${suiteKey}`;
+      // Campo padrão "Pai" do Jira (issue.fields.parent) — quando a suíte está sob um
+      // Épico na hierarquia do projeto, isso já vem de graça nesta mesma resposta (a
+      // issue é buscada sem restringir `fields`), sem precisar de nenhuma chamada extra.
+      const epicKey: string | undefined = issueData.fields?.parent?.key;
+      const epicSummary: string | undefined = issueData.fields?.parent?.fields?.summary;
 
       const testCases: Array<{ key: string; title: string; link: string; priority?: string }> = [];
 
@@ -504,6 +655,8 @@ if (targetIssue && targetIssue.key !== suiteKey) {
       return {
         suiteKey,
         suiteTitle,
+        epicKey,
+        epicSummary,
         testCases,
       };
     } catch (error) {

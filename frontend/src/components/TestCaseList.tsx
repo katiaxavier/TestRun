@@ -8,6 +8,7 @@ import { PRIORITY_COLORS, priorityLabel, normalize } from '../utils/priority';
 interface TestCaseListProps {
   testCases: TestCase[];
   onDelete?: (id: string) => Promise<void>;
+  onToggleAutomated?: (id: string, automated: boolean) => Promise<void>;
   suiteMap?: Record<string, Suite>;
   renderExtra?: (tc: TestCase) => React.ReactNode;
   isManual?: boolean;
@@ -17,12 +18,13 @@ type PriorityFilter = 'all' | 'Gravíssima' | 'Crítica' | 'Alta' | 'Média' | '
 
 const PAGE_SIZES = [10, 25, 50, 100] as const;
 
-export function TestCaseList({ testCases, onDelete, suiteMap, renderExtra, isManual }: TestCaseListProps) {
+export function TestCaseList({ testCases, onDelete, onToggleAutomated, suiteMap, renderExtra, isManual }: TestCaseListProps) {
   const [search, setSearch] = useState('');
   const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>('all');
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<number | 'all'>(10);
 
@@ -46,6 +48,16 @@ export function TestCaseList({ testCases, onDelete, suiteMap, renderExtra, isMan
   const currentPage = Math.min(page, totalPages);
   const pageStartIndex = pageSize === 'all' ? 0 : (currentPage - 1) * pageSize;
   const displayed = pageSize === 'all' ? filtered : filtered.slice(pageStartIndex, pageStartIndex + pageSize);
+
+  const handleToggleAutomated = async (id: string, automated: boolean) => {
+    if (!onToggleAutomated) return;
+    setTogglingId(id);
+    try {
+      await onToggleAutomated(id, automated);
+    } finally {
+      setTogglingId(null);
+    }
+  };
 
   const handleDelete = async () => {
     if (!onDelete || !confirmDeleteId) return;
@@ -117,13 +129,14 @@ export function TestCaseList({ testCases, onDelete, suiteMap, renderExtra, isMan
               <th style={{ width: 150 }}>ID</th>
               <th>Título</th>
               <th style={{ width: 120 }}>Prioridade</th>
+              {onToggleAutomated && <th style={{ width: 110 }}>Automatizado</th>}
               {onDelete && <th style={{ width: 60 }} />}
             </tr>
           </thead>
           <tbody>
             {displayed.length === 0 ? (
               <tr>
-                <td colSpan={(onDelete ? 4 : 3) + (suiteMap ? 1 : 0)} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+                <td colSpan={(onDelete ? 4 : 3) + (suiteMap ? 1 : 0) + (onToggleAutomated ? 1 : 0)} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
                   Nenhum caso encontrado.
                 </td>
               </tr>
@@ -175,6 +188,16 @@ export function TestCaseList({ testCases, onDelete, suiteMap, renderExtra, isMan
                       </span>
                     )}
                   </td>
+                  {onToggleAutomated && (
+                    <td style={{ textAlign: 'center' }}>
+                      <input
+                        type="checkbox"
+                        checked={!!tc.automated}
+                        disabled={togglingId === tc.id}
+                        onChange={e => handleToggleAutomated(tc.id, e.target.checked)}
+                      />
+                    </td>
+                  )}
                   {onDelete && (
                     <td>
                       <button

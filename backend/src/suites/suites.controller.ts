@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Patch,
   Delete,
   Param,
   Query,
@@ -113,6 +114,12 @@ export class SuitesController {
   @ProjectAccess('suite', 'id')
   async deleteSuite(@Param('id') id: string) {
     return this.suitesService.deleteSuite(id);
+  }
+
+  @Patch('test-cases/:id')
+  @ProjectAccess('testCase', 'id')
+  async updateTestCase(@Param('id') id: string, @Body('automated') automated: boolean) {
+    return this.suitesService.updateTestCase(id, { automated });
   }
 
   @Delete('test-cases/:id')

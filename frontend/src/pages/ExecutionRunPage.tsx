@@ -13,6 +13,7 @@ import { StatusBadge } from '../components/StatusBadge';
 import { Modal } from '../components/Modal';
 import { Tooltip } from '../components/Tooltip';
 import { ExecutionFormModal, type ExecutionFormData } from '../components/ExecutionFormModal';
+import { JiraItemPicker } from '../components/JiraItemPicker';
 import { PRIORITY_COLORS, SEVERITY_COLORS, priorityLabel, normalize } from '../utils/priority';
 
 const STATUS_OPTIONS = ['PENDING', 'PASSED', 'FAILED', 'BLOCKED'];
@@ -49,10 +50,13 @@ function formatVersion(version?: string | null) {
 }
 
 // ── Issue helpers ────────────────────────────────────────────────────────────
+// Fallback só pra exibir bugs/melhorias antigos, criados antes da mudança pra vincular a
+// uma issue real do Jira (quando só existia o campo de severidade manual).
 const SEVERITY_PT: Record<string, string> = { Trivial: 'Trivial', Normal: 'Normal', Low: 'Trivial', Medium: 'Média', High: 'Alta', Critical: 'Crítica', Gravissima: 'Gravíssima' };
-const SEVERITY_EN: Record<string, string> = { Trivial: 'Trivial', Normal: 'Normal', Média: 'Medium', Alta: 'High', Crítica: 'Critical', 'Gravíssima': 'Gravissima' };
+// Fallback só pra exibir bugs/melhorias antigos (status manual em EN, antes da mudança
+// pra vincular a uma issue real do Jira). Bugs novos guardam o status real do Jira, que
+// pode ser qualquer string (varia por workflow) — não passa mais por essa tradução.
 const ISSUE_STATUS_PT: Record<string, string> = { Open: 'Aberto', 'In Progress': 'Em Andamento', Resolved: 'Resolvido', Cancelled: 'Cancelado' };
-const ISSUE_STATUS_EN: Record<string, string> = { Aberto: 'Open', 'Em Andamento': 'In Progress', Resolvido: 'Resolved', Cancelado: 'Cancelled' };
 
 const ISSUE_STATUS_STYLE: Record<string, { color: string; bg: string }> = {
   Aberto:        { color: 'var(--status-blocked)',   bg: 'var(--status-blocked-bg)' },
@@ -60,53 +64,79 @@ const ISSUE_STATUS_STYLE: Record<string, { color: string; bg: string }> = {
   Resolvido:     { color: 'var(--status-passed)',    bg: 'var(--status-passed-bg)' },
   Cancelado:     { color: 'var(--status-pending)',   bg: 'var(--status-pending-bg)' },
 };
+// Status reais do Jira variam por workflow/projeto e não têm cor definida acima —
+// usa um estilo neutro em vez de simplesmente esconder o badge.
+const DEFAULT_ISSUE_STATUS_STYLE = { color: 'var(--text-secondary)', bg: 'var(--bg-elevated)' };
 
-type IssueFormState = { type: string; jiraKey: string; title: string; severity: string; status: string };
-const EMPTY_ISSUE_FORM: IssueFormState = { type: 'BUG', jiraKey: '', title: '', severity: 'Média', status: 'Aberto' };
+type IssueFormState = {
+  type: string;
+  jiraKey: string;
+  jiraSummary: string;
+  jiraPriority?: string;
+  jiraLabels?: string[];
+  title: string;
+  status: string;
+};
+const EMPTY_ISSUE_FORM: IssueFormState = { type: 'BUG', jiraKey: '', jiraSummary: '', title: '', status: 'Aberto' };
 
-function IssueForm({ form, onChange, onSubmit, onCancel, loading, submitLabel }: {
+// Tipo interno é sempre derivado do issuetype real da issue selecionada — a busca do
+// picker já restringe a Bug/Melhoria, então qualquer coisa que não seja literalmente
+// "Bug" é tratada como Melhoria (mesma convenção de `typeColor()` em utils/priority.ts,
+// que trata "Improvement"/"Melhoria" como equivalentes).
+function issueTypeToInternal(issuetype: string): 'BUG' | 'IMPROVEMENT' {
+  return issuetype === 'Bug' ? 'BUG' : 'IMPROVEMENT';
+}
+
+function IssueForm({ form, onChange, onSubmit, onCancel, loading, submitLabel, projectId }: {
   form: IssueFormState;
   onChange: (f: IssueFormState) => void;
   onSubmit: () => void;
   onCancel: () => void;
   loading: boolean;
   submitLabel: string;
+  projectId: string;
 }) {
   return (
     <div className="card" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+      <div>
+        <label className="form-label">ID Issue *</label>
+        <JiraItemPicker
+          projectId={projectId}
+          value={form.jiraKey ? { key: form.jiraKey, summary: form.jiraSummary } : null}
+          onChange={issue => onChange(issue ? {
+            ...form,
+            jiraKey: issue.key,
+            jiraSummary: issue.summary,
+            jiraPriority: issue.priority,
+            jiraLabels: issue.labels,
+            title: issue.summary,
+            type: issueTypeToInternal(issue.issuetype),
+            status: issue.status,
+          } : {
+            ...form,
+            jiraKey: '', jiraSummary: '', jiraPriority: undefined, jiraLabels: undefined,
+            title: '', type: 'BUG', status: 'Aberto',
+          })}
+        />
+      </div>
+      <div>
+        <label className="form-label">Título</label>
+        <Tooltip content={form.title || 'Selecione uma issue do Jira acima'} placement="top" display="block">
+          <input value={form.title} disabled placeholder="Selecione uma issue do Jira acima" />
+        </Tooltip>
+      </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
         <div>
           <label className="form-label">Tipo</label>
-          <select value={form.type} onChange={e => onChange({ ...form, type: e.target.value })}>
-            <option value="BUG">Bug</option>
-            <option value="IMPROVEMENT">Melhoria</option>
-          </select>
-        </div>
-        <div>
-          <label className="form-label">Severidade</label>
-          <select value={form.severity} onChange={e => onChange({ ...form, severity: e.target.value })}>
-            <option>Trivial</option><option>Normal</option><option>Média</option><option>Alta</option><option>Crítica</option><option>Gravíssima</option>
-          </select>
-        </div>
-      </div>
-      <div>
-        <label className="form-label">Título *</label>
-        <input placeholder="Descreva o bug ou melhoria" value={form.title} onChange={e => onChange({ ...form, title: e.target.value })} />
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-        <div>
-          <label className="form-label">ID Jira (opcional)</label>
-          <input placeholder="PROJ-999" value={form.jiraKey} onChange={e => onChange({ ...form, jiraKey: e.target.value.toUpperCase() })} />
+          <input value={form.type === 'BUG' ? 'Bug' : 'Melhoria'} disabled />
         </div>
         <div>
           <label className="form-label">Status</label>
-          <select value={form.status} onChange={e => onChange({ ...form, status: e.target.value })}>
-            <option>Aberto</option><option>Em Andamento</option><option>Resolvido</option><option>Cancelado</option>
-          </select>
+          <input value={form.status || '—'} disabled />
         </div>
       </div>
       <div style={{ display: 'flex', gap: '0.5rem' }}>
-        <button className="btn btn-primary btn-sm" onClick={onSubmit} disabled={loading || !form.title.trim()} style={{ justifyContent: 'center', flex: 1 }}>
+        <button className="btn btn-primary btn-sm" onClick={onSubmit} disabled={loading || !form.title.trim() || !form.jiraKey} style={{ justifyContent: 'center', flex: 1 }}>
           {loading ? <div className="spinner" style={{ width: 13, height: 13 }} /> : <CheckCircle size={14} />}
           {submitLabel}
         </button>
@@ -125,11 +155,13 @@ function IssueCard({ issue, jiraUrl, onEdit, onDelete, confirmDelete, onConfirmD
   onConfirmDelete: () => void;
   onCancelDelete: () => void;
 }) {
-  const severityPt = SEVERITY_PT[issue.severity ?? ''] ?? issue.severity;
+  const severityPt = issue.jiraPriority
+    ? priorityLabel(issue.jiraPriority)
+    : (SEVERITY_PT[issue.severity ?? ''] ?? issue.severity);
   const statusPt = ISSUE_STATUS_PT[issue.status ?? ''] ?? issue.status;
   const jiraHref = issue.jiraKey && jiraUrl ? `${jiraUrl.replace(/\/$/, '')}/browse/${issue.jiraKey}` : null;
   const severityStyle = severityPt ? SEVERITY_COLORS[severityPt] : undefined;
-  const statusStyle = statusPt ? ISSUE_STATUS_STYLE[statusPt] : undefined;
+  const statusStyle = statusPt ? (ISSUE_STATUS_STYLE[statusPt] ?? DEFAULT_ISSUE_STATUS_STYLE) : undefined;
   return (
     <div style={{ padding: '0.65rem 0.85rem', background: 'var(--bg-elevated)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
@@ -158,6 +190,13 @@ function IssueCard({ issue, jiraUrl, onEdit, onDelete, confirmDelete, onConfirmD
             )}
           </div>
           <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>{issue.title}</p>
+          {issue.jiraLabels && issue.jiraLabels.length > 0 && (
+            <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap', marginTop: '0.35rem' }}>
+              {issue.jiraLabels.map(label => (
+                <span key={label} className="tag" style={{ fontSize: '0.65rem', padding: '0.05rem 0.35rem' }}>{label}</span>
+              ))}
+            </div>
+          )}
         </div>
         <div style={{ display: 'flex', gap: '0.1rem', flexShrink: 0 }}>
           <Tooltip content="Editar" placement="top">
@@ -185,12 +224,13 @@ function IssueCard({ issue, jiraUrl, onEdit, onDelete, confirmDelete, onConfirmD
 
 // ── Issue panel (reusable for test case and scenario) ────────────────────────
 function IssuePanel({
-  issues, jiraUrl, onAdd, onUpdate, onRemove,
+  issues, jiraUrl, projectId, onAdd, onUpdate, onRemove,
 }: {
   issues: Issue[];
   jiraUrl: string;
-  onAdd: (data: { type: string; jiraKey?: string; title: string; severity?: string; status?: string }) => Promise<void>;
-  onUpdate: (issueId: string, data: { type?: string; jiraKey?: string | null; title?: string; severity?: string; status?: string }) => Promise<void>;
+  projectId: string;
+  onAdd: (data: { type: string; jiraKey: string; title: string; jiraPriority?: string; jiraLabels?: string[]; status?: string }) => Promise<void>;
+  onUpdate: (issueId: string, data: { type?: string; jiraKey?: string | null; title?: string; jiraPriority?: string; jiraLabels?: string[]; status?: string }) => Promise<void>;
   onRemove: (issueId: string) => Promise<void>;
 }) {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
@@ -209,15 +249,16 @@ function IssuePanel({
   };
 
   const handleAdd = async () => {
-    if (!issueForm.title.trim()) return;
+    if (!issueForm.title.trim() || !issueForm.jiraKey) return;
     setAddingIssue(true);
     try {
       await onAdd({
         type: issueForm.type,
-        jiraKey: issueForm.jiraKey || undefined,
+        jiraKey: issueForm.jiraKey,
         title: issueForm.title,
-        severity: SEVERITY_EN[issueForm.severity] ?? issueForm.severity,
-        status: ISSUE_STATUS_EN[issueForm.status] ?? issueForm.status,
+        jiraPriority: issueForm.jiraPriority,
+        jiraLabels: issueForm.jiraLabels,
+        status: issueForm.status,
       });
       setIssueForm(EMPTY_ISSUE_FORM);
       setShowIssueForm(false);
@@ -235,8 +276,9 @@ function IssuePanel({
         type: editForm.type,
         jiraKey: editForm.jiraKey || null,
         title: editForm.title,
-        severity: SEVERITY_EN[editForm.severity] ?? editForm.severity,
-        status: ISSUE_STATUS_EN[editForm.status] ?? editForm.status,
+        jiraPriority: editForm.jiraPriority,
+        jiraLabels: editForm.jiraLabels,
+        status: editForm.status,
       });
       setEditingIssueId(null);
       addToast(editForm.type === 'BUG' ? 'Bug atualizado' : 'Melhoria atualizada');
@@ -273,7 +315,7 @@ function IssuePanel({
         {showIssueForm && (
           <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
             style={{ overflow: 'hidden', marginBottom: '0.75rem' }}>
-            <IssueForm form={issueForm} onChange={setIssueForm} onSubmit={handleAdd} onCancel={() => setShowIssueForm(false)} loading={addingIssue} submitLabel="Adicionar" />
+            <IssueForm form={issueForm} onChange={setIssueForm} onSubmit={handleAdd} onCancel={() => setShowIssueForm(false)} loading={addingIssue} submitLabel="Adicionar" projectId={projectId} />
           </motion.div>
         )}
       </AnimatePresence>
@@ -291,6 +333,7 @@ function IssuePanel({
                     onSubmit={() => handleUpdate(issue.id)}
                     onCancel={() => setEditingIssueId(null)}
                     loading={updatingIssue} submitLabel="Salvar"
+                    projectId={projectId}
                   />
                 </motion.div>
               ) : (
@@ -302,9 +345,11 @@ function IssuePanel({
                     setEditForm({
                       type: issue.type,
                       jiraKey: issue.jiraKey ?? '',
+                      jiraSummary: issue.title,
+                      jiraPriority: issue.jiraPriority,
+                      jiraLabels: issue.jiraLabels,
                       title: issue.title,
-                      severity: SEVERITY_PT[issue.severity ?? ''] ?? issue.severity ?? 'Média',
-                      status: ISSUE_STATUS_PT[issue.status ?? ''] ?? issue.status ?? 'Aberto',
+                      status: issue.status ?? 'Aberto',
                     });
                   }}
                   onDelete={() => setDeleteConfirmId(issue.id)}
@@ -334,11 +379,12 @@ function IssuePanel({
 
 // ── Scenario view inside drawer ───────────────────────────────────────────────
 function ScenarioView({
-  executionId, etcId, scenario, onBack, onUpdated, onDeleted, allScenarios, currentScenarioIndex, onNavigate,
+  executionId, etcId, scenario, projectId, onBack, onUpdated, onDeleted, allScenarios, currentScenarioIndex, onNavigate,
 }: {
   executionId: string;
   etcId: string;
   scenario: Scenario;
+  projectId: string;
   onBack: () => void;
   onUpdated: (s: Scenario) => void;
   onDeleted: (issues?: Issue[]) => void;
@@ -553,6 +599,7 @@ function ScenarioView({
         <IssuePanel
           issues={issues}
           jiraUrl={jiraUrl}
+          projectId={projectId}
           onAdd={async (d) => {
             const { data } = await executionsApi.addScenarioIssue(executionId, etcId, scenario.id, d);
             const newIssues = [...issues, data];
@@ -632,10 +679,11 @@ function ScenarioView({
 
 // ── Drawer ──────────────────────────────────────────────────────────────────
 function TestCaseDrawer({
-  executionId, etc, allTestCases, currentIndex, onClose, onUpdated, onNavigate, onRemoved,
+  executionId, etc, projectId, allTestCases, currentIndex, onClose, onUpdated, onNavigate, onRemoved,
 }: {
   executionId: string;
   etc: ExecutionTestCase;
+  projectId: string;
   allTestCases: ExecutionTestCase[];
   currentIndex: number;
   onClose: () => void;
@@ -873,6 +921,7 @@ function TestCaseDrawer({
             executionId={executionId}
             etcId={etc.id}
             scenario={activeScenario}
+            projectId={projectId}
             onBack={() => setActiveScenario(null)}
             onUpdated={handleScenarioUpdated}
             onDeleted={handleScenarioDeleted}
@@ -1092,6 +1141,7 @@ function TestCaseDrawer({
                 <IssuePanel
                   issues={issues}
                   jiraUrl={jiraUrl}
+                  projectId={projectId}
                   onAdd={async (d) => {
                     const { data } = await executionsApi.addIssue(executionId, etc.id, d);
                     const newIssues = [...issues, data];
@@ -1720,6 +1770,7 @@ export default function ExecutionRunPage() {
           <TestCaseDrawer
             executionId={execution.id}
             etc={selectedEtc}
+            projectId={execution.suite?.projectId ?? ''}
             allTestCases={filteredTcs}
             currentIndex={filteredTcs.findIndex(tc => tc.id === selectedEtc.id)}
             onClose={() => setSelectedEtc(null)}

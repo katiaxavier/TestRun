@@ -24,12 +24,34 @@ const CHUMBO     = '818B9D';   // chumbo — labels e subtítulos de suíte
 const CREAM      = 'FFFEEE';   // creme — linhas alternadas (calor da marca)
 const ORANGE_ACC = 'FF6002';   // laranja primário — links Jira
 
+// Fallback só pra bugs/melhorias antigos (severidade manual, antes da mudança pra
+// vincular a uma issue real do Jira). Bugs novos não preenchem mais este campo.
 const SEVERITY_PT: Record<string, string> = {
   Trivial: 'Trivial', Normal: 'Normal', Low: 'Trivial', Medium: 'Médio', High: 'Alto', Critical: 'Crítico', Gravissima: 'Gravíssima',
 };
 const ISSUE_STATUS_PT: Record<string, string> = {
   Open: 'Aberto', 'In Progress': 'Em Andamento', Resolved: 'Resolvido', Cancelled: 'Cancelado',
 };
+
+// Severidade exibida no relatório: prioriza a prioridade real do Jira (`jiraPriority`,
+// preenchida desde que bugs/melhorias passaram a exigir vínculo com uma issue real),
+// normalizando nomes em EN/PT do esquema padrão do Jira (Highest/High/Medium/Low/Lowest)
+// pro mesmo vocabulário em PT já usado neste relatório. Sem jiraPriority (registro
+// antigo), cai no campo `severity` manual de antes.
+function severityLabel(issue: { severity?: string | null; jiraPriority?: string | null }): string {
+  if (issue.jiraPriority) {
+    const n = issue.jiraPriority.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+    if (n.includes('highest') || n.includes('gravissim')) return 'Gravíssima';
+    if (n.includes('lowest')) return 'Trivial';
+    if (n.includes('critic')) return 'Crítico';
+    if (n.includes('high') || n === 'alta') return 'Alto';
+    if (n.includes('medium') || n.includes('media')) return 'Médio';
+    if (n.includes('low') || n === 'normal') return 'Normal';
+    if (n.includes('trivial')) return 'Trivial';
+    return issue.jiraPriority;
+  }
+  return SEVERITY_PT[issue.severity ?? ''] || issue.severity || '-';
+}
 
 const XL_BORDER_THIN = {
   top:    { style: 'thin' as const, color: { argb: 'C8D0D8' } },
@@ -446,7 +468,7 @@ export class ReportsService {
           type:      issue.type === 'BUG' ? 'Bug' : 'Melhoria',
           jiraKey:   issue.jiraKey || 'N/A',
           title:     issue.title,
-          severity:  SEVERITY_PT[issue.severity ?? ''] || issue.severity || '-',
+          severity:  severityLabel(issue),
           createdAt: this.formatDate(issue.createdAt),
           status:    ISSUE_STATUS_PT[issue.status ?? ''] || issue.status || 'Aberto',
         });
@@ -457,7 +479,7 @@ export class ReportsService {
             type:      issue.type === 'BUG' ? 'Bug' : 'Melhoria',
             jiraKey:   issue.jiraKey || 'N/A',
             title:     issue.title,
-            severity:  SEVERITY_PT[issue.severity ?? ''] || issue.severity || '-',
+            severity:  severityLabel(issue),
             createdAt: this.formatDate(issue.createdAt),
             status:    ISSUE_STATUS_PT[issue.status ?? ''] || issue.status || 'Aberto',
           });
@@ -714,7 +736,7 @@ export class ReportsService {
             type:     issue.type === 'BUG' ? 'Bug' : 'Melhoria',
             key:      issue.jiraKey || 'N/A',
             title:    issue.title,
-            severity: SEVERITY_PT[issue.severity ?? ''] || issue.severity || '-',
+            severity: severityLabel(issue),
             status:   ISSUE_STATUS_PT[issue.status ?? ''] || issue.status || 'Aberto',
           });
         });
@@ -724,7 +746,7 @@ export class ReportsService {
               type:     issue.type === 'BUG' ? 'Bug' : 'Melhoria',
               key:      issue.jiraKey || 'N/A',
               title:    issue.title,
-              severity: SEVERITY_PT[issue.severity ?? ''] || issue.severity || '-',
+              severity: severityLabel(issue),
               status:   ISSUE_STATUS_PT[issue.status ?? ''] || issue.status || 'Aberto',
             });
           });
@@ -881,7 +903,7 @@ export class ReportsService {
           type:     issue.type === 'BUG' ? 'Bug' : 'Melhoria',
           key:      issue.jiraKey || 'N/A',
           title:    issue.title,
-          severity: SEVERITY_PT[issue.severity ?? ''] || issue.severity || '-',
+          severity: severityLabel(issue),
           status:   ISSUE_STATUS_PT[issue.status ?? ''] || issue.status || 'Aberto',
         });
       });
@@ -891,7 +913,7 @@ export class ReportsService {
             type:     issue.type === 'BUG' ? 'Bug' : 'Melhoria',
             key:      issue.jiraKey || 'N/A',
             title:    issue.title,
-            severity: SEVERITY_PT[issue.severity ?? ''] || issue.severity || '-',
+            severity: severityLabel(issue),
             status:   ISSUE_STATUS_PT[issue.status ?? ''] || issue.status || 'Aberto',
           });
         });
