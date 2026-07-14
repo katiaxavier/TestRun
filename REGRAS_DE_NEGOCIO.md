@@ -1,7 +1,7 @@
 # Regras de Negócio — TestRun
 
-**Versão:** 2.0  
-**Data:** 07/07/2026  
+**Versão:** 2.1  
+**Data:** 14/07/2026  
 **Sistema:** TestRun — Plataforma de Gestão de Testes de QA
 
 ---
@@ -60,8 +60,10 @@ Conjunto de casos de teste. Pode ser criada manualmente ou importada do Jira. Pe
 |---|---|---|
 | `projectId` | FK | Obrigatório; toda suíte pertence a exatamente um projeto |
 | `jiraKey` | string (opcional) | Preenchido apenas em suítes importadas do Jira; único por projeto (`projectId` + `jiraKey`) |
+| `manualKey` | string (opcional) | Preenchido apenas em suítes manuais (ex.: `SUITE-001`, gerado automaticamente); único por projeto (`projectId` + `manualKey`) |
 | `title` | string | Obrigatório |
 | `isManual` | boolean | `true` = criada manualmente; `false` = importada do Jira |
+| `epicKey`, `epicSummary` | string (opcionais) | Chave e resumo do Epic do Jira associado; usados no cálculo de cobertura de requisitos do Dashboard (ver 17.2) |
 
 ### 2.6 Caso de Teste (`TestCase`)
 Item individual de teste pertencente a uma suíte.
@@ -70,6 +72,8 @@ Item individual de teste pertencente a uma suíte.
 |---|---|---|
 | `jiraKey` | string | Obrigatório (mesmo para suítes manuais) |
 | `priority` | string | Importada do Jira ou definida manualmente |
+| `automated` | boolean | `default false`; marca se o caso é coberto por automação — alimenta a métrica de cobertura de automação do Dashboard (ver 17.2) |
+| `link` | string (opcional) | Link do ticket no Jira |
 | `suiteId` | FK | Cada caso pertence a exatamente uma suíte |
 
 ### 2.7 Cenário Template (`TestCaseScenario`)
@@ -80,6 +84,10 @@ Representa um ciclo de teste de uma suíte.
 
 | Campo | Tipo | Regra |
 |---|---|---|
+| `sprint`, `responsible` | string | Obrigatórios |
+| `version` | string | Não obrigatório na prática (DTO aceita omissão; assume `''` como padrão) |
+| `startDate`, `endDate` | datetime | Obrigatórios |
+| `testedFeature` | string (opcional) | Funcionalidade testada, informativo |
 | `status` | enum | `PENDING` → `IN_PROGRESS` → `COMPLETED` (calculado automaticamente) |
 | `batchId` | FK (opcional) | Preenchido se a execução pertence a um lote |
 
@@ -105,7 +113,11 @@ Bug ou melhoria vinculado a um caso de teste ou a um cenário.
 | Campo | Valores |
 |---|---|
 | `type` | `BUG`, `IMPROVEMENT` |
-| `severity` | Trivial, Normal, Low, Medium, High, Critical, Gravissima |
+| `jiraKey` | string (opcional) — chave do ticket no Jira |
+| `title` | string — obrigatório |
+| `severity` | Campo legado, preenchido manualmente: Trivial, Normal, Low, Medium, High, Critical, Gravissima |
+| `jiraPriority` | Campo atual, sincronizado do Jira — tem prioridade sobre `severity` sempre que ambos existem (`severity` só é usado como fallback em registros antigos, ex.: em relatórios) |
+| `jiraLabels` | string[] — labels do Jira; usado no cálculo de "Densidade por Label" do Dashboard (ver 17.2) |
 | `status` | Open, In Progress, Resolved, Cancelled |
 
 ### 2.12 Lote (`ExecutionBatch`)
@@ -113,6 +125,10 @@ Agrupa múltiplas suítes para execução conjunta.
 
 | Campo | Tipo | Regra |
 |---|---|---|
+| `projectId` | FK | Obrigatório; todo lote pertence a exatamente um projeto |
+| `boardId` | FK (opcional) | Quadro ao qual o lote está associado, se houver |
+| `name` | string (opcional) | Nome do lote |
+| `testedFeature` | string (opcional) | Funcionalidade testada, informativo |
 | `suiteIds` | JSON array | Lista de IDs das suítes do lote |
 | `excludedTestCaseIds` | JSON array | TCs excluídos de todas as execuções do lote |
 | `status` | enum | `PENDING` → `IN_PROGRESS` → `COMPLETED` |
@@ -163,7 +179,7 @@ Agrupa múltiplas suítes para execução conjunta.
 
 ### 4.1 Criação de Execução
 - A suíte deve existir e possuir ao menos um caso de teste.
-- Os campos obrigatórios são: sprint, versão, data de início, responsável.
+- Os campos obrigatórios são: sprint, data de início, data de término, responsável. Versão é opcional (assume `''` se omitida).
 - Ao criar, todos os casos de teste da suíte são copiados para a execução como `ExecutionTestCase` com status `PENDING`.
 
 ### 4.2 Status da Execução (Calculado Automaticamente)
@@ -435,12 +451,11 @@ Não há restrição de transição; o testador pode alterar para qualquer statu
 
 ---
 
-## 16. Execuções (Tela Inicial)
+## 16. Execuções (`/execucoes`)
 
 ### 16.1 Escopo
-- A tela inicial é Execuções, em `/execucoes` (`/` redireciona pra lá), que substituiu a antiga
-  listagem de Suítes/Lotes como home. Essa listagem migrou para `/suites` (item próprio no menu
-  lateral).
+- Tela de Execuções, em `/execucoes`, item próprio no menu lateral. A tela inicial do sistema (`/`)
+  é hoje o Dashboard, em `/dashboard` (ver seção 17) — a listagem de Suítes/Lotes fica em `/suites`.
 - Mesmo escopo de dados do restante do sistema: Projeto + Quadro selecionados na sidebar — não existe
   visão global entre quadros.
 
@@ -474,6 +489,41 @@ Não há restrição de transição; o testador pode alterar para qualquer statu
 - Filtros disponíveis: status (`IN_PROGRESS`/`COMPLETED`/`PENDING`) e período (`startDate`/`endDate` da
   execução) — mudar qualquer filtro reinicia a paginação para a primeira página.
 - Mesma ordenação da tela Execuções: `createdAt` decrescente (execução criada mais recentemente primeiro).
+
+---
+
+## 17. Dashboard (Tela Inicial)
+
+### 17.1 Escopo
+- Tela inicial do sistema, em `/dashboard` (`/` redireciona para lá). Três abas: **Operação**, **Qualidade** e **Eficiência**.
+- Cada aba tem uma pergunta-guia exibida em tooltip: Operação = "O que está acontecendo agora?"; Qualidade = "Qual a saúde do produto?"; Eficiência = "Estamos resolvendo os problemas no tempo esperado?".
+- Mesmo escopo de dados do restante do sistema: Projeto + Quadro selecionados na sidebar. Uma aba só busca seus dados na primeira vez que é visitada; depois permanece montada (não refaz a busca ao trocar de aba).
+
+### 17.2 Aba Operação
+- Conteúdo herdado do antigo dashboard: KPIs gerais, execuções em andamento, últimas 3 execuções concluídas, totais de bugs/melhorias, issues recentes, lista de "pronto para teste" e gráfico de taxa de sucesso.
+- Reaproveita os mesmos endpoints de Execuções/Issues; não tem endpoint de backend próprio.
+
+### 17.3 Aba Qualidade (`GET /dashboard/quality`)
+- Considera as últimas 10 execuções `COMPLETED` escopadas a Projeto+Quadro.
+- **Densidade por Label**: conta apenas bugs (`type = BUG`; melhorias são ignoradas), deduplicados globalmente por `jiraKey`, agrupados pela combinação ordenada de `jiraLabels` (labels concatenadas com `" + "`; sem label → `"Sem label"`). Exibida como tabela (não como gráfico de barras).
+- **Taxa de Sucesso × Severidade**: por execução concluída, bugs distintos (deduplicados dentro da execução) agrupados por `jiraPriority` (sem prioridade → `"Sem severidade"`), com `totalTests`/`failedTests` como contexto no tooltip.
+- **Cobertura de requisitos e automação**: `epicsWithSuite` = quantidade de `epicKey` distintos entre as suítes do projeto (contagem no nível do projeto, não do quadro, pois quadros não têm conceito de Epic no Jira); `totalEpics` = total de issues tipo Epic no projeto no Jira (não calculado para o projeto sentinela `MANUAL`); `totalTestCases`/`automatedTestCases` = contagem de `TestCase.automated`, escopada ao quadro.
+
+### 17.4 Aba Eficiência (`GET /dashboard/efficiency`)
+- Busca **todos** os bugs do Jira do Projeto/Quadro diretamente (não só os que passaram por execuções no TestRun), paginado.
+- **MTTR** (tempo médio de resolução, em dias): usa `resolutiondate` quando preenchido; senão usa `updated` se o `statusCategory` for `done` (muitos projetos Jira nunca preenchem `resolutiondate`). Comparado contra uma meta fixa de 20 dias (placeholder ainda não validado com o negócio).
+- **Idade dos bugs em aberto**: média/mínima/máxima em dias, e contagem por `jiraPriority`.
+- **SLA em 3 estados** (semáforo, calculado só sobre bugs em aberto): `withinSla` (dentro do prazo), `nearSla` (idade acima de 80% do prazo da prioridade), `aboveSla` (violado — lista individual com chave, link, título, prioridade, idade em dias, data de abertura e % do SLA consumido). Existe ainda um 4º grupo fora do semáforo, `noSlaDefined`, para prioridades sem prazo configurado.
+- Prazos de SLA por prioridade (dias): Gravíssima 3, Crítica 7, Alta 15, Média 21, Normal 30, Trivial 45 (nomenclatura PT-BR) / Highest 3, High 7, Medium 15, Low 30, Lowest 45 (nomenclatura EN) — os dois esquemas coexistem porque cada usuário conecta o próprio site Jira, que pode usar prioridades em qualquer um dos dois idiomas.
+
+---
+
+## 18. Tela Bugs e Melhorias (`/jira-issues`)
+
+### 18.1 Escopo
+- Lista ao vivo de issues do Jira (bugs e melhorias) do Projeto+Quadro selecionados, com paginação e filtros por tipo, status, prioridade e busca textual (debounce de 400ms).
+- Endpoints: `GET /jira-issues` (listagem paginada e filtrada) e `GET /jira-issues/filters` (valores disponíveis para os filtros). Há também `GET /jira-issues/picker` (`type: BUG|IMPROVEMENT` + busca textual), usado em seletores de issue por chave em outras telas.
+- Desabilitada quando o quadro selecionado é o pseudo-quadro "Sem quadro" (`boardId === 'none'`), já que não há quadro real do Jira para consultar.
 
 ---
 

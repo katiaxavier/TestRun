@@ -211,6 +211,8 @@ TestRun/
 │   │   ├── boards/          # Quadros (boards) dentro de cada projeto
 │   │   ├── executions/      # Execuções individuais e lotes (batch)
 │   │   ├── jira/            # Integração com a API do Jira
+│   │   ├── jira-issues/     # Listagem ao vivo de bugs/melhorias do Jira
+│   │   ├── dashboard/       # KPIs de Operação, Qualidade e Eficiência
 │   │   ├── reports/         # Geração de relatórios .xlsx e .pdf
 │   │   ├── suites/          # Suites, casos de teste e cenários
 │   │   └── prisma/          # Serviço do Prisma ORM
@@ -227,12 +229,15 @@ TestRun/
 │   │   │   └── ...                     # Demais componentes reutilizáveis
 │   │   ├── pages/
 │   │   │   ├── LoginPage.tsx           # Login via OAuth Atlassian
-│   │   │   ├── ExecucoesPage.tsx       # Execuções (home): execuções em andamento e últimas execuções
+│   │   │   ├── HomePage.tsx            # Dashboard (home): abas Operação / Qualidade / Eficiência
+│   │   │   ├── dashboard/              # Conteúdo de cada aba do Dashboard
+│   │   │   ├── ExecucoesPage.tsx       # Execuções: execuções em andamento e últimas execuções
 │   │   │   ├── ExecutionsPage.tsx      # Todas as execuções, com filtros e paginação
 │   │   │   ├── SuitesPage.tsx          # Lista de suites e lotes (cards ou tabela)
 │   │   │   ├── SuiteDetailPage.tsx     # Detalhes e execuções de uma suite
 │   │   │   ├── ExecutionRunPage.tsx    # Execução guiada de testes
-│   │   │   └── BatchExecutionPage.tsx  # Execução em lote (múltiplas suites)
+│   │   │   ├── BatchExecutionPage.tsx  # Execução em lote (múltiplas suites)
+│   │   │   └── JiraIssuesPage.tsx      # Bugs e Melhorias: listagem ao vivo de issues do Jira
 │   │   └── api/
 │   │       └── client.ts    # Cliente HTTP (Axios)
 │   └── Dockerfile
@@ -244,9 +249,17 @@ TestRun/
 
 ## Funcionalidades Principais
 
+### Dashboard
+
+- Tela inicial (`/dashboard`) com três abas, cada uma respondendo a uma pergunta central:
+  - **Operação** — "O que está acontecendo agora?": execuções em andamento, últimas execuções concluídas, totais de bugs/melhorias e taxa de sucesso
+  - **Qualidade** — "Qual a saúde do produto?": densidade de bugs por label, taxa de sucesso por severidade e cobertura de requisitos/automação
+  - **Eficiência** — "Estamos resolvendo os problemas no tempo esperado?": MTTR, idade dos bugs em aberto e SLA em 3 estados (dentro do prazo, próximo do prazo, violado)
+- Escopado ao Projeto+Quadro selecionados na sidebar; cada aba busca seus dados só na primeira vez que é visitada
+
 ### Execuções
 
-- Tela inicial (`/execucoes`) com visão geral das execuções do Projeto+Quadro selecionados
+- Tela (`/execucoes`) com visão geral das execuções do Projeto+Quadro selecionados
 - **Execuções em Andamento**: lista todas as execuções com status em andamento (suite e lote podem ter
   execuções ativas simultâneas), atualizando automaticamente a cada 15 segundos
 - **Últimas Execuções**: as execuções concluídas mais recentes
@@ -283,6 +296,12 @@ TestRun/
 - Registro de comentários por caso/cenário
 - Registro de issues (bugs e melhorias) vinculados ao caso ou ao cenário
   - Campos: tipo, chave Jira, título, severidade, status
+
+### Bugs e Melhorias
+
+- Tela (`/jira-issues`) com listagem ao vivo das issues do Jira (bugs e melhorias) do Projeto+Quadro selecionados
+- Filtros por tipo, status, prioridade e busca textual, com paginação
+- Indisponível quando o quadro selecionado é "Sem quadro" (não há quadro real do Jira para consultar)
 
 ### Relatórios
 
@@ -389,4 +408,10 @@ Verifique se o backend está rodando em `http://localhost:3000`. O frontend assu
 
 - [x] Autenticação de usuários (OAuth Atlassian)
 - [x] Múltiplos projetos e quadros do Jira
-- [ ] Criação de suites/casos de teste integrados ao Jira
+- [x] Criação de suites/casos de teste integrados ao Jira
+- [x] Lotes de execução (múltiplas suites em um ciclo)
+- [x] Cenários por caso de teste (templates reutilizáveis)
+- [x] Relatórios Excel e PDF
+- [x] Autorização por projeto (acesso espelhado do Jira)
+- [x] Dashboard (Operação / Qualidade / Eficiência)
+- [x] Tela "Bugs e Melhorias" com listagem ao vivo do Jira
