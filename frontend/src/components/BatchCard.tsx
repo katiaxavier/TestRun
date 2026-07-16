@@ -25,11 +25,11 @@ export function BatchCard({ batch, onDelete }: BatchCardProps) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
-        <span className="tag" style={{ fontFamily: 'monospace', fontSize: '0.7rem', background: 'rgba(255, 209, 90, 0.18)', color: 'var(--tertiary)', flexShrink: 0 }}>
+        <span className="tag" style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem', background: 'var(--warning-bg)', color: 'var(--tertiary)', flexShrink: 0 }}>
           LOTE
         </span>
         {suiteKeys.map((key, i) => (
-          <span key={i} className="tag" style={{ fontFamily: 'monospace', fontSize: '0.7rem', flexShrink: 0 }}>
+          <span key={i} className="tag" style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem', flexShrink: 0 }}>
             {key}
           </span>
         ))}

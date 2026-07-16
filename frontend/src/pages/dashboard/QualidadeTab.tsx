@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { CountUp } from '../../components/CountUp';
 import { BarChart, Bar, ResponsiveContainer, Tooltip as RechartsTooltip, XAxis } from 'recharts';
 import { ChartBarIcon, GaugeIcon, TargetIcon, HeartbeatIcon } from '@phosphor-icons/react';
 import { dashboardApi, executionsApi } from '../../api/client';
@@ -16,7 +17,7 @@ interface QualidadeTabProps {
 const CRITICAL_SEVERITIES = ['Gravíssima', 'Crítica'];
 
 const SEVERITY_KEYS = ['Gravíssima', 'Crítica', 'Alta', 'Média', 'Normal', 'Trivial', 'Sem severidade'] as const;
-const SEVERITY_KEY_COLORS: Record<string, string> = { ...PRIORITY_COLORS, 'Sem severidade': '#555e76' };
+const SEVERITY_KEY_COLORS: Record<string, string> = { ...PRIORITY_COLORS, 'Sem severidade': 'var(--chart-muted)' };
 
 function pct(part: number, total: number): number | null {
   return total > 0 ? Math.round((part / total) * 100) : null;
@@ -139,25 +140,25 @@ export function QualidadeTab({ projectId, boardId }: QualidadeTabProps) {
           <div className="stat-card">
             <p className="stat-label" title="Taxa de Aprovação">Taxa de Aprovação</p>
             <p className="stat-value" style={{ color: successRate !== null ? bandColor(successRate) : undefined }}>
-              {successRate !== null ? `${successRate}%` : '—'}
+              {successRate !== null ? <CountUp value={successRate} suffix="%" /> : '—'}
             </p>
           </div>
           <div className="stat-card">
             <p className="stat-label" title="Bugs Críticos em Aberto">Bugs Críticos em Aberto</p>
             <p className="stat-value" style={{ color: criticalOpenBugs > 0 ? 'var(--status-failed)' : undefined }}>
-              {efficiency ? criticalOpenBugs : '—'}
+              {efficiency ? <CountUp value={criticalOpenBugs} /> : '—'}
             </p>
           </div>
           <div className="stat-card">
             <p className="stat-label" title="Cobertura de Requisitos">Cobertura de Requisitos</p>
             <p className="stat-value" style={{ color: coveragePct !== null ? bandColor(coveragePct) : undefined }}>
-              {coveragePct !== null ? `${coveragePct}%` : '—'}
+              {coveragePct !== null ? <CountUp value={coveragePct} suffix="%" /> : '—'}
             </p>
           </div>
           <div className="stat-card">
             <p className="stat-label" title="Cobertura de Automação">Cobertura de Automação</p>
             <p className="stat-value" style={{ color: automationPct !== null ? bandColor(automationPct) : undefined }}>
-              {automationPct !== null ? `${automationPct}%` : '—'}
+              {automationPct !== null ? <CountUp value={automationPct} suffix="%" /> : '—'}
             </p>
           </div>
         </div>
@@ -261,22 +262,22 @@ export function QualidadeTab({ projectId, boardId }: QualidadeTabProps) {
           <div className="stat-card">
             <p className="stat-label" title="Épicos com Suíte Vinculada">Épicos com Suíte Vinculada</p>
             <p className="stat-value" style={{ color: coveragePct !== null ? bandColor(coveragePct) : undefined }}>
-              {coveragePct !== null ? `${coveragePct}%` : '—'}
+              {coveragePct !== null ? <CountUp value={coveragePct} suffix="%" /> : '—'}
             </p>
             <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{epicsWithSuite} de {totalEpics} épicos</p>
           </div>
           <div className="stat-card">
             <p className="stat-label" title="Épicos sem Cobertura">Épicos sem Cobertura</p>
-            <p className="stat-value">{Math.max(0, totalEpics - epicsWithSuite)}</p>
+            <p className="stat-value"><CountUp value={Math.max(0, totalEpics - epicsWithSuite)} /></p>
           </div>
           <div className="stat-card">
             <p className="stat-label" title="Casos de Teste">Casos de Teste</p>
-            <p className="stat-value">{totalTestCases}</p>
+            <p className="stat-value"><CountUp value={totalTestCases} /></p>
           </div>
           <div className="stat-card">
             <p className="stat-label" title="Automação">Automação</p>
             <p className="stat-value" style={{ color: automationPct !== null ? bandColor(automationPct) : undefined }}>
-              {automationPct !== null ? `${automationPct}%` : '—'}
+              {automationPct !== null ? <CountUp value={automationPct} suffix="%" /> : '—'}
             </p>
             <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{automatedTestCases} de {totalTestCases} casos</p>
           </div>

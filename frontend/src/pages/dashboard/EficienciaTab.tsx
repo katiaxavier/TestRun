@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { CountUp } from '../../components/CountUp';
 import { ClockIcon, ArrowSquareOutIcon, HourglassIcon } from '@phosphor-icons/react';
 import { dashboardApi } from '../../api/client';
 import type { DashboardEfficiency } from '../../api/client';
@@ -111,18 +112,18 @@ export function EficienciaTab({ projectId, boardId }: EficienciaTabProps) {
         <div className="stats-grid">
           <div className="stat-card">
             <p className="stat-label" title="Dentro do SLA">🟢 Dentro do SLA</p>
-            <p className="stat-value" style={{ color: 'var(--status-passed)' }}>{data.slaBuckets.withinSla}</p>
+            <p className="stat-value" style={{ color: 'var(--status-passed)' }}><CountUp value={data.slaBuckets.withinSla} /></p>
           </div>
           <div className="stat-card">
             <p className="stat-label" title="Próximo do SLA">🟡 Próximo do SLA</p>
             <p className="stat-value" style={{ color: data.slaBuckets.nearSla > 0 ? 'var(--status-blocked)' : undefined }}>
-              {data.slaBuckets.nearSla}
+              <CountUp value={data.slaBuckets.nearSla} />
             </p>
           </div>
           <div className="stat-card">
             <p className="stat-label" title="Acima do SLA">🔴 Acima do SLA</p>
             <p className="stat-value" style={{ color: data.slaBuckets.aboveSla > 0 ? 'var(--status-failed)' : undefined }}>
-              {data.slaBuckets.aboveSla}
+              <CountUp value={data.slaBuckets.aboveSla} />
             </p>
           </div>
         </div>
@@ -180,7 +181,7 @@ export function EficienciaTab({ projectId, boardId }: EficienciaTabProps) {
                             href={bug.link}
                             target="_blank"
                             rel="noreferrer"
-                            style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--accent)', fontSize: '0.85rem', fontFamily: 'monospace' }}
+                            style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--accent)', fontSize: '0.85rem', fontFamily: 'var(--font-mono)' }}
                           >
                             {bug.key} <ArrowSquareOutIcon size={11} />
                           </a>

@@ -192,7 +192,7 @@ export default function JiraIssuesPage() {
                             href={issue.link}
                             target="_blank"
                             rel="noreferrer"
-                            style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--accent)', fontSize: '0.85rem', fontFamily: 'monospace' }}
+                            style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--accent)', fontSize: '0.85rem', fontFamily: 'var(--font-mono)' }}
                           >
                             {issue.key} <ArrowSquareOut size={11} />
                           </a>

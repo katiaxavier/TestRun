@@ -1,5 +1,7 @@
 import { useState } from 'react';
+import { motion } from 'framer-motion';
 import { GaugeIcon } from '@phosphor-icons/react';
+import { springSnappy } from '../utils/motion';
 import { useProject } from '../context/ProjectContext';
 import { useBoard } from '../context/BoardContext';
 import { OperacaoTab } from './dashboard/OperacaoTab';
@@ -67,14 +69,17 @@ export default function HomePage() {
         </div>
       </div>
 
-      <div className="filters" style={{ marginBottom: '2rem' }}>
+      <div className="tabs" style={{ marginBottom: '2rem' }}>
         {TABS.map(tab => (
           <button
             key={tab.key}
-            className={`filter-item ${activeTab === tab.key ? 'active' : ''}`}
+            className={`tab ${activeTab === tab.key ? 'active' : ''}`}
             onClick={() => selectTab(tab.key)}
           >
-            {tab.label}
+            {activeTab === tab.key && (
+              <motion.span className="tab-pill" layoutId="dashboard-tab-pill" transition={springSnappy} />
+            )}
+            <span>{tab.label}</span>
             <InfoTooltip>{tab.question}</InfoTooltip>
           </button>
         ))}

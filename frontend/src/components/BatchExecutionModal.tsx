@@ -61,10 +61,10 @@ export function BatchExecutionModal({
           <span style={{ fontWeight: 600 }}>Suítes Selecionadas</span>
         </div>
         <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
-          <div style={{ padding: '0.4rem 0.8rem', background: 'rgba(59, 130, 246, 0.15)', borderRadius: 'var(--radius-sm)', fontSize: '0.85rem' }}>
+          <div style={{ padding: '0.4rem 0.8rem', background: 'var(--info-bg)', border: '1px solid var(--info-border)', borderRadius: 'var(--radius-sm)', fontSize: '0.85rem' }}>
             <strong>{suites.length}</strong> Suítes
           </div>
-          <div style={{ padding: '0.4rem 0.8rem', background: 'rgba(59, 130, 246, 0.15)', borderRadius: 'var(--radius-sm)', fontSize: '0.85rem' }}>
+          <div style={{ padding: '0.4rem 0.8rem', background: 'var(--info-bg)', border: '1px solid var(--info-border)', borderRadius: 'var(--radius-sm)', fontSize: '0.85rem' }}>
             <strong>{totalTests}</strong> Casos
           </div>
         </div>
@@ -72,7 +72,7 @@ export function BatchExecutionModal({
           {suites.map(s => (
             <div key={s.id} className="card" style={{ padding: '0.75rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
-                <span className="tag" style={{ fontFamily: 'monospace', fontSize: '0.75rem', background: 'var(--accent-subtle)', color: 'var(--accent)' }}>{s.jiraKey ?? s.manualKey}</span>
+                <span className="tag" style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', background: 'var(--accent-subtle)', color: 'var(--accent)' }}>{s.jiraKey ?? s.manualKey}</span>
                 <div style={{ fontSize: '0.9rem', fontWeight: 500, marginTop: '0.25rem' }}>{s.title}</div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
@@ -87,7 +87,7 @@ export function BatchExecutionModal({
       {/* Form Section */}
       <div style={{ padding: '1rem' }}>
         {error && (
-          <div style={{ padding: '0.5rem', background: 'rgba(239,68,68,0.1)', color: 'var(--status-failed)', borderRadius: 'var(--radius-sm)', fontSize: '0.85rem', marginBottom: '1rem' }}>
+          <div className="alert alert-danger" style={{ fontSize: '0.85rem', marginBottom: '1rem' }}>
             {error}
           </div>
         )}

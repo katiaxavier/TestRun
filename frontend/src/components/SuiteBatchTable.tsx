@@ -13,7 +13,7 @@ function CustomCheckbox({ checked, onChange }: { checked: boolean; onChange: (ch
       cursor: 'pointer', transition: 'all 0.15s',
     }}>
       <input type="checkbox" checked={checked} onChange={e => onChange(e.target.checked)} style={{ display: 'none' }} />
-      {checked && <span style={{ width: 8, height: 8, borderRadius: 2, background: '#fff' }} />}
+      {checked && <span style={{ width: 8, height: 8, borderRadius: 2, background: 'var(--on-accent)' }} />}
     </label>
   );
 }
@@ -76,7 +76,7 @@ export function SuiteBatchTable({ items, selectedSuites, onSelectSuite, onDelete
                       />
                     </td>
                     <td>
-                      <span className="tag" style={{ fontFamily: 'monospace', fontSize: '0.7rem', background: 'var(--accent-subtle)', color: 'var(--accent)' }}>
+                      <span className="tag" style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem', background: 'var(--accent-subtle)', color: 'var(--accent)' }}>
                         SUITE
                       </span>
                     </td>
@@ -122,7 +122,7 @@ export function SuiteBatchTable({ items, selectedSuites, onSelectSuite, onDelete
                 >
                   <td />
                   <td>
-                    <span className="tag" style={{ fontFamily: 'monospace', fontSize: '0.7rem', background: 'rgba(255, 209, 90, 0.18)', color: 'var(--tertiary)' }}>
+                    <span className="tag" style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem', background: 'var(--warning-bg)', color: 'var(--tertiary)' }}>
                       LOTE
                     </span>
                   </td>

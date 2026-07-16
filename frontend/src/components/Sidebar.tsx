@@ -1,6 +1,9 @@
 import { NavLink } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { GaugeIcon, FlaskIcon, PlayIcon, BugIcon, CaretDoubleLeftIcon, CaretDoubleRightIcon, SignOutIcon } from '@phosphor-icons/react';
+import { springSnappy } from '../utils/motion';
 import { Tooltip } from './Tooltip';
+import { BrandLogo } from './BrandLogo';
 import { ProjectSelector } from './ProjectSelector';
 import { BoardSelector } from './BoardSelector';
 import type { AuthUser } from '../api/client';
@@ -24,7 +27,7 @@ export function Sidebar({ collapsed, onToggle, user, onLogout }: SidebarProps) {
     <nav className={`sidebar${collapsed ? ' sidebar--collapsed' : ''}`}>
       <div className="sidebar-logo">
         {!collapsed && (
-          <img src="/tr-logo.svg" alt="Testrun" className="sidebar-logo-img" />
+          <BrandLogo className="sidebar-logo-img" variant="on-dark" />
         )}
         <button
           className="sidebar-toggle-btn"
@@ -59,6 +62,13 @@ export function Sidebar({ collapsed, onToggle, user, onLogout }: SidebarProps) {
           >
             {({ isActive }) => (
               <>
+                {isActive && (
+                  <motion.span
+                    className="sidebar-active-pill"
+                    layoutId="sidebar-active"
+                    transition={springSnappy}
+                  />
+                )}
                 <Icon size={18} weight={isActive ? 'fill' : 'duotone'} />
                 {!collapsed && <span className="sidebar-link-label">{label}</span>}
               </>
@@ -69,26 +79,17 @@ export function Sidebar({ collapsed, onToggle, user, onLogout }: SidebarProps) {
 
       <div className="sidebar-footer">
         {user && (
-          <div className="sidebar-user" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', width: '100%' }}>
+          <div className="sidebar-user">
             {user.avatarUrl && (
-              <img
-                src={user.avatarUrl}
-                alt={user.displayName}
-                style={{ width: 24, height: 24, borderRadius: '50%', flexShrink: 0 }}
-              />
+              <img src={user.avatarUrl} alt={user.displayName} className="sidebar-user-avatar" />
             )}
             {!collapsed && (
-              <span className="sidebar-footer-version" style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <span className="sidebar-footer-version sidebar-user-name">
                 {user.displayName}
               </span>
             )}
             <Tooltip content="Sair" placement="right" delay={150}>
-              <button
-                type="button"
-                onClick={onLogout}
-                aria-label="Sair"
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', flexShrink: 0 }}
-              >
+              <button type="button" onClick={onLogout} aria-label="Sair" className="sidebar-logout-btn">
                 <SignOutIcon size={16} />
               </button>
             </Tooltip>

@@ -151,7 +151,7 @@ export function TestCaseList({ testCases, onDelete, onToggleAutomated, suiteMap,
                         <Link
                           to={`/suite/${suite.id}`}
                           onClick={e => e.stopPropagation()}
-                          style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--accent)', fontSize: '0.85rem', fontFamily: 'monospace' }}
+                          style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--accent)', fontSize: '0.85rem', fontFamily: 'var(--font-mono)' }}
                         >
                           {suite.jiraKey ?? suite.manualKey ?? suite.title}
                         </Link>
@@ -167,7 +167,7 @@ export function TestCaseList({ testCases, onDelete, onToggleAutomated, suiteMap,
                         target="_blank"
                         rel="noreferrer"
                         onClick={e => e.stopPropagation()}
-                        style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--accent)', fontSize: '0.85rem', fontFamily: 'monospace' }}
+                        style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--accent)', fontSize: '0.85rem', fontFamily: 'var(--font-mono)' }}
                       >
                         {tc.jiraKey} <ArrowSquareOut size={11} />
                       </a>

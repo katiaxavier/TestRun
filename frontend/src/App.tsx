@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { AnimatePresence, MotionConfig } from 'framer-motion';
 import { Sidebar } from './components/Sidebar';
 import { TopBar } from './components/TopBar';
+import { PageTransition } from './components/PageTransition';
 import HomePage from './pages/HomePage';
 import ExecucoesPage from './pages/ExecucoesPage';
 import SuitesPage from './pages/SuitesPage';
@@ -41,6 +43,29 @@ function ExitDetailOnContextSwitch() {
   return null;
 }
 
+// Transição de rota: AnimatePresence precisa do location como key para animar
+// saída/entrada; exit curto (ver pageTransition) para não atrasar a navegação.
+function AnimatedRoutes() {
+  const location = useLocation();
+  const wrap = (page: React.ReactNode) => <PageTransition>{page}</PageTransition>;
+
+  return (
+    <AnimatePresence mode="wait" initial={false}>
+      <Routes location={location} key={location.pathname}>
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/dashboard" element={wrap(<HomePage />)} />
+        <Route path="/execucoes" element={wrap(<ExecucoesPage />)} />
+        <Route path="/suites" element={wrap(<SuitesPage />)} />
+        <Route path="/executions" element={wrap(<ExecutionsPage />)} />
+        <Route path="/jira-issues" element={wrap(<JiraIssuesPage />)} />
+        <Route path="/suite/:id" element={wrap(<SuiteDetailPage />)} />
+        <Route path="/execution/:id" element={wrap(<ExecutionRunPage />)} />
+        <Route path="/batch/:id" element={wrap(<BatchExecutionPage />)} />
+      </Routes>
+    </AnimatePresence>
+  );
+}
+
 export default function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(
     () => localStorage.getItem('sidebar-collapsed') === 'true'
@@ -78,29 +103,21 @@ export default function App() {
   }
 
   return (
-    <ProjectProvider>
-      <BoardProvider>
-        <BrowserRouter>
-          <ExitDetailOnContextSwitch />
-          <div className={`app-layout${sidebarCollapsed ? ' app-layout--collapsed' : ''}`}>
-            <Sidebar collapsed={sidebarCollapsed} onToggle={handleSidebarToggle} user={user} onLogout={handleLogout} />
-            <main className="main-content">
-              <TopBar />
-              <Routes>
-                <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                <Route path="/dashboard" element={<HomePage />} />
-                <Route path="/execucoes" element={<ExecucoesPage />} />
-                <Route path="/suites" element={<SuitesPage />} />
-                <Route path="/executions" element={<ExecutionsPage />} />
-                <Route path="/jira-issues" element={<JiraIssuesPage />} />
-                <Route path="/suite/:id" element={<SuiteDetailPage />} />
-                <Route path="/execution/:id" element={<ExecutionRunPage />} />
-                <Route path="/batch/:id" element={<BatchExecutionPage />} />
-              </Routes>
-            </main>
-          </div>
-        </BrowserRouter>
-      </BoardProvider>
-    </ProjectProvider>
+    <MotionConfig reducedMotion="user">
+      <ProjectProvider>
+        <BoardProvider>
+          <BrowserRouter>
+            <ExitDetailOnContextSwitch />
+            <div className={`app-layout${sidebarCollapsed ? ' app-layout--collapsed' : ''}`}>
+              <Sidebar collapsed={sidebarCollapsed} onToggle={handleSidebarToggle} user={user} onLogout={handleLogout} />
+              <main className="main-content">
+                <TopBar />
+                <AnimatedRoutes />
+              </main>
+            </div>
+          </BrowserRouter>
+        </BoardProvider>
+      </ProjectProvider>
+    </MotionConfig>
   );
 }

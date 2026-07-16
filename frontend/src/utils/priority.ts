@@ -1,19 +1,19 @@
 export const PRIORITY_COLORS: Record<string, string> = {
-  Gravíssima: '#991B1B',
-  Crítica:    '#DC2626',
-  Alta:       '#F97316',
-  Média:      '#F59E0B',
-  Normal:     '#6B7280',
-  Trivial:    '#9CA3AF',
+  Gravíssima: 'var(--sev-gravissima)',
+  Crítica:    'var(--sev-critica)',
+  Alta:       'var(--sev-alta)',
+  Média:      'var(--sev-media)',
+  Normal:     'var(--sev-normal)',
+  Trivial:    'var(--sev-trivial)',
 };
 
 export const SEVERITY_COLORS: Record<string, { color: string; bg: string }> = {
-  Trivial:      { color: '#9CA3AF', bg: 'rgba(156,163,175,0.12)' },
-  Normal:       { color: '#6B7280', bg: 'rgba(107,114,128,0.12)' },
-  Média:        { color: '#F59E0B', bg: 'rgba(245,158,11,0.12)'  },
-  Alta:         { color: '#F97316', bg: 'rgba(249,115,22,0.12)'  },
-  Crítica:      { color: '#DC2626', bg: 'rgba(220,38,38,0.12)'   },
-  'Gravíssima': { color: '#991B1B', bg: 'rgba(153,27,27,0.12)'   },
+  Trivial:      { color: 'var(--sev-trivial)',    bg: 'var(--sev-trivial-bg)'    },
+  Normal:       { color: 'var(--sev-normal)',     bg: 'var(--sev-normal-bg)'     },
+  Média:        { color: 'var(--sev-media)',      bg: 'var(--sev-media-bg)'      },
+  Alta:         { color: 'var(--sev-alta)',       bg: 'var(--sev-alta-bg)'       },
+  Crítica:      { color: 'var(--sev-critica)',    bg: 'var(--sev-critica-bg)'    },
+  'Gravíssima': { color: 'var(--sev-gravissima)', bg: 'var(--sev-gravissima-bg)' },
 };
 
 export function normalize(value: string) {

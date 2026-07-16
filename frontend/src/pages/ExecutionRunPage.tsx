@@ -22,8 +22,8 @@ const STATUS_LABELS: Record<string, string> = {
   PASSED: 'Passou', FAILED: 'Falhou', BLOCKED: 'Bloqueado',
 };
 const STATUS_COLORS: Record<string, string> = {
-  PASSED: '#22c55e', FAILED: '#ef4444', BLOCKED: '#f59e0b',
-  IN_PROGRESS: '#3b82f6', PENDING: '#6b7280',
+  PASSED: 'var(--status-passed)', FAILED: 'var(--status-failed)', BLOCKED: 'var(--status-blocked)',
+  IN_PROGRESS: 'var(--status-inprogress)', PENDING: 'var(--status-pending)',
 };
 const STATUS_FILTERS = [
   { key: 'all', label: 'Todos os status', status: undefined },
@@ -167,7 +167,7 @@ function IssueCard({ issue, jiraUrl, onEdit, onDelete, confirmDelete, onConfirmD
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', flexWrap: 'wrap', marginBottom: '0.25rem' }}>
-            <span style={{ fontSize: '0.7rem', fontWeight: 700, padding: '0.1rem 0.4rem', borderRadius: 4, background: issue.type === 'BUG' ? 'rgba(239,68,68,0.15)' : 'rgba(59,130,246,0.15)', color: issue.type === 'BUG' ? 'var(--status-failed)' : 'var(--status-inprogress)' }}>
+            <span style={{ fontSize: '0.7rem', fontWeight: 700, padding: '0.1rem 0.4rem', borderRadius: 4, background: issue.type === 'BUG' ? 'var(--status-failed-bg)' : 'var(--info-bg)', color: issue.type === 'BUG' ? 'var(--status-failed)' : 'var(--status-inprogress)' }}>
               {issue.type === 'BUG' ? 'Bug' : 'Melhoria'}
             </span>
             {severityPt && severityStyle && (
@@ -183,7 +183,7 @@ function IssueCard({ issue, jiraUrl, onEdit, onDelete, confirmDelete, onConfirmD
             )}
             {issue.jiraKey && (
               jiraHref
-                ? <a href={jiraHref} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2rem', fontSize: '0.7rem', fontFamily: 'monospace', color: 'var(--accent)' }}>
+                ? <a href={jiraHref} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2rem', fontSize: '0.7rem', fontFamily: 'var(--font-mono)', color: 'var(--accent)' }}>
                     {issue.jiraKey} <ArrowSquareOut size={10} />
                   </a>
                 : <code style={{ fontSize: '0.7rem' }}>{issue.jiraKey}</code>
@@ -572,7 +572,7 @@ function ScenarioView({
                   padding: '0.4rem 0.9rem', borderRadius: 99, fontSize: '0.8rem', fontWeight: 600,
                   cursor: 'pointer', transition: 'all 0.15s',
                   background: status === s ? STATUS_COLORS[s] : 'var(--bg-elevated)',
-                  color: status === s ? '#fff' : 'var(--text-secondary)',
+                  color: status === s ? 'var(--on-accent)' : 'var(--text-secondary)',
                   border: `1px solid ${status === s ? STATUS_COLORS[s] : 'var(--border)'}`,
                   opacity: savingStatus ? 0.65 : 1,
                 }}
@@ -937,7 +937,7 @@ function TestCaseDrawer({
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem' }}>
                   {etc.testCase.link ? (
                     <a href={etc.testCase.link} target="_blank" rel="noreferrer"
-                      style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', color: 'var(--accent)', fontSize: '0.8rem', fontFamily: 'monospace' }}>
+                      style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', color: 'var(--accent)', fontSize: '0.8rem', fontFamily: 'var(--font-mono)' }}>
                       {etc.testCase.jiraKey} <ArrowSquareOut size={11} />
                     </a>
                   ) : <code style={{ fontSize: '0.8rem' }}>{etc.testCase.jiraKey}</code>}
@@ -986,7 +986,7 @@ function TestCaseDrawer({
                           padding: '0.4rem 0.9rem', borderRadius: 99, fontSize: '0.8rem', fontWeight: 600,
                           cursor: 'pointer', transition: 'all 0.15s',
                           background: status === s ? STATUS_COLORS[s] : 'var(--bg-elevated)',
-                          color: status === s ? '#fff' : 'var(--text-secondary)',
+                          color: status === s ? 'var(--on-accent)' : 'var(--text-secondary)',
                           border: `1px solid ${status === s ? STATUS_COLORS[s] : 'var(--border)'}`,
                           opacity: savingStatus ? 0.65 : 1,
                         }}
@@ -1578,11 +1578,11 @@ export default function ExecutionRunPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Sprint</span>
-                <span style={{ fontSize: '0.875rem', fontFamily: 'monospace' }}>{execution.sprint || '—'}</span>
+                <span style={{ fontSize: '0.875rem', fontFamily: 'var(--font-mono)' }}>{execution.sprint || '—'}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Versão do Sistema</span>
-                <span style={{ fontSize: '0.875rem', fontFamily: 'monospace' }}>{formatVersion(execution.version)}</span>
+                <span style={{ fontSize: '0.875rem', fontFamily: 'var(--font-mono)' }}>{formatVersion(execution.version)}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Período</span>
@@ -1602,7 +1602,7 @@ export default function ExecutionRunPage() {
               <span style={{ fontSize: '1.75rem', fontWeight: 800, letterSpacing: '-0.03em', color: pctColor }}>{pct}%</span>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', fontFamily: 'monospace' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', fontFamily: 'var(--font-mono)' }}>
                 <span style={{ color: 'var(--text-secondary)' }}>Executado ({executed})</span>
                 <span style={{ color: 'var(--text-secondary)' }}>Total ({counts.total})</span>
               </div>
@@ -1611,7 +1611,7 @@ export default function ExecutionRunPage() {
                 {counts.failed > 0 && <div style={{ width: `${(counts.failed / counts.total) * 100}%`, background: STATUS_COLORS.FAILED, transition: 'width 0.6s cubic-bezier(0.4,0,0.2,1)' }} title={`Falhou: ${counts.failed}`} />}
                 {counts.blocked > 0 && <div style={{ width: `${(counts.blocked / counts.total) * 100}%`, background: STATUS_COLORS.BLOCKED, transition: 'width 0.6s cubic-bezier(0.4,0,0.2,1)' }} title={`Bloqueado: ${counts.blocked}`} />}
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', fontFamily: 'monospace' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', fontFamily: 'var(--font-mono)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                   <span style={{ width: 8, height: 8, borderRadius: '50%', background: STATUS_COLORS.PASSED, display: 'inline-block', flexShrink: 0 }} />
                   <span style={{ color: 'var(--text-secondary)' }}>Passou ({counts.passed})</span>
@@ -1700,7 +1700,7 @@ export default function ExecutionRunPage() {
                       <td>
                         {etc.testCase.link ? (
                           <a href={etc.testCase.link} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()}
-                            style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', color: 'var(--accent)', fontSize: '0.82rem', fontFamily: 'monospace' }}>
+                            style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', color: 'var(--accent)', fontSize: '0.82rem', fontFamily: 'var(--font-mono)' }}>
                             {etc.testCase.jiraKey} <ArrowSquareOut size={10} />
                           </a>
                         ) : <code style={{ fontSize: '0.8rem' }}>{etc.testCase.jiraKey}</code>}
@@ -1732,8 +1732,8 @@ export default function ExecutionRunPage() {
                           const improvements = allIssues.filter(i => i.type === 'IMPROVEMENT').length;
                           return bugs > 0 || improvements > 0 ? (
                             <span style={{ display: 'inline-flex', gap: '0.25rem', alignItems: 'center' }}>
-                              {bugs > 0 && <span style={{ background: 'rgba(239,68,68,0.12)', color: 'var(--status-failed)', borderRadius: 99, padding: '0.15rem 0.45rem', fontSize: '0.72rem', fontWeight: 700 }}>{bugs}</span>}
-                              {improvements > 0 && <span style={{ background: 'rgba(59,130,246,0.12)', color: 'var(--status-inprogress)', borderRadius: 99, padding: '0.15rem 0.45rem', fontSize: '0.72rem', fontWeight: 700 }}>{improvements}</span>}
+                              {bugs > 0 && <span style={{ background: 'var(--status-failed-bg)', color: 'var(--status-failed)', borderRadius: 99, padding: '0.15rem 0.45rem', fontSize: '0.72rem', fontWeight: 700 }}>{bugs}</span>}
+                              {improvements > 0 && <span style={{ background: 'var(--info-bg)', color: 'var(--status-inprogress)', borderRadius: 99, padding: '0.15rem 0.45rem', fontSize: '0.72rem', fontWeight: 700 }}>{improvements}</span>}
                             </span>
                           ) : <span style={{ color: 'var(--text-muted)' }}>—</span>;
                         })()}

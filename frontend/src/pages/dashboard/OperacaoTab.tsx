@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { CountUp } from '../../components/CountUp';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { BarChart, Bar, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, XAxis } from 'recharts';
@@ -234,20 +235,20 @@ export function OperacaoTab({ active }: OperacaoTabProps) {
       <div className="stats-grid">
         <div className="stat-card">
           <p className="stat-label" title="Execuções em Andamento">Execuções em Andamento</p>
-          <p className="stat-value progress">{activeExecutions.length}</p>
+          <p className="stat-value progress"><CountUp value={activeExecutions.length} /></p>
         </div>
         <div className="stat-card">
           <p className="stat-label" title="Bugs Ready for Test">Bugs Ready for Test</p>
-          <p className="stat-value">{isNoneBoard ? '—' : bugsTotal}</p>
+          <p className="stat-value">{isNoneBoard ? '—' : <CountUp value={bugsTotal} />}</p>
         </div>
         <div className="stat-card">
           <p className="stat-label" title="Melhorias Ready for Test">Melhorias Ready for Test</p>
-          <p className="stat-value">{isNoneBoard ? '—' : improvementsTotal}</p>
+          <p className="stat-value">{isNoneBoard ? '—' : <CountUp value={improvementsTotal} />}</p>
         </div>
         <div className="stat-card">
           <p className="stat-label" title="Taxa de Sucesso">Taxa de Sucesso</p>
           <p className="stat-value" style={{ color: successRate !== null ? bandColor(successRate) : undefined }}>
-            {successRate !== null ? `${successRate}%` : '—'}
+            {successRate !== null ? <CountUp value={successRate} suffix="%" /> : '—'}
           </p>
         </div>
       </div>
@@ -313,7 +314,7 @@ export function OperacaoTab({ active }: OperacaoTabProps) {
                               href={issue.link}
                               target="_blank"
                               rel="noreferrer"
-                              style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--accent)', fontSize: '0.85rem', fontFamily: 'monospace' }}
+                              style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--accent)', fontSize: '0.85rem', fontFamily: 'var(--font-mono)' }}
                             >
                               {issue.key} <ArrowSquareOutIcon size={11} />
                             </a>
@@ -387,7 +388,7 @@ export function OperacaoTab({ active }: OperacaoTabProps) {
                           href={issue.link}
                           target="_blank"
                           rel="noreferrer"
-                          style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--accent)', fontSize: '0.85rem', fontFamily: 'monospace' }}
+                          style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--accent)', fontSize: '0.85rem', fontFamily: 'var(--font-mono)' }}
                         >
                           {issue.key} <ArrowSquareOutIcon size={11} />
                         </a>
