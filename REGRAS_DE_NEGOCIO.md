@@ -496,7 +496,7 @@ Não há restrição de transição; o testador pode alterar para qualquer statu
 
 ### 17.1 Escopo
 - Tela inicial do sistema, em `/dashboard` (`/` redireciona para lá). Três abas: **Operação**, **Qualidade** e **Eficiência**.
-- Cada aba tem uma pergunta-guia exibida em tooltip: Operação = "O que está acontecendo agora?"; Qualidade = "Qual a saúde do produto?"; Eficiência = "Estamos resolvendo os problemas no tempo esperado?".
+- Cada aba tem uma pergunta-guia + resumo, exibidos sempre visíveis num subtítulo abaixo das abas (não em tooltip): Operação = "O que está acontecendo agora?" / "Alertas, execuções em andamento e itens aguardando validação."; Qualidade = "Como está a saúde do produto?" / "Taxa de aprovação, densidade de defeitos e cobertura de testes."; Eficiência = "Estamos resolvendo os problemas no tempo esperado?" / "MTTR, idade dos bugs abertos e SLA.".
 - Mesmo escopo de dados do restante do sistema: Projeto + Quadro selecionados na sidebar. Uma aba só busca seus dados na primeira vez que é visitada; depois permanece montada (não refaz a busca ao trocar de aba).
 
 ### 17.2 Aba Operação

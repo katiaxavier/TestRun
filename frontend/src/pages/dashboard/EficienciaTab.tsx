@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { Fragment, useState, useEffect } from 'react';
 import { CountUp } from '../../components/CountUp';
 import { ClockIcon, ArrowSquareOutIcon, HourglassIcon } from '@phosphor-icons/react';
 import { dashboardApi } from '../../api/client';
@@ -79,6 +79,19 @@ export function EficienciaTab({ projectId, boardId }: EficienciaTabProps) {
     (acc, { totalDays, count }) => ({ totalDays: acc.totalDays + totalDays, count: acc.count + count }),
     { totalDays: 0, count: 0 },
   );
+  // Uma lista só (severidades conhecidas + "Sem severidade" no fim), pra renderizar tudo
+  // com o mesmo grid de colunas em vez de duplicar o bloco.
+  const mttrRows: { label: string; slaDays?: number; avgDays: number | null; count: number; dotColor: string }[] = [
+    ...mttrSeverityRows.map((row) => ({ ...row, dotColor: PRIORITY_COLORS[row.label] })),
+    ...(semSeveridade.count > 0
+      ? [{
+          label: 'Sem severidade',
+          avgDays: Math.round((semSeveridade.totalDays / semSeveridade.count) * 10) / 10,
+          count: semSeveridade.count,
+          dotColor: 'var(--chart-muted)',
+        }]
+      : []),
+  ];
 
   return (
     <div>
@@ -121,42 +134,42 @@ export function EficienciaTab({ projectId, boardId }: EficienciaTabProps) {
           </div>
         </div>
 
-        {mttrSeverityRows.length > 0 && (
-          <div className="card" style={{ marginTop: '0.75rem', padding: '0.75rem 1.25rem' }}>
-            <p style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.03em', marginBottom: '0.6rem' }}>
+        {mttrRows.length > 0 && (
+          <div
+            style={{
+              marginTop: '0.75rem',
+              padding: '0.75rem 1.25rem',
+              width: 'fit-content',
+              background: 'var(--bg-surface)',
+              border: '1px solid var(--border-subtle)',
+              borderRadius: 'var(--radius-lg)',
+              boxShadow: 'var(--shadow-sm)',
+            }}
+          >
+            <p style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.03em', marginBottom: '0.5rem' }}>
               MTTR por severidade
             </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
-              {mttrSeverityRows.map(({ label, slaDays, avgDays, count }) => {
-                const withinSla = avgDays !== null && avgDays <= slaDays;
+            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(90px, 1fr) auto auto auto', alignItems: 'center', columnGap: '0.75rem', rowGap: '0.3rem' }}>
+              {mttrRows.map(({ label, slaDays, avgDays, count, dotColor }) => {
+                const withinSla = slaDays !== undefined && avgDays !== null && avgDays <= slaDays;
                 return (
-                  <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem' }}>
-                    <span style={{ width: 8, height: 8, borderRadius: 99, background: PRIORITY_COLORS[label], flexShrink: 0 }} />
-                    <span style={{ flex: 1, color: 'var(--text-secondary)' }}>{label}</span>
-                    <span style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 600, color: 'var(--text-primary)' }}>
+                  <Fragment key={label}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                      <span style={{ width: 8, height: 8, borderRadius: 99, background: dotColor, flexShrink: 0 }} />
+                      {label}
+                    </span>
+                    <span style={{ textAlign: 'right', whiteSpace: 'nowrap', fontSize: '0.85rem', fontFamily: "'JetBrains Mono', monospace", fontWeight: 600, color: 'var(--text-primary)' }}>
                       {avgDays} d
                     </span>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem', color: withinSla ? 'var(--status-passed)' : 'var(--status-failed)' }}>
-                      meta ≤{slaDays}d {withinSla ? '✓' : '✗'}
+                    <span style={{ whiteSpace: 'nowrap', fontSize: '0.75rem', color: slaDays === undefined ? 'var(--text-muted)' : withinSla ? 'var(--status-passed)' : 'var(--status-failed)' }}>
+                      {slaDays !== undefined ? `meta ≤${slaDays}d` : '—'}
                     </span>
-                    <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem', minWidth: 66, textAlign: 'right' }}>
+                    <span style={{ textAlign: 'right', whiteSpace: 'nowrap', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                       {count} bug(s)
                     </span>
-                  </div>
+                  </Fragment>
                 );
               })}
-              {semSeveridade.count > 0 && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem' }}>
-                  <span style={{ width: 8, height: 8, borderRadius: 99, background: 'var(--chart-muted)', flexShrink: 0 }} />
-                  <span style={{ flex: 1, color: 'var(--text-secondary)' }}>Sem severidade</span>
-                  <span style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 600, color: 'var(--text-primary)' }}>
-                    {Math.round((semSeveridade.totalDays / semSeveridade.count) * 10) / 10} d
-                  </span>
-                  <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem', minWidth: 66, textAlign: 'right' }}>
-                    {semSeveridade.count} bug(s)
-                  </span>
-                </div>
-              )}
             </div>
           </div>
         )}
