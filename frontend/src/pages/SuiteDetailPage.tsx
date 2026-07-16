@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Play, Plus, Trash, WarningCircle, ListBullets } from '@phosphor-icons/react';
-import { suitesApi, executionsApi } from '../api/client';
+import { ArrowSquareOut, Play, Plus, Trash, WarningCircle, ListBullets } from '@phosphor-icons/react';
+import { suitesApi, executionsApi, jiraApi } from '../api/client';
 import type { Suite, TestCase, TestCaseScenario } from '../api/client';
 import { ExecutionList } from '../components/ExecutionList';
 import { TestCaseList } from '../components/TestCaseList';
@@ -250,6 +250,11 @@ export default function SuiteDetailPage() {
   const [loading, setLoading] = useState(true);
   const [newExecOpen, setNewExecOpen] = useState(false);
   const [addTcOpen, setAddTcOpen] = useState(false);
+  const [jiraUrl, setJiraUrl] = useState('');
+
+  useEffect(() => {
+    jiraApi.getSite().then(({ data }) => setJiraUrl(data.url ?? '')).catch(() => {});
+  }, []);
 
   const fetchSuite = useCallback(async () => {
     if (!id) return;
@@ -296,13 +301,22 @@ export default function SuiteDetailPage() {
   const executions = suite.executions ?? [];
   const testCases = suite.testCases ?? [];
 
+  const suiteJiraHref = suite.jiraKey && jiraUrl ? `${jiraUrl.replace(/\/$/, '')}/browse/${suite.jiraKey}` : null;
+  const eyebrow = suite.jiraKey
+    ? (suiteJiraHref
+        ? <a href={suiteJiraHref} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: 'inherit' }}>
+            {suite.jiraKey} <ArrowSquareOut size={14} />
+          </a>
+        : suite.jiraKey)
+    : (suite.isManual ? (suite.manualKey ?? 'Manual') : undefined);
+
   return (
     <div className="page">
       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
         <PageHeader
           backLabel="Suites de Teste"
           onBack={() => navigate('/suites')}
-          eyebrow={suite.jiraKey ?? (suite.isManual ? (suite.manualKey ?? 'Manual') : undefined)}
+          eyebrow={eyebrow}
           title={suite.title}
         />
 
