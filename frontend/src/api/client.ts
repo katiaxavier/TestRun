@@ -323,6 +323,7 @@ export interface DashboardEfficiency {
   mttrDays: number | null;
   mttrMedianDays: number | null;
   mttrP90Days: number | null;
+  mttrPreviousDays: number | null;
   mttrWindowDays: number;
   avgAgeDays: number | null;
   maxAgeDays: number | null;

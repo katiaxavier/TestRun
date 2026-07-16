@@ -54,6 +54,12 @@ export function EficienciaTab({ projectId, boardId }: EficienciaTabProps) {
     );
   }
 
+  // Delta do MTTR (média) contra o período de 90 dias imediatamente anterior — null quando
+  // não há bugs resolvidos no período anterior pra comparar.
+  const mttrDelta = data.mttrDays !== null && data.mttrPreviousDays !== null
+    ? Math.round((data.mttrDays - data.mttrPreviousDays) * 10) / 10
+    : null;
+
   // Reagrupa por severidade canônica (o backend manda o valor bruto do Jira, que pode variar
   // de idioma) — mesmo padrão de severityChartData em QualidadeTab. Cada severidade conhecida
   // é comparada contra o próprio prazo de SLA; o que sobra vira o grupo "Sem severidade".
@@ -98,12 +104,12 @@ export function EficienciaTab({ projectId, boardId }: EficienciaTabProps) {
       <section style={{ marginBottom: '2.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
           <ClockIcon size={18} weight="duotone" style={{ color: 'var(--secondary)' }} />
-          <h2 style={{ fontSize: '1.1rem', fontWeight: 700, letterSpacing: '-0.01em' }}>MTTR / Idade dos Defeitos</h2>
+          <h2 style={{ fontSize: '1.1rem', fontWeight: 700, letterSpacing: '-0.01em' }}>MTTR</h2>
           <InfoTooltip>
-            <strong>MTTR:</strong> tempo para resolver bugs fechados nos últimos {data.mttrWindowDays} dias.
+            Tempo para resolver bugs fechados nos últimos {data.mttrWindowDays} dias.
             Média, mediana (o bug "típico") e P90 (9 em cada 10 bugs resolveram até esse prazo) — a média
-            sozinha oscila muito quando a amostra é pequena.<br />
-            <strong>Idade Média:</strong> há quantos dias, em média, os bugs abertos estão parados.
+            sozinha oscila muito quando a amostra é pequena. A seta compara a média com o período de{' '}
+            {data.mttrWindowDays} dias anterior.
           </InfoTooltip>
         </div>
         <div className="stats-grid">
@@ -113,6 +119,15 @@ export function EficienciaTab({ projectId, boardId }: EficienciaTabProps) {
             <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
               {data.resolvedBugsCount} bug(s) resolvido(s) nos últimos {data.mttrWindowDays} dias
             </p>
+            {mttrDelta !== null && (
+              <p style={{
+                fontSize: '0.75rem', fontWeight: 600, marginTop: '0.15rem',
+                color: mttrDelta === 0 ? 'var(--text-muted)' : mttrDelta < 0 ? 'var(--status-passed)' : 'var(--status-failed)',
+              }}>
+                {mttrDelta === 0 ? '→ sem variação' : `${mttrDelta < 0 ? '↓' : '↑'} ${mttrDelta > 0 ? '+' : ''}${mttrDelta} dias`}
+                {' '}em relação aos {data.mttrWindowDays} dias anteriores
+              </p>
+            )}
           </div>
           <div className="stat-card">
             <p className="stat-label" title="MTTR Mediana">Mediana</p>
@@ -121,16 +136,6 @@ export function EficienciaTab({ projectId, boardId }: EficienciaTabProps) {
           <div className="stat-card">
             <p className="stat-label" title="MTTR Percentil 90">P90</p>
             <p className="stat-value">{data.mttrP90Days !== null ? `${data.mttrP90Days} dias` : '—'}</p>
-          </div>
-          <div className="stat-card">
-            <p className="stat-label" title="Idade Média dos Bugs Abertos">Idade Média (Abertos)</p>
-            <p className="stat-value">{data.avgAgeDays !== null ? `${data.avgAgeDays} dias` : '—'}</p>
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-              {data.openBugsCount} bug(s) em aberto
-              {data.minAgeDays !== null && data.maxAgeDays !== null && (
-                <> · menor {data.minAgeDays}d · maior {data.maxAgeDays}d</>
-              )}
-            </p>
           </div>
         </div>
 
@@ -173,6 +178,28 @@ export function EficienciaTab({ projectId, boardId }: EficienciaTabProps) {
             </div>
           </div>
         )}
+      </section>
+
+      <section style={{ marginBottom: '2.5rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+          <HourglassIcon size={18} weight="duotone" style={{ color: 'var(--secondary)' }} />
+          <h2 style={{ fontSize: '1.1rem', fontWeight: 700, letterSpacing: '-0.01em' }}>Idade dos Defeitos</h2>
+          <InfoTooltip>
+            Há quantos dias, em média, os bugs abertos estão parados.
+          </InfoTooltip>
+        </div>
+        <div className="stats-grid">
+          <div className="stat-card">
+            <p className="stat-label" title="Idade Média dos Bugs Abertos">Idade Média (Abertos)</p>
+            <p className="stat-value">{data.avgAgeDays !== null ? `${data.avgAgeDays} dias` : '—'}</p>
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+              {data.openBugsCount} bug(s) em aberto
+              {data.minAgeDays !== null && data.maxAgeDays !== null && (
+                <> · menor {data.minAgeDays}d · maior {data.maxAgeDays}d</>
+              )}
+            </p>
+          </div>
+        </div>
       </section>
 
       <section style={{ marginBottom: '2.5rem' }}>

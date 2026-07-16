@@ -260,6 +260,9 @@ export class DashboardService {
 
     const now = Date.now();
     const resolvedDurationsDays: number[] = [];
+    // Bugs resolvidos entre 91 e 180 dias atrás — usado só pra calcular a tendência (delta)
+    // do MTTR contra o período imediatamente anterior, sem detalhamento por severidade.
+    const previousResolvedDurationsDays: number[] = [];
     // Soma/contagem por severidade real do Jira, só dos bugs resolvidos dentro da janela do
     // MTTR — mesmo padrão de "backend agrupa pelo valor bruto, frontend normaliza pra exibir"
     // já usado em openBugsBySeverityMap/severityByExecution.
@@ -303,6 +306,8 @@ export class DashboardService {
           entry.totalDays += durationDays;
           entry.count += 1;
           mttrBySeverityMap.set(severityKey, entry);
+        } else if (daysSinceResolved <= MTTR_WINDOW_DAYS * 2) {
+          previousResolvedDurationsDays.push((resolvedMs - createdMs) / 86_400_000);
         }
       } else {
         const ageDays = (now - createdMs) / 86_400_000;
@@ -360,6 +365,7 @@ export class DashboardService {
       mttrDays: average(resolvedDurationsDays),
       mttrMedianDays: median(resolvedDurationsDays),
       mttrP90Days: percentile(resolvedDurationsDays, 90),
+      mttrPreviousDays: average(previousResolvedDurationsDays),
       mttrWindowDays: MTTR_WINDOW_DAYS,
       avgAgeDays: average(openAgesDays),
       maxAgeDays: openAgesDays.length > 0 ? Math.round(Math.max(...openAgesDays)) : null,
