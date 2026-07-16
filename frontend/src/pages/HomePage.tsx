@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { GaugeIcon } from '@phosphor-icons/react';
 import { springSnappy } from '../utils/motion';
 import { useProject } from '../context/ProjectContext';
@@ -7,12 +7,11 @@ import { useBoard } from '../context/BoardContext';
 import { OperacaoTab } from './dashboard/OperacaoTab';
 import { QualidadeTab } from './dashboard/QualidadeTab';
 import { EficienciaTab } from './dashboard/EficienciaTab';
-import { InfoTooltip } from '../components/InfoTooltip';
 
 const TABS = [
-  { key: 'operacao', label: 'Operação', question: 'O que está acontecendo agora?' },
-  { key: 'qualidade', label: 'Qualidade', question: 'Qual a saúde do produto?' },
-  { key: 'eficiencia', label: 'Eficiência', question: 'Estamos resolvendo os problemas no tempo esperado?' },
+  { key: 'operacao', label: 'Operação', question: 'O que está acontecendo agora: alertas, execuções em andamento e itens aguardando validação.' },
+  { key: 'qualidade', label: 'Qualidade', question: 'Qual a saúde do produto: taxa de aprovação, densidade de defeitos e cobertura.' },
+  { key: 'eficiencia', label: 'Eficiência', question: 'Estamos resolvendo no tempo esperado: MTTR, idade dos bugs abertos e SLA.' },
 ] as const;
 type TabKey = typeof TABS[number]['key'];
 
@@ -69,7 +68,7 @@ export default function HomePage() {
         </div>
       </div>
 
-      <div className="tabs" style={{ marginBottom: '2rem' }}>
+      <div className="tabs">
         {TABS.map(tab => (
           <button
             key={tab.key}
@@ -80,9 +79,23 @@ export default function HomePage() {
               <motion.span className="tab-pill" layoutId="dashboard-tab-pill" transition={springSnappy} />
             )}
             <span>{tab.label}</span>
-            <InfoTooltip>{tab.question}</InfoTooltip>
           </button>
         ))}
+      </div>
+
+      {/* Subtítulo sempre visível: explica a aba ativa sem exigir hover num ícone de info. */}
+      <div className="tabs-subtitle">
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.p
+            key={activeTab}
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 4 }}
+            transition={{ duration: 0.18 }}
+          >
+            {TABS.find(t => t.key === activeTab)!.question}
+          </motion.p>
+        </AnimatePresence>
       </div>
 
       {visitedTabs.has('operacao') && (

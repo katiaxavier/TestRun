@@ -131,9 +131,8 @@ export function QualidadeTab({ projectId, boardId }: QualidadeTabProps) {
           <HeartbeatIcon size={18} weight="duotone" style={{ color: 'var(--status-passed)' }} />
           <h2 style={{ fontSize: '1.1rem', fontWeight: 700, letterSpacing: '-0.01em' }}>Resumo</h2>
           <InfoTooltip>
-            Estado geral da qualidade antes de entrar no detalhe dos gráficos abaixo. Taxa de Aprovação e
-            Bugs Críticos consideram as últimas {COMPLETED_EXECUTIONS_LIMIT} execuções/bugs em aberto no
-            Jira; Cobertura de Requisitos e Automação são os mesmos dados detalhados mais abaixo.
+            Visão geral antes do detalhe. Taxa de Aprovação vem das últimas {COMPLETED_EXECUTIONS_LIMIT}{' '}
+            execuções; Bugs Críticos, dos bugs em aberto no Jira.
           </InfoTooltip>
         </div>
         <div className="stats-grid">
@@ -170,9 +169,8 @@ export function QualidadeTab({ projectId, boardId }: QualidadeTabProps) {
           <ChartBarIcon size={18} weight="duotone" style={{ color: 'var(--status-failed)' }} />
           <h2 style={{ fontSize: '1.1rem', fontWeight: 700, letterSpacing: '-0.01em' }}>Densidade de Defeitos por Label</h2>
           <InfoTooltip>
-            Quantidade de bugs distintos (das últimas execuções concluídas) agrupados pela combinação
-            exata de labels do Jira — cada bug conta uma única vez, no grupo do conjunto de labels que ele
-            tem. Melhorias não entram nessa contagem, só bugs.
+            Bugs das últimas execuções, agrupados pela combinação exata de labels do Jira. Cada bug conta
+            uma vez. Só bugs — melhorias não entram.
           </InfoTooltip>
         </div>
         {sortedDensity.length === 0 ? (
@@ -213,9 +211,8 @@ export function QualidadeTab({ projectId, boardId }: QualidadeTabProps) {
           <GaugeIcon size={18} weight="duotone" style={{ color: 'var(--text-muted)' }} />
           <h2 style={{ fontSize: '1.1rem', fontWeight: 700, letterSpacing: '-0.01em' }}>Taxa de Sucesso × Severidade</h2>
           <InfoTooltip>
-            Uma barra por execução concluída, mostrando quantos bugs distintos de cada severidade
-            apareceram naquela execução — dá pra ver se as execuções mais recentes estão trazendo defeitos
-            mais ou menos graves que as anteriores. Melhorias não entram nessa contagem, só bugs.
+            Uma barra por execução, com os bugs de cada severidade que apareceram nela. Mostra se os
+            defeitos recentes estão mais ou menos graves. Só bugs — melhorias não entram.
           </InfoTooltip>
         </div>
         {severityChartData.length === 0 ? (
@@ -254,8 +251,8 @@ export function QualidadeTab({ projectId, boardId }: QualidadeTabProps) {
           <TargetIcon size={18} weight="duotone" style={{ color: 'var(--secondary)' }} />
           <h2 style={{ fontSize: '1.1rem', fontWeight: 700, letterSpacing: '-0.01em' }}>Cobertura de Requisitos + Automação</h2>
           <InfoTooltip>
-            Épicos são sempre do projeto inteiro, mesmo com um quadro selecionado no resto do dashboard.
-            Casos de Teste e Automação já são filtrados pelo quadro selecionado.
+            Épicos são sempre do projeto inteiro, mesmo com um quadro selecionado. Casos de Teste e
+            Automação seguem o quadro.
           </InfoTooltip>
         </div>
         <div className="stats-grid">

@@ -202,8 +202,7 @@ export function OperacaoTab({ active }: OperacaoTabProps) {
           <WarningIcon size={18} weight="duotone" style={{ color: 'var(--status-blocked)' }} />
           <h2 style={{ fontSize: '1.1rem', fontWeight: 700, letterSpacing: '-0.01em' }}>Atenção</h2>
           <InfoTooltip>
-            Alertas que pedem ação agora: bugs Ready for Test aguardando validação, e execuções concluídas
-            (das últimas {COMPLETED_EXECUTIONS_LIMIT}) com item(ns) reprovado(s) ou bloqueado(s).
+            Bugs aguardando validação e execuções com item reprovado ou bloqueado (últimas {COMPLETED_EXECUTIONS_LIMIT}).
           </InfoTooltip>
         </div>
         {alerts.length === 0 ? (
@@ -259,8 +258,7 @@ export function OperacaoTab({ active }: OperacaoTabProps) {
           <BugIcon size={18} weight="duotone" style={{ color: 'var(--status-failed)' }} />
           <h2 style={{ fontSize: '1.1rem', fontWeight: 700, letterSpacing: '-0.01em' }}>Ready for Test</h2>
           <InfoTooltip>
-            Bugs e melhorias do quadro selecionado cujo status no Jira é "Ready for Test" — itens já
-            corrigidos/implementados, aguardando validação.
+            Itens já corrigidos, aguardando validação — status "Ready for Test" no Jira.
           </InfoTooltip>
           <button className="btn btn-ghost btn-sm" style={{ marginLeft: 'auto' }} onClick={() => navigate('/jira-issues')}>
             Ver todas
@@ -348,8 +346,8 @@ export function OperacaoTab({ active }: OperacaoTabProps) {
           <PlusCircleIcon size={18} weight="duotone" style={{ color: 'var(--text-muted)' }} />
           <h2 style={{ fontSize: '1.1rem', fontWeight: 700, letterSpacing: '-0.01em' }}>Últimos Bugs e Melhorias Criados</h2>
           <InfoTooltip>
-            Os {RECENT_ISSUES_LIMIT} bugs/melhorias mais recentes do quadro selecionado, ordenados pela
-            data de criação no Jira (não é uma janela por dias, é sempre a quantidade mais recente).
+            Os {RECENT_ISSUES_LIMIT} mais recentes por data de criação no Jira — sempre {RECENT_ISSUES_LIMIT},
+            não uma janela de dias.
           </InfoTooltip>
           <button className="btn btn-ghost btn-sm" style={{ marginLeft: 'auto' }} onClick={() => navigate('/jira-issues')}>
             Ver todas
@@ -423,8 +421,7 @@ export function OperacaoTab({ active }: OperacaoTabProps) {
           <PlayIcon size={18} weight="duotone" style={{ color: 'var(--secondary)' }} />
           <h2 style={{ fontSize: '1.1rem', fontWeight: 700, letterSpacing: '-0.01em' }}>Execuções em Andamento</h2>
           <InfoTooltip>
-            Execuções com status "Em Andamento". A barra mostra o percentual de casos de teste (ou
-            cenários, quando existem) já executados em relação ao total da execução.
+            A barra mostra quantos casos de teste já foram executados, do total da execução.
           </InfoTooltip>
         </div>
         {activeExecutions.length === 0 ? (
@@ -472,8 +469,10 @@ export function OperacaoTab({ active }: OperacaoTabProps) {
           <ClockCounterClockwiseIcon size={18} weight="duotone" style={{ color: 'var(--text-muted)' }} />
           <h2 style={{ fontSize: '1.1rem', fontWeight: 700, letterSpacing: '-0.01em' }}>Últimas Execuções Concluídas</h2>
           <InfoTooltip>
-            As {RECENT_COMPLETED_DISPLAY} execuções concluídas mais recentes. O ícone indica se a execução
-            teve algum item reprovado (✖ vermelho), bloqueado (⊘ amarelo), ou se tudo foi aprovado (✔ verde).
+            As {RECENT_COMPLETED_DISPLAY} mais recentes. O ícone resume o resultado:<br />
+            ✖ vermelho — teve item reprovado<br />
+            ⊘ amarelo — teve item bloqueado<br />
+            ✔ verde — tudo aprovado
           </InfoTooltip>
           <button className="btn btn-ghost btn-sm" style={{ marginLeft: 'auto' }} onClick={() => navigate('/executions')}>
             Ver todas
@@ -519,9 +518,8 @@ export function OperacaoTab({ active }: OperacaoTabProps) {
           <ChartLineUpIcon size={18} weight="duotone" style={{ color: 'var(--text-muted)' }} />
           <h2 style={{ fontSize: '1.1rem', fontWeight: 700, letterSpacing: '-0.01em' }}>Qualidade</h2>
           <InfoTooltip>
-            Taxa de aprovação de cada uma das últimas {COMPLETED_EXECUTIONS_LIMIT} execuções concluídas — casos
-            de teste (ou cenários, quando existem) marcados como Aprovado dividido pelo total já executado
-            (Aprovado + Reprovado + Bloqueado) naquela execução.
+            Taxa de aprovação de cada uma das últimas {COMPLETED_EXECUTIONS_LIMIT} execuções: aprovados ÷ total
+            executado (aprovados + reprovados + bloqueados).
           </InfoTooltip>
         </div>
         {chartData.length === 0 ? (

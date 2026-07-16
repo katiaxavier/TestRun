@@ -63,10 +63,8 @@ export function EficienciaTab({ projectId, boardId }: EficienciaTabProps) {
           <ClockIcon size={18} weight="duotone" style={{ color: 'var(--secondary)' }} />
           <h2 style={{ fontSize: '1.1rem', fontWeight: 700, letterSpacing: '-0.01em' }}>MTTR / Idade dos Defeitos</h2>
           <InfoTooltip>
-            <strong>MTTR:</strong> tempo médio, em dias, entre a criação e a resolução dos bugs já corrigidos,
-            comparado com a meta configurada.<br />
-            <strong>Idade Média:</strong> há quanto tempo, em média, os bugs ainda abertos estão parados,
-            junto com o mais antigo e o mais recente.
+            <strong>MTTR:</strong> média de dias entre criar e resolver um bug, contra a meta.<br />
+            <strong>Idade Média:</strong> há quantos dias, em média, os bugs abertos estão parados.
           </InfoTooltip>
         </div>
         <div className="stats-grid">
@@ -97,16 +95,11 @@ export function EficienciaTab({ projectId, boardId }: EficienciaTabProps) {
           <HourglassIcon size={18} weight="duotone" style={{ color: 'var(--status-failed)' }} />
           <h2 style={{ fontSize: '1.1rem', fontWeight: 700, letterSpacing: '-0.01em' }}>SLA</h2>
           <InfoTooltip>
-            <strong>SLA:</strong> prazo máximo esperado para resolver um bug, de acordo com a severidade
-            dele (bugs mais graves têm prazos mais curtos) — ver as faixas de dias por severidade
-            logo abaixo do gráfico.<br />
-            <strong>🟢 Dentro do SLA:</strong> bugs abertos cuja idade ainda não passou de{' '}
-            {SLA_WARNING_THRESHOLD_PCT}% do prazo esperado para a severidade deles.<br />
-            <strong>🟡 Próximo do SLA:</strong> já passou de {SLA_WARNING_THRESHOLD_PCT}% do prazo, mas
-            ainda não ultrapassou.<br />
-            <strong>🔴 Acima do SLA:</strong> já ultrapassou o prazo esperado para a severidade.<br />
-            <strong>Sem SLA definido:</strong> severidade do bug não tem prazo configurado — não entra em
-            nenhuma das faixas acima, em vez de simplesmente sumir da contagem.
+            Prazo para resolver um bug, por severidade (as faixas em dias estão na seção abaixo).<br />
+            <strong>🟢 Dentro:</strong> até {SLA_WARNING_THRESHOLD_PCT}% do prazo<br />
+            <strong>🟡 Próximo:</strong> passou de {SLA_WARNING_THRESHOLD_PCT}%, ainda no prazo<br />
+            <strong>🔴 Acima:</strong> prazo estourado<br />
+            <strong>Sem SLA:</strong> severidade sem prazo configurado
           </InfoTooltip>
         </div>
         <div className="stats-grid">
@@ -139,8 +132,8 @@ export function EficienciaTab({ projectId, boardId }: EficienciaTabProps) {
           <HourglassIcon size={18} weight="duotone" style={{ color: 'var(--status-failed)' }} />
           <h2 style={{ fontSize: '1.1rem', fontWeight: 700, letterSpacing: '-0.01em' }}>Bugs Acima do SLA</h2>
           <InfoTooltip>
-            Bugs abertos cujo tempo decorrido desde a criação já passou do prazo esperado para a
-            severidade deles. "% do SLA" acima de 100% indica quanto o prazo foi ultrapassado.
+            Bugs abertos que já passaram do prazo da severidade deles. "% do SLA" acima de 100% mostra o
+            quanto estourou.
           </InfoTooltip>
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem 1.25rem', marginBottom: '1rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
