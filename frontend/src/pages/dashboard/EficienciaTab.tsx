@@ -112,72 +112,74 @@ export function EficienciaTab({ projectId, boardId }: EficienciaTabProps) {
             {data.mttrWindowDays} dias anterior.
           </InfoTooltip>
         </div>
-        <div className="stats-grid">
-          <div className="stat-card">
-            <p className="stat-label" title="MTTR (Média)">MTTR (Média)</p>
-            <p className="stat-value">{data.mttrDays !== null ? `${data.mttrDays} dias` : '—'}</p>
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-              {data.resolvedBugsCount} bug(s) resolvido(s) nos últimos {data.mttrWindowDays} dias
-            </p>
-            {mttrDelta !== null && (
-              <p style={{
-                fontSize: '0.75rem', fontWeight: 600, marginTop: '0.15rem',
-                color: mttrDelta === 0 ? 'var(--text-muted)' : mttrDelta < 0 ? 'var(--status-passed)' : 'var(--status-failed)',
-              }}>
-                {mttrDelta === 0 ? '→ sem variação' : `${mttrDelta < 0 ? '↓' : '↑'} ${mttrDelta > 0 ? '+' : ''}${mttrDelta} dias`}
-                {' '}em relação aos {data.mttrWindowDays} dias anteriores
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'stretch', gap: '1rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(150px, 1fr))', gap: '1rem', flex: '1 1 480px' }}>
+            <div className="stat-card">
+              <p className="stat-label" title="MTTR (Média)">MTTR (Média)</p>
+              <p className="stat-value">{data.mttrDays !== null ? `${data.mttrDays} dias` : '—'}</p>
+              <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                {data.resolvedBugsCount} bug(s) resolvido(s) nos últimos {data.mttrWindowDays} dias
               </p>
-            )}
-          </div>
-          <div className="stat-card">
-            <p className="stat-label" title="MTTR Mediana">Mediana</p>
-            <p className="stat-value">{data.mttrMedianDays !== null ? `${data.mttrMedianDays} dias` : '—'}</p>
-          </div>
-          <div className="stat-card">
-            <p className="stat-label" title="MTTR Percentil 90">P90</p>
-            <p className="stat-value">{data.mttrP90Days !== null ? `${data.mttrP90Days} dias` : '—'}</p>
-          </div>
-        </div>
-
-        {mttrRows.length > 0 && (
-          <div
-            style={{
-              marginTop: '0.75rem',
-              padding: '0.75rem 1.25rem',
-              width: 'fit-content',
-              background: 'var(--bg-surface)',
-              border: '1px solid var(--border-subtle)',
-              borderRadius: 'var(--radius-lg)',
-              boxShadow: 'var(--shadow-sm)',
-            }}
-          >
-            <p style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.03em', marginBottom: '0.5rem' }}>
-              MTTR por severidade
-            </p>
-            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(90px, 1fr) auto auto auto', alignItems: 'center', columnGap: '0.75rem', rowGap: '0.3rem' }}>
-              {mttrRows.map(({ label, slaDays, avgDays, count, dotColor }) => {
-                const withinSla = slaDays !== undefined && avgDays !== null && avgDays <= slaDays;
-                return (
-                  <Fragment key={label}>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                      <span style={{ width: 8, height: 8, borderRadius: 99, background: dotColor, flexShrink: 0 }} />
-                      {label}
-                    </span>
-                    <span style={{ textAlign: 'right', whiteSpace: 'nowrap', fontSize: '0.85rem', fontFamily: "'JetBrains Mono', monospace", fontWeight: 600, color: 'var(--text-primary)' }}>
-                      {avgDays} d
-                    </span>
-                    <span style={{ whiteSpace: 'nowrap', fontSize: '0.75rem', color: slaDays === undefined ? 'var(--text-muted)' : withinSla ? 'var(--status-passed)' : 'var(--status-failed)' }}>
-                      {slaDays !== undefined ? `meta ≤${slaDays}d` : '—'}
-                    </span>
-                    <span style={{ textAlign: 'right', whiteSpace: 'nowrap', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                      {count} bug(s)
-                    </span>
-                  </Fragment>
-                );
-              })}
+              {mttrDelta !== null && (
+                <p style={{
+                  fontSize: '0.75rem', fontWeight: 600, marginTop: '0.15rem',
+                  color: mttrDelta === 0 ? 'var(--text-muted)' : mttrDelta < 0 ? 'var(--status-passed)' : 'var(--status-failed)',
+                }}>
+                  {mttrDelta === 0 ? '→ sem variação' : `${mttrDelta < 0 ? '↓' : '↑'} ${mttrDelta > 0 ? '+' : ''}${mttrDelta} dias`}
+                  {' '}em relação aos {data.mttrWindowDays} dias anteriores
+                </p>
+              )}
+            </div>
+            <div className="stat-card">
+              <p className="stat-label" title="MTTR (Mediana)">MTTR (Mediana)</p>
+              <p className="stat-value">{data.mttrMedianDays !== null ? `${data.mttrMedianDays} dias` : '—'}</p>
+            </div>
+            <div className="stat-card">
+              <p className="stat-label" title="MTTR (P90)">MTTR (P90)</p>
+              <p className="stat-value">{data.mttrP90Days !== null ? `${data.mttrP90Days} dias` : '—'}</p>
             </div>
           </div>
-        )}
+
+          {mttrRows.length > 0 && (
+            <div
+              style={{
+                flexShrink: 0,
+                padding: '0.75rem 1.25rem',
+                width: 'fit-content',
+                background: 'var(--bg-surface)',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: 'var(--radius-lg)',
+                boxShadow: 'var(--shadow-sm)',
+              }}
+            >
+              <p style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.03em', marginBottom: '0.5rem' }}>
+                MTTR por severidade
+              </p>
+              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(90px, 1fr) auto auto auto', alignItems: 'center', columnGap: '0.75rem', rowGap: '0.3rem' }}>
+                {mttrRows.map(({ label, slaDays, avgDays, count, dotColor }) => {
+                  const withinSla = slaDays !== undefined && avgDays !== null && avgDays <= slaDays;
+                  return (
+                    <Fragment key={label}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                        <span style={{ width: 8, height: 8, borderRadius: 99, background: dotColor, flexShrink: 0 }} />
+                        {label}
+                      </span>
+                      <span style={{ textAlign: 'right', whiteSpace: 'nowrap', fontSize: '0.85rem', fontFamily: "'JetBrains Mono', monospace", fontWeight: 600, color: 'var(--text-primary)' }}>
+                        {avgDays} d
+                      </span>
+                      <span style={{ whiteSpace: 'nowrap', fontSize: '0.75rem', color: slaDays === undefined ? 'var(--text-muted)' : withinSla ? 'var(--status-passed)' : 'var(--status-failed)' }}>
+                        {slaDays !== undefined ? `meta ≤${slaDays}d` : '—'}
+                      </span>
+                      <span style={{ textAlign: 'right', whiteSpace: 'nowrap', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                        {count} bug(s)
+                      </span>
+                    </Fragment>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
       </section>
 
       <section style={{ marginBottom: '2.5rem' }}>
