@@ -87,18 +87,27 @@ export function EficienciaTab({ projectId, boardId }: EficienciaTabProps) {
           <ClockIcon size={18} weight="duotone" style={{ color: 'var(--secondary)' }} />
           <h2 style={{ fontSize: '1.1rem', fontWeight: 700, letterSpacing: '-0.01em' }}>MTTR / Idade dos Defeitos</h2>
           <InfoTooltip>
-            <strong>MTTR:</strong> tempo médio para resolver bugs fechados nos últimos{' '}
-            {data.mttrWindowDays} dias, contra o prazo de SLA de cada severidade.<br />
+            <strong>MTTR:</strong> tempo para resolver bugs fechados nos últimos {data.mttrWindowDays} dias.
+            Média, mediana (o bug "típico") e P90 (9 em cada 10 bugs resolveram até esse prazo) — a média
+            sozinha oscila muito quando a amostra é pequena.<br />
             <strong>Idade Média:</strong> há quantos dias, em média, os bugs abertos estão parados.
           </InfoTooltip>
         </div>
         <div className="stats-grid">
           <div className="stat-card">
-            <p className="stat-label" title="MTTR">MTTR</p>
+            <p className="stat-label" title="MTTR (Média)">MTTR (Média)</p>
             <p className="stat-value">{data.mttrDays !== null ? `${data.mttrDays} dias` : '—'}</p>
             <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
               {data.resolvedBugsCount} bug(s) resolvido(s) nos últimos {data.mttrWindowDays} dias
             </p>
+          </div>
+          <div className="stat-card">
+            <p className="stat-label" title="MTTR Mediana">Mediana</p>
+            <p className="stat-value">{data.mttrMedianDays !== null ? `${data.mttrMedianDays} dias` : '—'}</p>
+          </div>
+          <div className="stat-card">
+            <p className="stat-label" title="MTTR Percentil 90">P90</p>
+            <p className="stat-value">{data.mttrP90Days !== null ? `${data.mttrP90Days} dias` : '—'}</p>
           </div>
           <div className="stat-card">
             <p className="stat-label" title="Idade Média dos Bugs Abertos">Idade Média (Abertos)</p>

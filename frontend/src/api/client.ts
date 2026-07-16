@@ -321,6 +321,8 @@ export interface DashboardQuality {
 
 export interface DashboardEfficiency {
   mttrDays: number | null;
+  mttrMedianDays: number | null;
+  mttrP90Days: number | null;
   mttrWindowDays: number;
   avgAgeDays: number | null;
   maxAgeDays: number | null;

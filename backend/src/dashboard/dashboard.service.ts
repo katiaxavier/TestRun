@@ -334,8 +334,32 @@ export class DashboardService {
     const average = (values: number[]) =>
       values.length > 0 ? Math.round((values.reduce((a, b) => a + b, 0) / values.length) * 10) / 10 : null;
 
+    // Média sozinha é sensível a outliers quando a amostra é pequena (poucas dezenas de bugs
+    // na janela) — um único bug muito antigo resolvido agora pode distorcer a média sem
+    // representar o "bug típico". Mediana e P90 completam o quadro: mediana mostra a
+    // experiência típica, P90 mostra o pior caso comum (9 em cada 10 bugs resolveram dentro
+    // desse prazo).
+    const median = (values: number[]) => {
+      if (values.length === 0) return null;
+      const sorted = [...values].sort((a, b) => a - b);
+      const mid = Math.floor(sorted.length / 2);
+      const value = sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
+      return Math.round(value * 10) / 10;
+    };
+    const percentile = (values: number[], p: number) => {
+      if (values.length === 0) return null;
+      const sorted = [...values].sort((a, b) => a - b);
+      const rank = (p / 100) * (sorted.length - 1);
+      const lower = Math.floor(rank);
+      const upper = Math.ceil(rank);
+      const value = sorted[lower] + (sorted[upper] - sorted[lower]) * (rank - lower);
+      return Math.round(value * 10) / 10;
+    };
+
     return {
       mttrDays: average(resolvedDurationsDays),
+      mttrMedianDays: median(resolvedDurationsDays),
+      mttrP90Days: percentile(resolvedDurationsDays, 90),
       mttrWindowDays: MTTR_WINDOW_DAYS,
       avgAgeDays: average(openAgesDays),
       maxAgeDays: openAgesDays.length > 0 ? Math.round(Math.max(...openAgesDays)) : null,
