@@ -54,7 +54,31 @@ export function EficienciaTab({ projectId, boardId }: EficienciaTabProps) {
     );
   }
 
-  const mttrOverTarget = data.mttrDays !== null && data.mttrDays > data.mttrTargetDays;
+  // Reagrupa por severidade canônica (o backend manda o valor bruto do Jira, que pode variar
+  // de idioma) — mesmo padrão de severityChartData em QualidadeTab. Cada severidade conhecida
+  // é comparada contra o próprio prazo de SLA; o que sobra vira o grupo "Sem severidade".
+  const bySeverity = new Map<string, { totalDays: number; count: number }>();
+  for (const { priority, avgDays, count } of data.mttrBySeverity) {
+    const label = priority === 'Sem severidade' ? 'Sem severidade' : priorityLabel(priority);
+    const entry = bySeverity.get(label) ?? { totalDays: 0, count: 0 };
+    entry.totalDays += avgDays * count;
+    entry.count += count;
+    bySeverity.set(label, entry);
+  }
+  const mttrSeverityRows = SLA_DAYS_BY_SEVERITY.map(({ label, days }) => {
+    const entry = bySeverity.get(label);
+    bySeverity.delete(label);
+    return {
+      label,
+      slaDays: days,
+      avgDays: entry ? Math.round((entry.totalDays / entry.count) * 10) / 10 : null,
+      count: entry?.count ?? 0,
+    };
+  }).filter((row) => row.count > 0);
+  const semSeveridade = Array.from(bySeverity.values()).reduce(
+    (acc, { totalDays, count }) => ({ totalDays: acc.totalDays + totalDays, count: acc.count + count }),
+    { totalDays: 0, count: 0 },
+  );
 
   return (
     <div>
@@ -63,18 +87,17 @@ export function EficienciaTab({ projectId, boardId }: EficienciaTabProps) {
           <ClockIcon size={18} weight="duotone" style={{ color: 'var(--secondary)' }} />
           <h2 style={{ fontSize: '1.1rem', fontWeight: 700, letterSpacing: '-0.01em' }}>MTTR / Idade dos Defeitos</h2>
           <InfoTooltip>
-            <strong>MTTR:</strong> média de dias entre criar e resolver um bug, contra a meta.<br />
+            <strong>MTTR:</strong> tempo médio para resolver bugs fechados nos últimos{' '}
+            {data.mttrWindowDays} dias, contra o prazo de SLA de cada severidade.<br />
             <strong>Idade Média:</strong> há quantos dias, em média, os bugs abertos estão parados.
           </InfoTooltip>
         </div>
         <div className="stats-grid">
           <div className="stat-card">
             <p className="stat-label" title="MTTR">MTTR</p>
-            <p className="stat-value" style={{ color: data.mttrDays !== null ? (mttrOverTarget ? 'var(--status-failed)' : 'var(--status-passed)') : undefined }}>
-              {data.mttrDays !== null ? `${data.mttrDays} dias` : '—'}
-            </p>
+            <p className="stat-value">{data.mttrDays !== null ? `${data.mttrDays} dias` : '—'}</p>
             <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-              Meta: {data.mttrTargetDays} dias · {data.resolvedBugsCount} bug(s) resolvido(s)
+              Últimos {data.mttrWindowDays} dias · {data.resolvedBugsCount} bug(s) resolvido(s)
             </p>
           </div>
           <div className="stat-card">
@@ -88,6 +111,49 @@ export function EficienciaTab({ projectId, boardId }: EficienciaTabProps) {
             </p>
           </div>
         </div>
+
+        {mttrSeverityRows.length > 0 && (
+          <div className="card" style={{ marginTop: '0.75rem', padding: '0.75rem 1.25rem' }}>
+            <p style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.03em', marginBottom: '0.6rem' }}>
+              MTTR por severidade
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+              {mttrSeverityRows.map(({ label, slaDays, avgDays, count }) => {
+                const withinSla = avgDays !== null && avgDays <= slaDays;
+                return (
+                  <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem' }}>
+                    <span style={{ width: 8, height: 8, borderRadius: 99, background: PRIORITY_COLORS[label], flexShrink: 0 }} />
+                    <span style={{ flex: 1, color: 'var(--text-secondary)' }}>{label}</span>
+                    <span style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 600, color: 'var(--text-primary)' }}>
+                      {avgDays} d
+                    </span>
+                    <span
+                      title={`Meta (SLA de ${label}): ${slaDays} dias`}
+                      style={{ color: withinSla ? 'var(--status-passed)' : 'var(--status-failed)', cursor: 'help' }}
+                    >
+                      {withinSla ? '✓' : '✗'}
+                    </span>
+                    <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem', minWidth: 66, textAlign: 'right' }}>
+                      {count} bug(s)
+                    </span>
+                  </div>
+                );
+              })}
+              {semSeveridade.count > 0 && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem' }}>
+                  <span style={{ width: 8, height: 8, borderRadius: 99, background: 'var(--chart-muted)', flexShrink: 0 }} />
+                  <span style={{ flex: 1, color: 'var(--text-secondary)' }}>Sem severidade</span>
+                  <span style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 600, color: 'var(--text-primary)' }}>
+                    {Math.round((semSeveridade.totalDays / semSeveridade.count) * 10) / 10} d
+                  </span>
+                  <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem', minWidth: 66, textAlign: 'right' }}>
+                    {semSeveridade.count} bug(s)
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </section>
 
       <section style={{ marginBottom: '2.5rem' }}>

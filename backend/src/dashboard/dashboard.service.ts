@@ -6,7 +6,7 @@ import {
   COMPLETED_EXECUTIONS_LIMIT,
   SLA_DAYS_BY_PRIORITY,
   SLA_WARNING_THRESHOLD,
-  MTTR_TARGET_DAYS,
+  MTTR_WINDOW_DAYS,
 } from './dashboard.constants';
 
 // Mesmo sentinela do backfill de projetos (suítes manuais, sem projeto real no Jira) —
@@ -260,6 +260,10 @@ export class DashboardService {
 
     const now = Date.now();
     const resolvedDurationsDays: number[] = [];
+    // Soma/contagem por severidade real do Jira, só dos bugs resolvidos dentro da janela do
+    // MTTR — mesmo padrão de "backend agrupa pelo valor bruto, frontend normaliza pra exibir"
+    // já usado em openBugsBySeverityMap/severityByExecution.
+    const mttrBySeverityMap = new Map<string, { totalDays: number; count: number }>();
     const openAgesDays: number[] = [];
     const slaViolations: Array<{
       key: string;
@@ -287,7 +291,19 @@ export class DashboardService {
       const resolvedAt = bug.resolutiondate ?? (bug.statusCategory === 'done' ? bug.updated : undefined);
       if (resolvedAt) {
         const resolvedMs = new Date(resolvedAt).getTime();
-        resolvedDurationsDays.push((resolvedMs - createdMs) / 86_400_000);
+        // Só entra no MTTR se a resolução em si aconteceu dentro da janela — bugs resolvidos
+        // há mais tempo que isso não contam, mesmo que o cálculo de todos os bugs (SLA/idade
+        // dos abertos) continue olhando o histórico inteiro.
+        const daysSinceResolved = (now - resolvedMs) / 86_400_000;
+        if (daysSinceResolved <= MTTR_WINDOW_DAYS) {
+          const durationDays = (resolvedMs - createdMs) / 86_400_000;
+          resolvedDurationsDays.push(durationDays);
+          const severityKey = bug.priority ?? 'Sem severidade';
+          const entry = mttrBySeverityMap.get(severityKey) ?? { totalDays: 0, count: 0 };
+          entry.totalDays += durationDays;
+          entry.count += 1;
+          mttrBySeverityMap.set(severityKey, entry);
+        }
       } else {
         const ageDays = (now - createdMs) / 86_400_000;
         openAgesDays.push(ageDays);
@@ -320,12 +336,17 @@ export class DashboardService {
 
     return {
       mttrDays: average(resolvedDurationsDays),
-      mttrTargetDays: MTTR_TARGET_DAYS,
+      mttrWindowDays: MTTR_WINDOW_DAYS,
       avgAgeDays: average(openAgesDays),
       maxAgeDays: openAgesDays.length > 0 ? Math.round(Math.max(...openAgesDays)) : null,
       minAgeDays: openAgesDays.length > 0 ? Math.round(Math.min(...openAgesDays)) : null,
       openBugsCount: openAgesDays.length,
       resolvedBugsCount: resolvedDurationsDays.length,
+      mttrBySeverity: Array.from(mttrBySeverityMap.entries()).map(([priority, { totalDays, count }]) => ({
+        priority,
+        avgDays: Math.round((totalDays / count) * 10) / 10,
+        count,
+      })),
       openBugsBySeverity: Array.from(openBugsBySeverityMap.entries()).map(([priority, count]) => ({
         priority,
         count,

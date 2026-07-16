@@ -31,7 +31,9 @@ export const SLA_DAYS_BY_PRIORITY: Record<string, number> = {
 // mesmo padrão de constante ajustável de SLA_DAYS_BY_PRIORITY.
 export const SLA_WARNING_THRESHOLD = 0.8;
 
-// Meta de MTTR (aba Eficiência), em dias. Valor placeholder (mesmo exemplo do documento de
-// proposta do stakeholder) — AINDA NÃO CONFIRMADO com o usuário/time; ajustar antes de
-// considerar essa métrica validada, mesmo risco já assumido para SLA_DAYS_BY_PRIORITY.
-export const MTTR_TARGET_DAYS = 20;
+// Janela de tempo do MTTR (aba Eficiência): só entram bugs resolvidos nos últimos N dias,
+// pra refletir o ritmo atual do time em vez da história inteira do projeto (que arrasta bugs
+// de anos atrás e só tende a piorar a média conforme a base cresce). A meta de cada bug
+// resolvido é o próprio prazo de SLA da severidade dele (SLA_DAYS_BY_PRIORITY) — não há mais
+// uma meta única fixa.
+export const MTTR_WINDOW_DAYS = 90;

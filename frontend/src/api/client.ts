@@ -321,12 +321,13 @@ export interface DashboardQuality {
 
 export interface DashboardEfficiency {
   mttrDays: number | null;
-  mttrTargetDays: number;
+  mttrWindowDays: number;
   avgAgeDays: number | null;
   maxAgeDays: number | null;
   minAgeDays: number | null;
   openBugsCount: number;
   resolvedBugsCount: number;
+  mttrBySeverity: { priority: string; avgDays: number; count: number }[];
   openBugsBySeverity: { priority: string; count: number }[];
   slaBuckets: { withinSla: number; nearSla: number; aboveSla: number; noSlaDefined: number };
   slaViolations: {
