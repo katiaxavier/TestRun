@@ -8,10 +8,26 @@ import { OperacaoTab } from './dashboard/OperacaoTab';
 import { QualidadeTab } from './dashboard/QualidadeTab';
 import { EficienciaTab } from './dashboard/EficienciaTab';
 
+// A pergunta desperta a curiosidade; o resumo diz o que a aba entrega.
 const TABS = [
-  { key: 'operacao', label: 'Operação', question: 'O que está acontecendo agora: alertas, execuções em andamento e itens aguardando validação.' },
-  { key: 'qualidade', label: 'Qualidade', question: 'Qual a saúde do produto: taxa de aprovação, densidade de defeitos e cobertura.' },
-  { key: 'eficiencia', label: 'Eficiência', question: 'Estamos resolvendo no tempo esperado: MTTR, idade dos bugs abertos e SLA.' },
+  {
+    key: 'operacao',
+    label: 'Operação',
+    question: 'O que está acontecendo agora?',
+    summary: 'Alertas, execuções em andamento e itens aguardando validação.',
+  },
+  {
+    key: 'qualidade',
+    label: 'Qualidade',
+    question: 'Como está a saúde do produto?',
+    summary: 'Taxa de aprovação, densidade de defeitos e cobertura de testes.',
+  },
+  {
+    key: 'eficiencia',
+    label: 'Eficiência',
+    question: 'Estamos resolvendo os problemas no tempo esperado?',
+    summary: 'MTTR, idade dos bugs abertos e SLA.',
+  },
 ] as const;
 type TabKey = typeof TABS[number]['key'];
 
@@ -86,15 +102,16 @@ export default function HomePage() {
       {/* Subtítulo sempre visível: explica a aba ativa sem exigir hover num ícone de info. */}
       <div className="tabs-subtitle">
         <AnimatePresence mode="wait" initial={false}>
-          <motion.p
+          <motion.div
             key={activeTab}
             initial={{ opacity: 0, y: -4 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 4 }}
             transition={{ duration: 0.18 }}
           >
-            {TABS.find(t => t.key === activeTab)!.question}
-          </motion.p>
+            <p className="tabs-subtitle-question">{TABS.find(t => t.key === activeTab)!.question}</p>
+            <p className="tabs-subtitle-summary">{TABS.find(t => t.key === activeTab)!.summary}</p>
+          </motion.div>
         </AnimatePresence>
       </div>
 
