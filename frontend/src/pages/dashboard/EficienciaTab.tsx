@@ -97,7 +97,7 @@ export function EficienciaTab({ projectId, boardId }: EficienciaTabProps) {
             <p className="stat-label" title="MTTR">MTTR</p>
             <p className="stat-value">{data.mttrDays !== null ? `${data.mttrDays} dias` : '—'}</p>
             <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-              Últimos {data.mttrWindowDays} dias · {data.resolvedBugsCount} bug(s) resolvido(s)
+              {data.resolvedBugsCount} bug(s) resolvido(s) nos últimos {data.mttrWindowDays} dias
             </p>
           </div>
           <div className="stat-card">
@@ -127,11 +127,8 @@ export function EficienciaTab({ projectId, boardId }: EficienciaTabProps) {
                     <span style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 600, color: 'var(--text-primary)' }}>
                       {avgDays} d
                     </span>
-                    <span
-                      title={`Meta (SLA de ${label}): ${slaDays} dias`}
-                      style={{ color: withinSla ? 'var(--status-passed)' : 'var(--status-failed)', cursor: 'help' }}
-                    >
-                      {withinSla ? '✓' : '✗'}
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem', color: withinSla ? 'var(--status-passed)' : 'var(--status-failed)' }}>
+                      meta ≤{slaDays}d {withinSla ? '✓' : '✗'}
                     </span>
                     <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem', minWidth: 66, textAlign: 'right' }}>
                       {count} bug(s)
