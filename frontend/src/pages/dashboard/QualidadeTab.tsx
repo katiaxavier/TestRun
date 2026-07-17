@@ -180,7 +180,7 @@ export function QualidadeTab({ projectId, boardId }: QualidadeTabProps) {
             <p>O gráfico aparece assim que houver bugs vinculados a uma issue real do Jira, com labels.</p>
           </div>
         ) : (
-          <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+          <div className="card" style={{ padding: 0, overflow: 'hidden', maxWidth: 480 }}>
             <div className="table-wrapper">
               <table>
                 <thead>

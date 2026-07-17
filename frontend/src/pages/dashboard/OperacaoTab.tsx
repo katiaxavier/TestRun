@@ -21,7 +21,7 @@ import { executionsApi, jiraIssuesApi } from '../../api/client';
 import type { Execution, JiraIssue } from '../../api/client';
 import { useProject } from '../../context/ProjectContext';
 import { useBoard } from '../../context/BoardContext';
-import { typeColor } from '../../utils/priority';
+import { typeColor, priorityLabel, PRIORITY_COLORS } from '../../utils/priority';
 import { progressOf, bandColor, executionTitle, computeSuccessRate, COMPLETED_EXECUTIONS_LIMIT } from './shared';
 import { InfoTooltip } from '../../components/InfoTooltip';
 
@@ -301,6 +301,7 @@ export function OperacaoTab({ active }: OperacaoTabProps) {
                         <th style={{ width: 130 }}>Chave</th>
                         <th>Título</th>
                         <th style={{ width: 110 }}>Tipo</th>
+                        <th style={{ width: 110 }}>Severidade</th>
                         <th style={{ width: 160 }}>Responsável</th>
                       </tr>
                     </thead>
@@ -327,6 +328,18 @@ export function OperacaoTab({ active }: OperacaoTabProps) {
                                 </span>
                               );
                             })()}
+                          </td>
+                          <td>
+                            {issue.priority ? (
+                              <span
+                                className="tag"
+                                style={{ background: `${PRIORITY_COLORS[priorityLabel(issue.priority)]}20`, color: PRIORITY_COLORS[priorityLabel(issue.priority)] }}
+                              >
+                                {priorityLabel(issue.priority)}
+                              </span>
+                            ) : (
+                              <span style={{ color: 'var(--text-muted)' }}>—</span>
+                            )}
                           </td>
                           <td style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{issue.assignee ?? '—'}</td>
                         </tr>
@@ -374,6 +387,7 @@ export function OperacaoTab({ active }: OperacaoTabProps) {
                     <th style={{ width: 130 }}>Chave</th>
                     <th>Título</th>
                     <th style={{ width: 110 }}>Tipo</th>
+                    <th style={{ width: 110 }}>Severidade</th>
                     <th style={{ width: 150 }}>Status</th>
                     <th style={{ width: 120 }}>Criado em</th>
                   </tr>
@@ -401,6 +415,18 @@ export function OperacaoTab({ active }: OperacaoTabProps) {
                             </span>
                           );
                         })()}
+                      </td>
+                      <td>
+                        {issue.priority ? (
+                          <span
+                            className="tag"
+                            style={{ background: `${PRIORITY_COLORS[priorityLabel(issue.priority)]}20`, color: PRIORITY_COLORS[priorityLabel(issue.priority)] }}
+                          >
+                            {priorityLabel(issue.priority)}
+                          </span>
+                        ) : (
+                          <span style={{ color: 'var(--text-muted)' }}>—</span>
+                        )}
                       </td>
                       <td><span className="tag" style={{ whiteSpace: 'nowrap' }}>{issue.status}</span></td>
                       <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
