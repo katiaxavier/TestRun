@@ -26,6 +26,26 @@ export const SLA_DAYS_BY_PRIORITY: Record<string, number> = {
   Lowest: 45,
 };
 
+// Normaliza a prioridade bruta do Jira (qualquer idioma/grafia) pra uma das 6 severidades
+// canônicas em português — mesma tabela de frontend/src/utils/priority.ts (priorityLabel),
+// duplicada aqui porque não há pacote compartilhado front/back neste repo (mesmo padrão já
+// usado por SLA_DAYS_BY_PRIORITY e reaproveitado por reports.service.ts). É o que permite um
+// override de SLA por quadro (chave = severidade canônica) valer tanto pra sites Jira em
+// português quanto no esquema padrão em inglês.
+const CANONICAL_SEVERITY_BY_NORMALIZED: Record<string, string> = {
+  highest: 'Gravíssima', critical: 'Gravíssima', gravissima: 'Gravíssima',
+  high: 'Crítica', critica: 'Crítica',
+  alta: 'Alta',
+  medium: 'Média', media: 'Média',
+  low: 'Normal', normal: 'Normal',
+  trivial: 'Trivial',
+};
+
+export function canonicalSeverityLabel(priority: string): string {
+  const normalized = priority.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  return CANONICAL_SEVERITY_BY_NORMALIZED[normalized] ?? priority;
+}
+
 // Fração do prazo de SLA a partir da qual um bug em aberto (ainda dentro do prazo) já conta
 // como "próximo do SLA" em vez de "dentro do SLA" — ex. 0.8 = últimos 20% do prazo. Editável,
 // mesmo padrão de constante ajustável de SLA_DAYS_BY_PRIORITY.

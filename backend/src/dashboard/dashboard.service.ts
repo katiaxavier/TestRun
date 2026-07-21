@@ -7,11 +7,15 @@ import {
   SLA_DAYS_BY_PRIORITY,
   SLA_WARNING_THRESHOLD,
   MTTR_WINDOW_DAYS,
+  canonicalSeverityLabel,
 } from './dashboard.constants';
 
 // Mesmo sentinela do backfill de projetos (suítes manuais, sem projeto real no Jira) —
 // ver MANUAL_PROJECT_JIRA_ID em boards.service.ts.
 const MANUAL_PROJECT_JIRA_ID = 'manual';
+
+// As 6 severidades editáveis na tela de SLA (aba Eficiência) — mesma ordem exibida no front.
+const CANONICAL_SEVERITIES = ['Gravíssima', 'Crítica', 'Alta', 'Média', 'Normal', 'Trivial'];
 
 interface IssueLite {
   jiraKey: string | null;
@@ -262,6 +266,7 @@ export class DashboardService {
     }
 
     const bugs = await this.fetchAllBugs(userId, project, boardId);
+    const slaOverrides = await this.getSlaOverrides(projectId, boardId);
 
     const now = Date.now();
     const resolvedDurationsDays: number[] = [];
@@ -320,7 +325,14 @@ export class DashboardService {
         const severityKey = bug.priority ?? 'Sem severidade';
         openBugsBySeverityMap.set(severityKey, (openBugsBySeverityMap.get(severityKey) ?? 0) + 1);
 
-        const slaDays = bug.priority ? SLA_DAYS_BY_PRIORITY[bug.priority] : undefined;
+        // Override por quadro (se existir) vale pela severidade canônica do bug — assim
+        // funciona tanto pra sites Jira em português quanto no esquema padrão em inglês.
+        // Sem override, cai no padrão de SLA_DAYS_BY_PRIORITY, chaveado pela string bruta
+        // do Jira (comportamento inalterado pra quem nunca customizou).
+        const canonical = bug.priority ? canonicalSeverityLabel(bug.priority) : undefined;
+        const slaDays = canonical && slaOverrides[canonical] !== undefined
+          ? slaOverrides[canonical]
+          : bug.priority ? SLA_DAYS_BY_PRIORITY[bug.priority] : undefined;
         if (slaDays === undefined) {
           noSlaDefinedCount += 1;
         } else if (ageDays > slaDays) {
@@ -393,6 +405,55 @@ export class DashboardService {
         noSlaDefined: noSlaDefinedCount,
       },
       slaViolations: slaViolations.sort((a, b) => b.ageDays - a.ageDays),
+      slaConfig: CANONICAL_SEVERITIES.map((label) => ({
+        label,
+        days: slaOverrides[label] ?? SLA_DAYS_BY_PRIORITY[label],
+      })),
     };
+  }
+
+  // Chave de BoardSlaConfig: boardId 'none' cobre o pseudo-quadro "Sem quadro" (não é uma
+  // linha real de Board); string vazia cobre o caso raro de nenhum boardId informado (dashboard
+  // sem filtro de quadro) — nunca colide com um UUID real nem com 'none'.
+  private async getSlaOverrides(projectId: string, boardId?: string): Promise<Record<string, number>> {
+    const config = await this.prisma.boardSlaConfig.findUnique({
+      where: { projectId_boardId: { projectId, boardId: boardId ?? '' } },
+    });
+    return (config?.slaDays as Record<string, number> | undefined) ?? {};
+  }
+
+  async getSlaConfig(projectId: string, boardId?: string) {
+    const overrides = await this.getSlaOverrides(projectId, boardId);
+    return {
+      entries: CANONICAL_SEVERITIES.map((label) => ({
+        label,
+        days: overrides[label] ?? SLA_DAYS_BY_PRIORITY[label],
+      })),
+      isCustom: Object.keys(overrides).length > 0,
+    };
+  }
+
+  async updateSlaConfig(projectId: string, boardId: string | undefined, slaDays: Record<string, number>) {
+    const entries = Object.entries(slaDays).filter(([label]) => CANONICAL_SEVERITIES.includes(label));
+    if (entries.length === 0) {
+      throw new HttpException('Informe ao menos uma severidade válida.', HttpStatus.BAD_REQUEST);
+    }
+    for (const [label, days] of entries) {
+      if (!Number.isInteger(days) || days < 1) {
+        throw new HttpException(`Prazo inválido para ${label}: deve ser um número inteiro maior que zero.`, HttpStatus.BAD_REQUEST);
+      }
+    }
+    const key = boardId ?? '';
+    await this.prisma.boardSlaConfig.upsert({
+      where: { projectId_boardId: { projectId, boardId: key } },
+      update: { slaDays: Object.fromEntries(entries) },
+      create: { projectId, boardId: key, slaDays: Object.fromEntries(entries) },
+    });
+    return this.getSlaConfig(projectId, boardId);
+  }
+
+  async resetSlaConfig(projectId: string, boardId?: string) {
+    await this.prisma.boardSlaConfig.deleteMany({ where: { projectId, boardId: boardId ?? '' } });
+    return this.getSlaConfig(projectId, boardId);
   }
 }

@@ -31,8 +31,25 @@ model Project {
   suites         Suite[]
   batches        ExecutionBatch[]
   memberships    ProjectMembership[]
+  slaConfigs     BoardSlaConfig[]
   createdAt      DateTime            @default(now())
   updatedAt      DateTime            @updatedAt
+}
+
+// Override por quadro dos prazos de SLA (dashboard.constants.ts SLA_DAYS_BY_PRIORITY é o padrão).
+// boardId não é FK pro Board: cobre tanto quadros reais quanto o pseudo-quadro "Sem quadro"
+// (id 'none', ver UNASSIGNED_BOARD em frontend/src/context/BoardContext.tsx), que não é uma
+// linha real de Board.
+model BoardSlaConfig {
+  id        String   @id @default(uuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  boardId   String
+  slaDays   Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([projectId, boardId])
 }
 
 model Board {

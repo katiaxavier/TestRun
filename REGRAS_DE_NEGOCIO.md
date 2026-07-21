@@ -1,7 +1,7 @@
 # Regras de Negócio — TestRun
 
-**Versão:** 2.1  
-**Data:** 14/07/2026  
+**Versão:** 2.2  
+**Data:** 21/07/2026  
 **Sistema:** TestRun — Plataforma de Gestão de Testes de QA
 
 ---
@@ -132,6 +132,15 @@ Agrupa múltiplas suítes para execução conjunta.
 | `suiteIds` | JSON array | Lista de IDs das suítes do lote |
 | `excludedTestCaseIds` | JSON array | TCs excluídos de todas as execuções do lote |
 | `status` | enum | `PENDING` → `IN_PROGRESS` → `COMPLETED` |
+
+### 2.13 Prazo de SLA por Quadro (`BoardSlaConfig`)
+Override, por Quadro, dos prazos de SLA usados na aba Eficiência do Dashboard (ver 17.4). Sem um registro aqui, vale o prazo padrão.
+
+| Campo | Tipo | Regra |
+|---|---|---|
+| `projectId` | FK | Obrigatório |
+| `boardId` | string | Identifica o quadro; **não é FK** para `Board` — cobre também o pseudo-quadro "Sem quadro" (`'none'`), que não é uma linha real de `Board`. Único por `projectId` + `boardId` |
+| `slaDays` | JSON | Mapa severidade → dias, só com as severidades customizadas (as não presentes usam o prazo padrão) |
 
 ---
 
@@ -514,7 +523,8 @@ Não há restrição de transição; o testador pode alterar para qualquer statu
 - **MTTR** (tempo de resolução, em dias): usa `resolutiondate` quando preenchido; senão usa `updated` se o `statusCategory` for `done` (muitos projetos Jira nunca preenchem `resolutiondate`). Só entram bugs cuja resolução aconteceu nos últimos 90 dias (janela fixa, `MTTR_WINDOW_DAYS`); o histórico mais antigo não conta. O agregado mostra três números — média, mediana e percentil 90 (interpolação linear) — porque a média sozinha é sensível a outliers quando a amostra é pequena. A média também mostra uma tendência (seta + delta em dias) comparando o período atual com o período de 90 dias imediatamente anterior (bugs resolvidos entre 91 e 180 dias atrás); some quando não há bugs resolvidos no período anterior para comparar. Além disso, mostra o MTTR médio por severidade (`jiraPriority`), cada uma comparada contra o próprio prazo de SLA (SLA_DAYS_BY_PRIORITY) em vez de uma meta única.
 - **Idade dos bugs em aberto**: média/mínima/máxima em dias, e contagem por `jiraPriority`.
 - **SLA em 3 estados** (semáforo, calculado só sobre bugs em aberto): `withinSla` (dentro do prazo), `nearSla` (idade acima de 80% do prazo da prioridade), `aboveSla` (violado — lista individual com chave, link, título, prioridade, idade em dias, data de abertura e % do SLA consumido). Existe ainda um 4º grupo fora do semáforo, `noSlaDefined`, para prioridades sem prazo configurado.
-- Prazos de SLA por prioridade (dias): Gravíssima 3, Crítica 7, Alta 15, Média 21, Normal 30, Trivial 45 (nomenclatura PT-BR) / Highest 3, High 7, Medium 15, Low 30, Lowest 45 (nomenclatura EN) — os dois esquemas coexistem porque cada usuário conecta o próprio site Jira, que pode usar prioridades em qualquer um dos dois idiomas.
+- Prazos de SLA por prioridade (dias), padrão: Gravíssima 3, Crítica 7, Alta 15, Média 21, Normal 30, Trivial 45 (nomenclatura PT-BR) / Highest 3, High 7, Medium 15, Low 30, Lowest 45 (nomenclatura EN) — os dois esquemas coexistem porque cada usuário conecta o próprio site Jira, que pode usar prioridades em qualquer um dos dois idiomas.
+- **Prazos de SLA editáveis por Quadro**: um botão de engrenagem na seção SLA abre um modal onde o usuário customiza o prazo (em dias) de cada uma das 6 severidades canônicas (Gravíssima/Crítica/Alta/Média/Normal/Trivial) só para o quadro selecionado — persistido em `BoardSlaConfig` (ver 2.13). A prioridade bruta do bug no Jira (PT ou EN) é normalizada para a severidade canônica antes de aplicar o override, então uma customização vale para os dois esquemas de nomenclatura. Sem customização, o prazo padrão do item anterior é usado sem alteração de comportamento. Endpoints: `GET /dashboard/sla-config` (consulta o efetivo, com flag `isCustom`), `PUT /dashboard/sla-config` (salva o override do quadro) e `DELETE /dashboard/sla-config` (restaura o padrão, removendo o override).
 
 ---
 

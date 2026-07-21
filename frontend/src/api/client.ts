@@ -342,6 +342,12 @@ export interface DashboardEfficiency {
     openedAt: string;
     percentOfSla: number;
   }[];
+  slaConfig: { label: string; days: number }[];
+}
+
+export interface SlaConfigResult {
+  entries: { label: string; days: number }[];
+  isCustom: boolean;
 }
 
 export const dashboardApi = {
@@ -349,6 +355,12 @@ export const dashboardApi = {
     api.get<DashboardQuality>('/dashboard/quality', { params: { projectId, boardId } }),
   getEfficiency: (projectId: string, boardId?: string) =>
     api.get<DashboardEfficiency>('/dashboard/efficiency', { params: { projectId, boardId } }),
+  getSlaConfig: (projectId: string, boardId?: string) =>
+    api.get<SlaConfigResult>('/dashboard/sla-config', { params: { projectId, boardId } }),
+  updateSlaConfig: (projectId: string, boardId: string | undefined, slaDays: Record<string, number>) =>
+    api.put<SlaConfigResult>('/dashboard/sla-config', { projectId, boardId, slaDays }),
+  resetSlaConfig: (projectId: string, boardId?: string) =>
+    api.delete<SlaConfigResult>('/dashboard/sla-config', { params: { projectId, boardId } }),
 };
 
 export const reportsApi = {

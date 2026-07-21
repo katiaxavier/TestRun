@@ -1,35 +1,34 @@
 import { Fragment, useState, useEffect } from 'react';
 import { CountUp } from '../../components/CountUp';
-import { ClockIcon, ArrowSquareOutIcon, HourglassIcon } from '@phosphor-icons/react';
+import { ClockIcon, ArrowSquareOutIcon, HourglassIcon, GearIcon } from '@phosphor-icons/react';
 import { dashboardApi } from '../../api/client';
 import type { DashboardEfficiency } from '../../api/client';
 import { priorityLabel, PRIORITY_COLORS } from '../../utils/priority';
 import { InfoTooltip } from '../../components/InfoTooltip';
+import { SlaConfigModal } from './SlaConfigModal';
 
 interface EficienciaTabProps {
   projectId: string;
   boardId: string;
 }
 
-// Mesmos prazos de backend/src/dashboard/dashboard.constants.ts (SLA_DAYS_BY_PRIORITY,
-// lado em português) — mantidos em sincronia manual, sem fonte única compartilhada
-// front/back neste repo (mesmo padrão de COMPLETED_EXECUTIONS_LIMIT).
-const SLA_DAYS_BY_SEVERITY: { label: string; days: number }[] = [
-  { label: 'Gravíssima', days: 3 },
-  { label: 'Crítica', days: 7 },
-  { label: 'Alta', days: 15 },
-  { label: 'Média', days: 21 },
-  { label: 'Normal', days: 30 },
-  { label: 'Trivial', days: 45 },
-];
-
 // Mesmo limiar de backend/src/dashboard/dashboard.constants.ts (SLA_WARNING_THRESHOLD) —
-// mesma sincronia manual front/back já usada acima.
+// mesma sincronia manual front/back já usada em COMPLETED_EXECUTIONS_LIMIT. Os prazos por
+// severidade em si (antes hardcoded aqui) agora vêm de data.slaConfig, editáveis por quadro.
 const SLA_WARNING_THRESHOLD_PCT = 80;
 
 export function EficienciaTab({ projectId, boardId }: EficienciaTabProps) {
   const [data, setData] = useState<DashboardEfficiency | null>(null);
   const [loading, setLoading] = useState(true);
+  const [slaModalOpen, setSlaModalOpen] = useState(false);
+
+  const fetchData = () => {
+    setLoading(true);
+    return dashboardApi.getEfficiency(projectId, boardId)
+      .then(({ data }) => setData(data))
+      .catch(() => setData(null))
+      .finally(() => setLoading(false));
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -71,7 +70,7 @@ export function EficienciaTab({ projectId, boardId }: EficienciaTabProps) {
     entry.count += count;
     bySeverity.set(label, entry);
   }
-  const mttrSeverityRows = SLA_DAYS_BY_SEVERITY.map(({ label, days }) => {
+  const mttrSeverityRows = data.slaConfig.map(({ label, days }) => {
     const entry = bySeverity.get(label);
     bySeverity.delete(label);
     return {
@@ -215,6 +214,14 @@ export function EficienciaTab({ projectId, boardId }: EficienciaTabProps) {
             <strong>🔴 Acima:</strong> prazo estourado<br />
             <strong>Sem SLA:</strong> severidade sem prazo configurado
           </InfoTooltip>
+          <button
+            className="btn btn-ghost btn-icon"
+            title="Editar prazos de SLA"
+            onClick={() => setSlaModalOpen(true)}
+            style={{ marginLeft: 'auto' }}
+          >
+            <GearIcon size={18} />
+          </button>
         </div>
         <div className="stats-grid">
           <div className="stat-card">
@@ -251,7 +258,7 @@ export function EficienciaTab({ projectId, boardId }: EficienciaTabProps) {
           </InfoTooltip>
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem 1.25rem', marginBottom: '1rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-          {SLA_DAYS_BY_SEVERITY.map(({ label, days }) => (
+          {data.slaConfig.map(({ label, days }) => (
             <span key={label} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
               <span style={{ width: 8, height: 8, borderRadius: 99, background: PRIORITY_COLORS[label] }} />
               {label}: {days} dias
@@ -319,6 +326,14 @@ export function EficienciaTab({ projectId, boardId }: EficienciaTabProps) {
           </div>
         )}
       </section>
+
+      <SlaConfigModal
+        open={slaModalOpen}
+        onClose={() => setSlaModalOpen(false)}
+        projectId={projectId}
+        boardId={boardId}
+        onSaved={fetchData}
+      />
     </div>
   );
 }
