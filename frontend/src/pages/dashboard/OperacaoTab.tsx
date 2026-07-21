@@ -9,7 +9,6 @@ import {
   ClockCounterClockwiseIcon,
   FlaskIcon,
   BugIcon,
-  ArrowSquareOutIcon,
   CheckCircleIcon,
   XCircleIcon,
   ProhibitIcon,
@@ -21,9 +20,9 @@ import { executionsApi, jiraIssuesApi } from '../../api/client';
 import type { Execution, JiraIssue } from '../../api/client';
 import { useProject } from '../../context/ProjectContext';
 import { useBoard } from '../../context/BoardContext';
-import { typeColor, priorityLabel, PRIORITY_COLORS } from '../../utils/priority';
 import { progressOf, bandColor, executionTitle, computeSuccessRate, COMPLETED_EXECUTIONS_LIMIT } from './shared';
 import { InfoTooltip } from '../../components/InfoTooltip';
+import { IssuesTable, IssueKeyLink, IssueTypeTag, IssuePriorityTag } from '../../components/IssuesTable';
 
 const ACTIVE_EXECUTIONS_LIMIT = 50; // teto do endpoint; cobre o caso de várias execuções simultâneas
 const RECENT_COMPLETED_DISPLAY = 3; // quantas aparecem na lista "Últimas Execuções Concluídas"
@@ -294,59 +293,17 @@ export function OperacaoTab({ active }: OperacaoTabProps) {
               </div>
             ) : (
               <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-                <div className="table-wrapper" style={{ maxHeight: 420, overflowY: 'auto' }}>
-                  <table>
-                    <thead>
-                      <tr>
-                        <th style={{ width: 130 }}>Chave</th>
-                        <th>Título</th>
-                        <th style={{ width: 110 }}>Tipo</th>
-                        <th style={{ width: 110 }}>Severidade</th>
-                        <th style={{ width: 160 }}>Responsável</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {readyForTestIssues.map(issue => (
-                        <tr key={issue.key}>
-                          <td>
-                            <a
-                              href={issue.link}
-                              target="_blank"
-                              rel="noreferrer"
-                              style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--accent)', fontSize: '0.85rem', fontFamily: 'var(--font-mono)' }}
-                            >
-                              {issue.key} <ArrowSquareOutIcon size={11} />
-                            </a>
-                          </td>
-                          <td style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>{issue.summary}</td>
-                          <td>
-                            {(() => {
-                              const c = typeColor(issue.issuetype);
-                              return (
-                                <span className="tag" style={c ? { background: c.bg, color: c.color } : undefined}>
-                                  {issue.issuetype}
-                                </span>
-                              );
-                            })()}
-                          </td>
-                          <td>
-                            {issue.priority ? (
-                              <span
-                                className="tag"
-                                style={{ background: `${PRIORITY_COLORS[priorityLabel(issue.priority)]}20`, color: PRIORITY_COLORS[priorityLabel(issue.priority)] }}
-                              >
-                                {priorityLabel(issue.priority)}
-                              </span>
-                            ) : (
-                              <span style={{ color: 'var(--text-muted)' }}>—</span>
-                            )}
-                          </td>
-                          <td style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{issue.assignee ?? '—'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                <IssuesTable
+                  issues={readyForTestIssues}
+                  maxHeight={420}
+                  columns={[
+                    { header: 'Chave', width: 130, render: issue => <IssueKeyLink issue={issue} /> },
+                    { header: 'Título', render: issue => <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>{issue.summary}</span> },
+                    { header: 'Tipo', width: 110, render: issue => <IssueTypeTag issue={issue} /> },
+                    { header: 'Severidade', width: 110, render: issue => <IssuePriorityTag issue={issue} /> },
+                    { header: 'Responsável', width: 160, render: issue => <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{issue.assignee ?? '—'}</span> },
+                  ]}
+                />
               </div>
             )}
           </>
@@ -380,63 +337,24 @@ export function OperacaoTab({ active }: OperacaoTabProps) {
           </div>
         ) : (
           <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-            <div className="table-wrapper">
-              <table>
-                <thead>
-                  <tr>
-                    <th style={{ width: 130 }}>Chave</th>
-                    <th>Título</th>
-                    <th style={{ width: 110 }}>Tipo</th>
-                    <th style={{ width: 110 }}>Severidade</th>
-                    <th style={{ width: 150 }}>Status</th>
-                    <th style={{ width: 120 }}>Criado em</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {recentIssues.map(issue => (
-                    <tr key={issue.key}>
-                      <td>
-                        <a
-                          href={issue.link}
-                          target="_blank"
-                          rel="noreferrer"
-                          style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--accent)', fontSize: '0.85rem', fontFamily: 'var(--font-mono)' }}
-                        >
-                          {issue.key} <ArrowSquareOutIcon size={11} />
-                        </a>
-                      </td>
-                      <td style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>{issue.summary}</td>
-                      <td>
-                        {(() => {
-                          const c = typeColor(issue.issuetype);
-                          return (
-                            <span className="tag" style={c ? { background: c.bg, color: c.color } : undefined}>
-                              {issue.issuetype}
-                            </span>
-                          );
-                        })()}
-                      </td>
-                      <td>
-                        {issue.priority ? (
-                          <span
-                            className="tag"
-                            style={{ background: `${PRIORITY_COLORS[priorityLabel(issue.priority)]}20`, color: PRIORITY_COLORS[priorityLabel(issue.priority)] }}
-                          >
-                            {priorityLabel(issue.priority)}
-                          </span>
-                        ) : (
-                          <span style={{ color: 'var(--text-muted)' }}>—</span>
-                        )}
-                      </td>
-                      <td><span className="tag" style={{ whiteSpace: 'nowrap' }}>{issue.status}</span></td>
-                      <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
-                        {issue.created ? new Date(issue.created).toLocaleDateString('pt-BR') : '—'}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <IssuesTable
+              issues={recentIssues}
+              columns={[
+                { header: 'Chave', width: 130, render: issue => <IssueKeyLink issue={issue} /> },
+                { header: 'Título', render: issue => <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>{issue.summary}</span> },
+                { header: 'Tipo', width: 110, render: issue => <IssueTypeTag issue={issue} /> },
+                { header: 'Severidade', width: 110, render: issue => <IssuePriorityTag issue={issue} /> },
+                { header: 'Status', width: 150, render: issue => <span className="tag" style={{ whiteSpace: 'nowrap' }}>{issue.status}</span> },
+                {
+                  header: 'Criado em', width: 120, nowrap: true,
+                  render: issue => (
+                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                      {issue.created ? new Date(issue.created).toLocaleDateString('pt-BR') : '—'}
+                    </span>
+                  ),
+                },
+              ]}
+            />
           </div>
         )}
       </section>
