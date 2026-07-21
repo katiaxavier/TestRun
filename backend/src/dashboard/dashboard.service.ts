@@ -162,27 +162,32 @@ export class DashboardService {
     });
 
     // ── Cobertura de requisitos + automação ──────────────────────────────────
-    // Épicos ficam sempre no projeto inteiro — confirmado com o usuário que, neste
-    // Jira, quadros não têm Épico associado de jeito nenhum (nem o próprio Jira
-    // mostra Épico no Backlog/Roadmap de um quadro), então não há como calcular
-    // "épicos do quadro" com sentido: numerador (épicos com suíte) e denominador
-    // (total de épicos) precisam estar no mesmo escopo, senão a fração fica
-    // artificialmente pequena/errada.
+    // Épicos são escopados ao quadro selecionado usando o filtro JQL real do board (via
+    // JiraService.countEpicsByBoard) quando houver boardId — o filtro de um board pode ter
+    // qualquer combinação de critérios (ex. só projeto, ou projeto + status + labels) e
+    // raramente restringe issuetype, então Épicos que também atendam a esses critérios
+    // entram na conta. Sem boardId (ou "Sem quadro"), mantém o escopo do projeto inteiro.
+    // epicsWithSuite usa o mesmo filtro de board das Suítes (boardFilterSuite, reaproveitado
+    // abaixo em totalTestCases/automatedTestCases) pra numerador e denominador ficarem no
+    // mesmo escopo.
+    const boardFilterSuite =
+      boardId === 'none' ? { boards: { none: {} } } : boardId ? { boards: { some: { id: boardId } } } : {};
     const suites = await this.prisma.suite.findMany({
-      where: { projectId },
+      where: { projectId, ...boardFilterSuite },
       select: { epicKey: true },
     });
     const epicsWithSuite = new Set(suites.map((s) => s.epicKey).filter((k): k is string => !!k));
 
     let totalEpics = 0;
     if (project.jiraProjectId !== MANUAL_PROJECT_JIRA_ID) {
-      totalEpics = await this.jiraService.countIssuesByProject(userId, project.jiraProjectKey, { type: 'Epic' });
+      if (boardId && boardId !== 'none') {
+        const board = await this.prisma.board.findUnique({ where: { id: boardId } });
+        totalEpics = board ? await this.jiraService.countEpicsByBoard(userId, board.jiraBoardId) : 0;
+      } else {
+        totalEpics = await this.jiraService.countIssuesByProject(userId, project.jiraProjectKey, { type: 'Epic' });
+      }
     }
 
-    // Casos de teste/automação já são um dado nosso (Prisma), então esse sim dá
-    // pra filtrar por quadro real com sentido — mesmo filtro de findCompletedExecutionsWindow.
-    const boardFilterSuite =
-      boardId === 'none' ? { boards: { none: {} } } : boardId ? { boards: { some: { id: boardId } } } : {};
     const [totalTestCases, automatedTestCases] = await Promise.all([
       this.prisma.testCase.count({ where: { suite: { projectId, ...boardFilterSuite } } }),
       this.prisma.testCase.count({ where: { suite: { projectId, ...boardFilterSuite }, automated: true } }),

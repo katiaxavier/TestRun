@@ -46,8 +46,12 @@ export class AuthService {
       // read:board-scope:jira-software + read:issue-details:jira são escopos granulares
       // (aba "Granular scopes" dentro da própria Jira API no console) — necessários para
       // /rest/agile/1.0/board (quadros), que a Jira Software REST API exige em vez dos
-      // escopos clássicos.
-      scope: 'read:me read:jira-work read:board-scope:jira-software read:issue-details:jira read:project:jira offline_access',
+      // escopos clássicos. read:board-scope.admin:jira-software é necessário à parte para
+      // /rest/agile/1.0/board/{id}/configuration (view board configuration é uma permissão
+      // "admin" separada da leitura normal do board) — sem ele o Jira devolve 401 mesmo com
+      // read:board-scope:jira-software concedido. read:filter:jira é necessário para
+      // /rest/api/3/filter/{id} (ler a JQL salva de um filtro).
+      scope: 'read:me read:jira-work read:board-scope:jira-software read:board-scope.admin:jira-software read:issue-details:jira read:project:jira read:filter:jira offline_access',
       redirect_uri: process.env.OAUTH_REDIRECT_URI ?? '',
       state,
       response_type: 'code',
