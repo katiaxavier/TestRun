@@ -1372,6 +1372,8 @@ export default function ExecutionRunPage() {
   const [priorityFilter, setPriorityFilter] = useState<string>('all');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<number | 'all'>(10);
+  const tcsScrollRef = useRef<HTMLDivElement>(null);
+  useEffect(() => { tcsScrollRef.current?.scrollTo(0, 0); }, [page]);
 
   const fetchExecution = useCallback(async () => {
     if (!id) return;
@@ -1669,7 +1671,7 @@ export default function ExecutionRunPage() {
             <h2 style={{ fontSize: '0.95rem', fontWeight: 700 }}>Casos de Teste</h2>
             <span className="badge">{filteredTcs.length}</span>
           </div>
-          <div className="table-wrapper" style={{ height: 520, overflowY: 'auto' }}>
+          <div ref={tcsScrollRef} className="table-wrapper" style={{ height: 520, overflowY: 'auto' }}>
             <table>
               <thead>
                 <tr>

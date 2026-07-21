@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowSquareOut, CaretLeft, CaretRight, Flask, MagnifyingGlass, Trash } from '@phosphor-icons/react';
 import type { Suite, TestCase } from '../api/client';
@@ -50,6 +50,9 @@ export function TestCaseList({ testCases, onDelete, onToggleAutomated, suiteMap,
   const currentPage = Math.min(page, totalPages);
   const pageStartIndex = pageSize === 'all' ? 0 : (currentPage - 1) * pageSize;
   const displayed = pageSize === 'all' ? filtered : filtered.slice(pageStartIndex, pageStartIndex + pageSize);
+
+  const scrollRef = useRef<HTMLDivElement>(null);
+  useEffect(() => { scrollRef.current?.scrollTo(0, 0); }, [currentPage]);
 
   const handleToggleAutomated = async (id: string, automated: boolean) => {
     if (!onToggleAutomated) return;
@@ -123,7 +126,7 @@ export function TestCaseList({ testCases, onDelete, onToggleAutomated, suiteMap,
       </div>
 
       {/* Table */}
-      <div className="table-wrapper" style={height ? { height, overflowY: 'auto' } : undefined}>
+      <div ref={scrollRef} className="table-wrapper" style={height ? { height, overflowY: 'auto' } : undefined}>
         <table>
           <thead>
             <tr>
