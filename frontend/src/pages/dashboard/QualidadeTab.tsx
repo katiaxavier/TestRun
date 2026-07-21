@@ -3,7 +3,7 @@ import { CountUp } from '../../components/CountUp';
 import { BarChart, Bar, ResponsiveContainer, Tooltip as RechartsTooltip, XAxis } from 'recharts';
 import { ChartBarIcon, GaugeIcon, TargetIcon } from '@phosphor-icons/react';
 import { dashboardApi } from '../../api/client';
-import type { DashboardQuality, DashboardEfficiency } from '../../api/client';
+import type { DashboardQuality } from '../../api/client';
 import { priorityLabel, PRIORITY_COLORS } from '../../utils/priority';
 import { bandColor } from './shared';
 import { InfoTooltip } from '../../components/InfoTooltip';
@@ -12,9 +12,6 @@ interface QualidadeTabProps {
   projectId: string;
   boardId: string;
 }
-
-// Mesmas duas faixas de topo usadas em SLA_DAYS_BY_PRIORITY/PRIORITY_COLORS pra "crítico".
-const CRITICAL_SEVERITIES = ['Gravíssima', 'Crítica'];
 
 const SEVERITY_KEYS = ['Gravíssima', 'Crítica', 'Alta', 'Média', 'Normal', 'Trivial', 'Sem severidade'] as const;
 const SEVERITY_KEY_COLORS: Record<string, string> = { ...PRIORITY_COLORS, 'Sem severidade': 'var(--chart-muted)' };
@@ -58,23 +55,15 @@ function SeverityTooltip({ active, payload, label }: {
 
 export function QualidadeTab({ projectId, boardId }: QualidadeTabProps) {
   const [data, setData] = useState<DashboardQuality | null>(null);
-  const [efficiency, setEfficiency] = useState<DashboardEfficiency | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    Promise.all([
-      dashboardApi.getQuality(projectId, boardId),
-      // Chamada independente só pra alimentar "Bugs Críticos em Aberto" — getEfficiency já é
-      // usado pela aba Eficiência, reaproveitado aqui em vez de duplicar a busca ao
-      // vivo de bugs no Jira dentro de getQuality.
-      dashboardApi.getEfficiency(projectId, boardId).catch(() => ({ data: null })),
-    ])
-      .then(([qualityRes, efficiencyRes]) => {
+    dashboardApi.getQuality(projectId, boardId)
+      .then((qualityRes) => {
         if (cancelled) return;
         setData(qualityRes.data);
-        setEfficiency(efficiencyRes.data);
       })
       .catch(() => { if (!cancelled) setData(null); })
       .finally(() => { if (!cancelled) setLoading(false); });
@@ -114,10 +103,6 @@ export function QualidadeTab({ projectId, boardId }: QualidadeTabProps) {
 
   const { totalTestCases, automatedTestCases } = data.coverage;
   const automationPct = pct(automatedTestCases, totalTestCases);
-
-  const criticalOpenBugs = (efficiency?.openBugsBySeverity ?? [])
-    .filter(({ priority }) => CRITICAL_SEVERITIES.includes(priorityLabel(priority)))
-    .reduce((sum, { count }) => sum + count, 0);
 
   return (
     <div>
@@ -172,18 +157,6 @@ export function QualidadeTab({ projectId, boardId }: QualidadeTabProps) {
             Uma barra por execução, com os bugs de cada severidade que apareceram nela. Mostra se os
             defeitos recentes estão mais ou menos graves. Só bugs — melhorias não entram.
           </InfoTooltip>
-          <span
-            title="Bugs Críticos em Aberto"
-            style={{
-              marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.4rem',
-              fontSize: '0.8rem', color: 'var(--text-muted)',
-            }}
-          >
-            Bugs Críticos em Aberto
-            <strong style={{ fontSize: '0.95rem', color: criticalOpenBugs > 0 ? 'var(--status-failed)' : 'var(--text-primary)' }}>
-              {efficiency ? <CountUp value={criticalOpenBugs} /> : '—'}
-            </strong>
-          </span>
         </div>
         {severityChartData.length === 0 ? (
           <div className="empty-state" style={{ padding: '2rem' }}>
