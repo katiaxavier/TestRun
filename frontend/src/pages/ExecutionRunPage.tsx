@@ -1669,7 +1669,7 @@ export default function ExecutionRunPage() {
             <h2 style={{ fontSize: '0.95rem', fontWeight: 700 }}>Casos de Teste</h2>
             <span className="badge">{filteredTcs.length}</span>
           </div>
-          <div className="table-wrapper">
+          <div className="table-wrapper" style={{ height: 520, overflowY: 'auto' }}>
             <table>
               <thead>
                 <tr>

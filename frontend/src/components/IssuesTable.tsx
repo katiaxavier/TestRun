@@ -45,19 +45,19 @@ export interface IssuesTableColumn {
 interface IssuesTableProps {
   issues: JiraIssue[];
   columns: IssuesTableColumn[];
-  /** Ativa scroll vertical com cabeçalho fixo (sticky), limitado a essa altura em px. */
-  maxHeight?: number;
-  /** Ativa scroll vertical com cabeçalho fixo (sticky) ocupando o espaço restante do container flex pai. */
+  /** Ativa scroll vertical com cabeçalho fixo (sticky): altura fixa em px, independente da quantidade de itens. */
+  height?: number;
+  /** Ativa scroll vertical com cabeçalho fixo (sticky) ocupando sempre o espaço restante do container flex pai. */
   fillHeight?: boolean;
   /** Mensagem exibida em uma linha única (colSpan) quando `issues` está vazio. */
   emptyMessage?: ReactNode;
 }
 
-export function IssuesTable({ issues, columns, maxHeight, fillHeight, emptyMessage }: IssuesTableProps) {
+export function IssuesTable({ issues, columns, height, fillHeight, emptyMessage }: IssuesTableProps) {
   const scrollStyle = fillHeight
     ? { flex: 1, minHeight: 0, overflowY: 'auto' as const }
-    : maxHeight
-    ? { maxHeight, overflowY: 'auto' as const }
+    : height
+    ? { height, overflowY: 'auto' as const }
     : undefined;
   return (
     <div className="table-wrapper" style={scrollStyle}>

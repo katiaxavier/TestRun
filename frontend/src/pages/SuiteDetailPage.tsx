@@ -350,6 +350,7 @@ export default function SuiteDetailPage() {
             onToggleAutomated={handleToggleAutomated}
             renderExtra={tc => <ScenarioTemplatePanel tc={tc} onUpdate={handleTcUpdate} />}
             isManual={suite.isManual}
+            height={520}
           />
         </div>
       </motion.div>

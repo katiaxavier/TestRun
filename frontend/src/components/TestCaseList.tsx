@@ -12,13 +12,15 @@ interface TestCaseListProps {
   suiteMap?: Record<string, Suite>;
   renderExtra?: (tc: TestCase) => React.ReactNode;
   isManual?: boolean;
+  /** Ativa scroll vertical com cabeçalho fixo (sticky): altura fixa em px, independente da quantidade de itens. */
+  height?: number;
 }
 
 type PriorityFilter = 'all' | 'Gravíssima' | 'Crítica' | 'Alta' | 'Média' | 'Normal' | 'Trivial';
 
 const PAGE_SIZES = [10, 25, 50, 100] as const;
 
-export function TestCaseList({ testCases, onDelete, onToggleAutomated, suiteMap, renderExtra, isManual }: TestCaseListProps) {
+export function TestCaseList({ testCases, onDelete, onToggleAutomated, suiteMap, renderExtra, isManual, height }: TestCaseListProps) {
   const [search, setSearch] = useState('');
   const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>('all');
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -121,7 +123,7 @@ export function TestCaseList({ testCases, onDelete, onToggleAutomated, suiteMap,
       </div>
 
       {/* Table */}
-      <div className="table-wrapper">
+      <div className="table-wrapper" style={height ? { height, overflowY: 'auto' } : undefined}>
         <table>
           <thead>
             <tr>

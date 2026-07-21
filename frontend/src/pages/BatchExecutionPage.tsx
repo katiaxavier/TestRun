@@ -152,6 +152,7 @@ export default function BatchExecutionPage() {
             suiteMap={suiteMap}
             onDelete={handleRemoveTestCase}
             renderExtra={tc => <ScenarioPreview tc={tc} />}
+            height={520}
           />
         </div>
       </motion.div>
