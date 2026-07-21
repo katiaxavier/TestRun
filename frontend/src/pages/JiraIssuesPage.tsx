@@ -88,9 +88,14 @@ export default function JiraIssuesPage() {
   }
 
   return (
-    <div className="page">
-      <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
-        <div className="page-header">
+    <div className="page" style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - var(--topbar-height))' }}>
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+        style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}
+      >
+        <div className="page-header" style={{ flexShrink: 0 }}>
           <div>
             <h1 className="page-title">Bugs e Melhorias</h1>
             <p className="page-subtitle">Bugs e melhorias registrados no Jira do quadro selecionado</p>
@@ -116,7 +121,7 @@ export default function JiraIssuesPage() {
             <p>Selecione um quadro real do Jira no menu lateral para ver bugs e melhorias.</p>
           </div>
         ) : (
-          <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+          <div className="card" style={{ padding: 0, overflow: 'hidden', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
             {/* Busca + filtros */}
             <div style={{
               padding: '1rem',
@@ -125,6 +130,7 @@ export default function JiraIssuesPage() {
               flexWrap: 'wrap',
               gap: '0.75rem',
               alignItems: 'center',
+              flexShrink: 0,
             }}>
               <div style={{ position: 'relative', flex: '1 1 160px', minWidth: 160 }}>
                 <MagnifyingGlass
@@ -167,6 +173,7 @@ export default function JiraIssuesPage() {
             ) : (
               <IssuesTable
                 issues={data}
+                fillHeight
                 emptyMessage={hasFilters ? 'Nenhum resultado com os filtros aplicados.' : 'Sem bugs ou melhorias neste quadro.'}
                 columns={[
                   { header: 'Chave', width: 130, render: issue => <IssueKeyLink issue={issue} /> },
@@ -188,7 +195,7 @@ export default function JiraIssuesPage() {
             )}
 
             {!loading && totalPages > 1 && (
-              <div style={{ display: 'flex', justifyContent: 'center', padding: '0.75rem 1.25rem', borderTop: '1px solid var(--border-subtle)' }}>
+              <div style={{ display: 'flex', justifyContent: 'center', padding: '0.75rem 1.25rem', borderTop: '1px solid var(--border-subtle)', flexShrink: 0 }}>
                 <div className="filters" style={{ gap: 0 }}>
                   <button className="filter-item" onClick={() => setPage(p => p - 1)} disabled={page <= 1} style={{ opacity: page <= 1 ? 0.35 : 1 }}>
                     <CaretLeft size={15} /> Anterior
