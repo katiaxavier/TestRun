@@ -1373,7 +1373,15 @@ export default function ExecutionRunPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<number | 'all'>(10);
   const tcsScrollRef = useRef<HTMLDivElement>(null);
-  useEffect(() => { tcsScrollRef.current?.scrollTo(0, 0); }, [page]);
+  useEffect(() => {
+    const container = tcsScrollRef.current;
+    if (!container) return;
+    if (selectedEtc) {
+      container.querySelector(`[data-etc-id="${selectedEtc.id}"]`)?.scrollIntoView({ block: 'nearest' });
+    } else {
+      container.scrollTo(0, 0);
+    }
+  }, [page, selectedEtc]);
 
   const fetchExecution = useCallback(async () => {
     if (!id) return;
@@ -1695,6 +1703,7 @@ export default function ExecutionRunPage() {
                   return (
                     <tr
                       key={etc.id}
+                      data-etc-id={etc.id}
                       style={{ cursor: 'pointer', background: selectedEtc?.id === etc.id ? 'var(--accent-subtle)' : undefined }}
                       onClick={() => setSelectedEtc(etc)}
                     >
