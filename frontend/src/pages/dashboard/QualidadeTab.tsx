@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { CountUp } from '../../components/CountUp';
 import { BarChart, Bar, ResponsiveContainer, Tooltip as RechartsTooltip, XAxis } from 'recharts';
-import { ChartBarIcon, GaugeIcon, TargetIcon, HeartbeatIcon } from '@phosphor-icons/react';
-import { dashboardApi, executionsApi } from '../../api/client';
+import { ChartBarIcon, GaugeIcon, TargetIcon } from '@phosphor-icons/react';
+import { dashboardApi } from '../../api/client';
 import type { DashboardQuality, DashboardEfficiency } from '../../api/client';
 import { priorityLabel, PRIORITY_COLORS } from '../../utils/priority';
-import { bandColor, computeSuccessRate, COMPLETED_EXECUTIONS_LIMIT } from './shared';
+import { bandColor } from './shared';
 import { InfoTooltip } from '../../components/InfoTooltip';
 
 interface QualidadeTabProps {
@@ -59,7 +59,6 @@ function SeverityTooltip({ active, payload, label }: {
 export function QualidadeTab({ projectId, boardId }: QualidadeTabProps) {
   const [data, setData] = useState<DashboardQuality | null>(null);
   const [efficiency, setEfficiency] = useState<DashboardEfficiency | null>(null);
-  const [successRate, setSuccessRate] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -67,17 +66,15 @@ export function QualidadeTab({ projectId, boardId }: QualidadeTabProps) {
     setLoading(true);
     Promise.all([
       dashboardApi.getQuality(projectId, boardId),
-      // Chamadas independentes só pra alimentar os KPIs do topo — getEfficiency já é
+      // Chamada independente só pra alimentar "Bugs Críticos em Aberto" — getEfficiency já é
       // usado pela aba Eficiência, reaproveitado aqui em vez de duplicar a busca ao
       // vivo de bugs no Jira dentro de getQuality.
       dashboardApi.getEfficiency(projectId, boardId).catch(() => ({ data: null })),
-      executionsApi.getRecent(projectId, boardId, { status: 'COMPLETED', limit: COMPLETED_EXECUTIONS_LIMIT }).catch(() => ({ data: [] })),
     ])
-      .then(([qualityRes, efficiencyRes, executionsRes]) => {
+      .then(([qualityRes, efficiencyRes]) => {
         if (cancelled) return;
         setData(qualityRes.data);
         setEfficiency(efficiencyRes.data);
-        setSuccessRate(computeSuccessRate(executionsRes.data));
       })
       .catch(() => { if (!cancelled) setData(null); })
       .finally(() => { if (!cancelled) setLoading(false); });
@@ -124,38 +121,6 @@ export function QualidadeTab({ projectId, boardId }: QualidadeTabProps) {
 
   return (
     <div>
-      {/* Health KPIs */}
-      <section style={{ marginBottom: '2.5rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
-          <HeartbeatIcon size={18} weight="duotone" style={{ color: 'var(--status-passed)' }} />
-          <h2 style={{ fontSize: '1.1rem', fontWeight: 700, letterSpacing: '-0.01em' }}>Resumo</h2>
-          <InfoTooltip>
-            Visão geral antes do detalhe. Taxa de Aprovação vem das últimas {COMPLETED_EXECUTIONS_LIMIT}{' '}
-            execuções; Bugs Críticos, dos bugs em aberto no Jira.
-          </InfoTooltip>
-        </div>
-        <div className="stats-grid">
-          <div className="stat-card">
-            <p className="stat-label" title="Taxa de Aprovação">Taxa de Aprovação</p>
-            <p className="stat-value" style={{ color: successRate !== null ? bandColor(successRate) : undefined }}>
-              {successRate !== null ? <CountUp value={successRate} suffix="%" /> : '—'}
-            </p>
-          </div>
-          <div className="stat-card">
-            <p className="stat-label" title="Bugs Críticos em Aberto">Bugs Críticos em Aberto</p>
-            <p className="stat-value" style={{ color: criticalOpenBugs > 0 ? 'var(--status-failed)' : undefined }}>
-              {efficiency ? <CountUp value={criticalOpenBugs} /> : '—'}
-            </p>
-          </div>
-          <div className="stat-card">
-            <p className="stat-label" title="Cobertura de Automação">Cobertura de Automação</p>
-            <p className="stat-value" style={{ color: automationPct !== null ? bandColor(automationPct) : undefined }}>
-              {automationPct !== null ? <CountUp value={automationPct} suffix="%" /> : '—'}
-            </p>
-          </div>
-        </div>
-      </section>
-
       {/* Densidade de defeitos por combinação de labels */}
       <section style={{ marginBottom: '2.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
@@ -207,6 +172,18 @@ export function QualidadeTab({ projectId, boardId }: QualidadeTabProps) {
             Uma barra por execução, com os bugs de cada severidade que apareceram nela. Mostra se os
             defeitos recentes estão mais ou menos graves. Só bugs — melhorias não entram.
           </InfoTooltip>
+          <span
+            title="Bugs Críticos em Aberto"
+            style={{
+              marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.4rem',
+              fontSize: '0.8rem', color: 'var(--text-muted)',
+            }}
+          >
+            Bugs Críticos em Aberto
+            <strong style={{ fontSize: '0.95rem', color: criticalOpenBugs > 0 ? 'var(--status-failed)' : 'var(--text-primary)' }}>
+              {efficiency ? <CountUp value={criticalOpenBugs} /> : '—'}
+            </strong>
+          </span>
         </div>
         {severityChartData.length === 0 ? (
           <div className="empty-state" style={{ padding: '2rem' }}>
