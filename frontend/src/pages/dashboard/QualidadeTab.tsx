@@ -115,8 +115,7 @@ export function QualidadeTab({ projectId, boardId }: QualidadeTabProps) {
   });
   const severitiesPresent = SEVERITY_KEYS.filter(key => severityChartData.some(row => (row[key] as number) > 0));
 
-  const { epicsWithSuite, totalEpics, totalTestCases, automatedTestCases } = data.coverage;
-  const coveragePct = pct(epicsWithSuite, totalEpics);
+  const { totalTestCases, automatedTestCases } = data.coverage;
   const automationPct = pct(automatedTestCases, totalTestCases);
 
   const criticalOpenBugs = (efficiency?.openBugsBySeverity ?? [])
@@ -146,12 +145,6 @@ export function QualidadeTab({ projectId, boardId }: QualidadeTabProps) {
             <p className="stat-label" title="Bugs Críticos em Aberto">Bugs Críticos em Aberto</p>
             <p className="stat-value" style={{ color: criticalOpenBugs > 0 ? 'var(--status-failed)' : undefined }}>
               {efficiency ? <CountUp value={criticalOpenBugs} /> : '—'}
-            </p>
-          </div>
-          <div className="stat-card">
-            <p className="stat-label" title="Cobertura de Requisitos">Cobertura de Requisitos</p>
-            <p className="stat-value" style={{ color: coveragePct !== null ? bandColor(coveragePct) : undefined }}>
-              {coveragePct !== null ? <CountUp value={coveragePct} suffix="%" /> : '—'}
             </p>
           </div>
           <div className="stat-card">
@@ -245,28 +238,16 @@ export function QualidadeTab({ projectId, boardId }: QualidadeTabProps) {
         )}
       </section>
 
-      {/* Cobertura de requisitos + automação */}
+      {/* Casos de teste + automação */}
       <section>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
           <TargetIcon size={18} weight="duotone" style={{ color: 'var(--secondary)' }} />
-          <h2 style={{ fontSize: '1.1rem', fontWeight: 700, letterSpacing: '-0.01em' }}>Cobertura de Requisitos + Automação</h2>
+          <h2 style={{ fontSize: '1.1rem', fontWeight: 700, letterSpacing: '-0.01em' }}>Casos de Teste + Automação</h2>
           <InfoTooltip>
-            Épicos são sempre do projeto inteiro, mesmo com um quadro selecionado. Casos de Teste e
-            Automação seguem o quadro.
+            Casos de Teste e Automação seguem o quadro selecionado.
           </InfoTooltip>
         </div>
         <div className="stats-grid">
-          <div className="stat-card">
-            <p className="stat-label" title="Épicos com Suíte Vinculada">Épicos com Suíte Vinculada</p>
-            <p className="stat-value" style={{ color: coveragePct !== null ? bandColor(coveragePct) : undefined }}>
-              {coveragePct !== null ? <CountUp value={coveragePct} suffix="%" /> : '—'}
-            </p>
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{epicsWithSuite} de {totalEpics} épicos</p>
-          </div>
-          <div className="stat-card">
-            <p className="stat-label" title="Épicos sem Cobertura">Épicos sem Cobertura</p>
-            <p className="stat-value"><CountUp value={Math.max(0, totalEpics - epicsWithSuite)} /></p>
-          </div>
           <div className="stat-card">
             <p className="stat-label" title="Casos de Teste">Casos de Teste</p>
             <p className="stat-value"><CountUp value={totalTestCases} /></p>
