@@ -277,7 +277,7 @@ export function EficienciaTab({ projectId, boardId }: EficienciaTabProps) {
               <table>
                 <thead>
                   <tr>
-                    <th style={{ width: 130 }}>Chave</th>
+                    <th style={{ width: 130 }}>ID</th>
                     <th>Título</th>
                     <th style={{ width: 130 }}>Severidade</th>
                     <th style={{ width: 130 }}>Data de Abertura</th>

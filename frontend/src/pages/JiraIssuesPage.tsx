@@ -176,7 +176,7 @@ export default function JiraIssuesPage() {
                 fillHeight
                 emptyMessage={hasFilters ? 'Nenhum resultado com os filtros aplicados.' : 'Sem bugs ou melhorias neste quadro.'}
                 columns={[
-                  { header: 'Chave', width: 130, render: issue => <IssueKeyLink issue={issue} /> },
+                  { header: 'ID', width: 130, render: issue => <IssueKeyLink issue={issue} /> },
                   { header: 'Título', render: issue => <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>{issue.summary}</span> },
                   { header: 'Tipo', width: 110, render: issue => <IssueTypeTag issue={issue} label={typeLabel(issue.issuetype)} /> },
                   { header: 'Status', width: 150, render: issue => <span className="tag" style={{ whiteSpace: 'nowrap' }}>{issue.status}</span> },
