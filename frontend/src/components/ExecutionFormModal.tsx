@@ -107,7 +107,7 @@ export function ExecutionFormModal({
           </div>
         </div>
         {error && (
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', padding: '0.75rem', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 'var(--radius-sm)', fontSize: '0.83rem', color: 'var(--status-failed)' }}>
+          <div className="alert alert-danger" style={{ fontSize: '0.83rem' }}>
             <WarningCircle size={16} style={{ flexShrink: 0, marginTop: 2 }} /> {error}
           </div>
         )}

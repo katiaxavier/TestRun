@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
+import { CountUp } from '../../components/CountUp';
 import { BarChart, Bar, ResponsiveContainer, Tooltip as RechartsTooltip, XAxis } from 'recharts';
-import { ChartBarIcon, GaugeIcon, TargetIcon, HeartbeatIcon } from '@phosphor-icons/react';
-import { dashboardApi, executionsApi } from '../../api/client';
-import type { DashboardQuality, DashboardEfficiency } from '../../api/client';
+import { ChartBarIcon, GaugeIcon, TargetIcon } from '@phosphor-icons/react';
+import { dashboardApi } from '../../api/client';
+import type { DashboardQuality } from '../../api/client';
 import { priorityLabel, PRIORITY_COLORS } from '../../utils/priority';
-import { bandColor, computeSuccessRate, COMPLETED_EXECUTIONS_LIMIT } from './shared';
+import { bandColor } from './shared';
 import { InfoTooltip } from '../../components/InfoTooltip';
 
 interface QualidadeTabProps {
@@ -12,11 +13,8 @@ interface QualidadeTabProps {
   boardId: string;
 }
 
-// Mesmas duas faixas de topo usadas em SLA_DAYS_BY_PRIORITY/PRIORITY_COLORS pra "crítico".
-const CRITICAL_SEVERITIES = ['Gravíssima', 'Crítica'];
-
 const SEVERITY_KEYS = ['Gravíssima', 'Crítica', 'Alta', 'Média', 'Normal', 'Trivial', 'Sem severidade'] as const;
-const SEVERITY_KEY_COLORS: Record<string, string> = { ...PRIORITY_COLORS, 'Sem severidade': '#555e76' };
+const SEVERITY_KEY_COLORS: Record<string, string> = { ...PRIORITY_COLORS, 'Sem severidade': 'var(--chart-muted)' };
 
 function pct(part: number, total: number): number | null {
   return total > 0 ? Math.round((part / total) * 100) : null;
@@ -57,26 +55,15 @@ function SeverityTooltip({ active, payload, label }: {
 
 export function QualidadeTab({ projectId, boardId }: QualidadeTabProps) {
   const [data, setData] = useState<DashboardQuality | null>(null);
-  const [efficiency, setEfficiency] = useState<DashboardEfficiency | null>(null);
-  const [successRate, setSuccessRate] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    Promise.all([
-      dashboardApi.getQuality(projectId, boardId),
-      // Chamadas independentes só pra alimentar os KPIs do topo — getEfficiency já é
-      // usado pela aba Eficiência, reaproveitado aqui em vez de duplicar a busca ao
-      // vivo de bugs no Jira dentro de getQuality.
-      dashboardApi.getEfficiency(projectId, boardId).catch(() => ({ data: null })),
-      executionsApi.getRecent(projectId, boardId, { status: 'COMPLETED', limit: COMPLETED_EXECUTIONS_LIMIT }).catch(() => ({ data: [] })),
-    ])
-      .then(([qualityRes, efficiencyRes, executionsRes]) => {
+    dashboardApi.getQuality(projectId, boardId)
+      .then((qualityRes) => {
         if (cancelled) return;
         setData(qualityRes.data);
-        setEfficiency(efficiencyRes.data);
-        setSuccessRate(computeSuccessRate(executionsRes.data));
       })
       .catch(() => { if (!cancelled) setData(null); })
       .finally(() => { if (!cancelled) setLoading(false); });
@@ -114,64 +101,19 @@ export function QualidadeTab({ projectId, boardId }: QualidadeTabProps) {
   });
   const severitiesPresent = SEVERITY_KEYS.filter(key => severityChartData.some(row => (row[key] as number) > 0));
 
-  const { epicsWithSuite, totalEpics, totalTestCases, automatedTestCases } = data.coverage;
-  const coveragePct = pct(epicsWithSuite, totalEpics);
+  const { totalTestCases, automatedTestCases } = data.coverage;
   const automationPct = pct(automatedTestCases, totalTestCases);
-
-  const criticalOpenBugs = (efficiency?.openBugsBySeverity ?? [])
-    .filter(({ priority }) => CRITICAL_SEVERITIES.includes(priorityLabel(priority)))
-    .reduce((sum, { count }) => sum + count, 0);
 
   return (
     <div>
-      {/* Health KPIs */}
-      <section style={{ marginBottom: '2.5rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
-          <HeartbeatIcon size={18} weight="duotone" style={{ color: 'var(--status-passed)' }} />
-          <h2 style={{ fontSize: '1.1rem', fontWeight: 700, letterSpacing: '-0.01em' }}>Resumo</h2>
-          <InfoTooltip>
-            Estado geral da qualidade antes de entrar no detalhe dos gráficos abaixo. Taxa de Aprovação e
-            Bugs Críticos consideram as últimas {COMPLETED_EXECUTIONS_LIMIT} execuções/bugs em aberto no
-            Jira; Cobertura de Requisitos e Automação são os mesmos dados detalhados mais abaixo.
-          </InfoTooltip>
-        </div>
-        <div className="stats-grid">
-          <div className="stat-card">
-            <p className="stat-label" title="Taxa de Aprovação">Taxa de Aprovação</p>
-            <p className="stat-value" style={{ color: successRate !== null ? bandColor(successRate) : undefined }}>
-              {successRate !== null ? `${successRate}%` : '—'}
-            </p>
-          </div>
-          <div className="stat-card">
-            <p className="stat-label" title="Bugs Críticos em Aberto">Bugs Críticos em Aberto</p>
-            <p className="stat-value" style={{ color: criticalOpenBugs > 0 ? 'var(--status-failed)' : undefined }}>
-              {efficiency ? criticalOpenBugs : '—'}
-            </p>
-          </div>
-          <div className="stat-card">
-            <p className="stat-label" title="Cobertura de Requisitos">Cobertura de Requisitos</p>
-            <p className="stat-value" style={{ color: coveragePct !== null ? bandColor(coveragePct) : undefined }}>
-              {coveragePct !== null ? `${coveragePct}%` : '—'}
-            </p>
-          </div>
-          <div className="stat-card">
-            <p className="stat-label" title="Cobertura de Automação">Cobertura de Automação</p>
-            <p className="stat-value" style={{ color: automationPct !== null ? bandColor(automationPct) : undefined }}>
-              {automationPct !== null ? `${automationPct}%` : '—'}
-            </p>
-          </div>
-        </div>
-      </section>
-
       {/* Densidade de defeitos por combinação de labels */}
       <section style={{ marginBottom: '2.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
           <ChartBarIcon size={18} weight="duotone" style={{ color: 'var(--status-failed)' }} />
           <h2 style={{ fontSize: '1.1rem', fontWeight: 700, letterSpacing: '-0.01em' }}>Densidade de Defeitos por Label</h2>
           <InfoTooltip>
-            Quantidade de bugs distintos (das últimas execuções concluídas) agrupados pela combinação
-            exata de labels do Jira — cada bug conta uma única vez, no grupo do conjunto de labels que ele
-            tem. Melhorias não entram nessa contagem, só bugs.
+            Bugs das últimas execuções, agrupados pela combinação exata de labels do Jira. Cada bug conta
+            uma vez. Só bugs — melhorias não entram.
           </InfoTooltip>
         </div>
         {sortedDensity.length === 0 ? (
@@ -181,7 +123,7 @@ export function QualidadeTab({ projectId, boardId }: QualidadeTabProps) {
             <p>O gráfico aparece assim que houver bugs vinculados a uma issue real do Jira, com labels.</p>
           </div>
         ) : (
-          <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+          <div className="card" style={{ padding: 0, overflow: 'hidden', maxWidth: 480 }}>
             <div className="table-wrapper">
               <table>
                 <thead>
@@ -212,9 +154,8 @@ export function QualidadeTab({ projectId, boardId }: QualidadeTabProps) {
           <GaugeIcon size={18} weight="duotone" style={{ color: 'var(--text-muted)' }} />
           <h2 style={{ fontSize: '1.1rem', fontWeight: 700, letterSpacing: '-0.01em' }}>Taxa de Sucesso × Severidade</h2>
           <InfoTooltip>
-            Uma barra por execução concluída, mostrando quantos bugs distintos de cada severidade
-            apareceram naquela execução — dá pra ver se as execuções mais recentes estão trazendo defeitos
-            mais ou menos graves que as anteriores. Melhorias não entram nessa contagem, só bugs.
+            Uma barra por execução, com os bugs de cada severidade que apareceram nela. Mostra se os
+            defeitos recentes estão mais ou menos graves. Só bugs — melhorias não entram.
           </InfoTooltip>
         </div>
         {severityChartData.length === 0 ? (
@@ -247,36 +188,24 @@ export function QualidadeTab({ projectId, boardId }: QualidadeTabProps) {
         )}
       </section>
 
-      {/* Cobertura de requisitos + automação */}
+      {/* Casos de teste + automação */}
       <section>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
           <TargetIcon size={18} weight="duotone" style={{ color: 'var(--secondary)' }} />
-          <h2 style={{ fontSize: '1.1rem', fontWeight: 700, letterSpacing: '-0.01em' }}>Cobertura de Requisitos + Automação</h2>
+          <h2 style={{ fontSize: '1.1rem', fontWeight: 700, letterSpacing: '-0.01em' }}>Casos de Teste + Automação</h2>
           <InfoTooltip>
-            Épicos são sempre do projeto inteiro, mesmo com um quadro selecionado no resto do dashboard.
-            Casos de Teste e Automação já são filtrados pelo quadro selecionado.
+            Casos de Teste e Automação seguem o quadro selecionado.
           </InfoTooltip>
         </div>
         <div className="stats-grid">
           <div className="stat-card">
-            <p className="stat-label" title="Épicos com Suíte Vinculada">Épicos com Suíte Vinculada</p>
-            <p className="stat-value" style={{ color: coveragePct !== null ? bandColor(coveragePct) : undefined }}>
-              {coveragePct !== null ? `${coveragePct}%` : '—'}
-            </p>
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{epicsWithSuite} de {totalEpics} épicos</p>
-          </div>
-          <div className="stat-card">
-            <p className="stat-label" title="Épicos sem Cobertura">Épicos sem Cobertura</p>
-            <p className="stat-value">{Math.max(0, totalEpics - epicsWithSuite)}</p>
-          </div>
-          <div className="stat-card">
             <p className="stat-label" title="Casos de Teste">Casos de Teste</p>
-            <p className="stat-value">{totalTestCases}</p>
+            <p className="stat-value"><CountUp value={totalTestCases} /></p>
           </div>
           <div className="stat-card">
             <p className="stat-label" title="Automação">Automação</p>
             <p className="stat-value" style={{ color: automationPct !== null ? bandColor(automationPct) : undefined }}>
-              {automationPct !== null ? `${automationPct}%` : '—'}
+              {automationPct !== null ? <CountUp value={automationPct} suffix="%" /> : '—'}
             </p>
             <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{automatedTestCases} de {totalTestCases} casos</p>
           </div>

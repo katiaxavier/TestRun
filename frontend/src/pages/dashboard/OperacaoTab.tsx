@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { CountUp } from '../../components/CountUp';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { BarChart, Bar, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, XAxis } from 'recharts';
@@ -8,7 +9,6 @@ import {
   ClockCounterClockwiseIcon,
   FlaskIcon,
   BugIcon,
-  ArrowSquareOutIcon,
   CheckCircleIcon,
   XCircleIcon,
   ProhibitIcon,
@@ -20,9 +20,9 @@ import { executionsApi, jiraIssuesApi } from '../../api/client';
 import type { Execution, JiraIssue } from '../../api/client';
 import { useProject } from '../../context/ProjectContext';
 import { useBoard } from '../../context/BoardContext';
-import { typeColor } from '../../utils/priority';
 import { progressOf, bandColor, executionTitle, computeSuccessRate, COMPLETED_EXECUTIONS_LIMIT } from './shared';
 import { InfoTooltip } from '../../components/InfoTooltip';
+import { IssuesTable, IssueKeyLink, IssueTypeTag, IssuePriorityTag } from '../../components/IssuesTable';
 
 const ACTIVE_EXECUTIONS_LIMIT = 50; // teto do endpoint; cobre o caso de várias execuções simultâneas
 const RECENT_COMPLETED_DISPLAY = 3; // quantas aparecem na lista "Últimas Execuções Concluídas"
@@ -201,8 +201,7 @@ export function OperacaoTab({ active }: OperacaoTabProps) {
           <WarningIcon size={18} weight="duotone" style={{ color: 'var(--status-blocked)' }} />
           <h2 style={{ fontSize: '1.1rem', fontWeight: 700, letterSpacing: '-0.01em' }}>Atenção</h2>
           <InfoTooltip>
-            Alertas que pedem ação agora: bugs Ready for Test aguardando validação, e execuções concluídas
-            (das últimas {COMPLETED_EXECUTIONS_LIMIT}) com item(ns) reprovado(s) ou bloqueado(s).
+            Bugs aguardando validação e execuções com item reprovado ou bloqueado (últimas {COMPLETED_EXECUTIONS_LIMIT}).
           </InfoTooltip>
         </div>
         {alerts.length === 0 ? (
@@ -234,20 +233,20 @@ export function OperacaoTab({ active }: OperacaoTabProps) {
       <div className="stats-grid">
         <div className="stat-card">
           <p className="stat-label" title="Execuções em Andamento">Execuções em Andamento</p>
-          <p className="stat-value progress">{activeExecutions.length}</p>
+          <p className="stat-value progress"><CountUp value={activeExecutions.length} /></p>
         </div>
         <div className="stat-card">
           <p className="stat-label" title="Bugs Ready for Test">Bugs Ready for Test</p>
-          <p className="stat-value">{isNoneBoard ? '—' : bugsTotal}</p>
+          <p className="stat-value">{isNoneBoard ? '—' : <CountUp value={bugsTotal} />}</p>
         </div>
         <div className="stat-card">
           <p className="stat-label" title="Melhorias Ready for Test">Melhorias Ready for Test</p>
-          <p className="stat-value">{isNoneBoard ? '—' : improvementsTotal}</p>
+          <p className="stat-value">{isNoneBoard ? '—' : <CountUp value={improvementsTotal} />}</p>
         </div>
         <div className="stat-card">
           <p className="stat-label" title="Taxa de Sucesso">Taxa de Sucesso</p>
           <p className="stat-value" style={{ color: successRate !== null ? bandColor(successRate) : undefined }}>
-            {successRate !== null ? `${successRate}%` : '—'}
+            {successRate !== null ? <CountUp value={successRate} suffix="%" /> : '—'}
           </p>
         </div>
       </div>
@@ -258,8 +257,7 @@ export function OperacaoTab({ active }: OperacaoTabProps) {
           <BugIcon size={18} weight="duotone" style={{ color: 'var(--status-failed)' }} />
           <h2 style={{ fontSize: '1.1rem', fontWeight: 700, letterSpacing: '-0.01em' }}>Ready for Test</h2>
           <InfoTooltip>
-            Bugs e melhorias do quadro selecionado cujo status no Jira é "Ready for Test" — itens já
-            corrigidos/implementados, aguardando validação.
+            Itens já corrigidos, aguardando validação — status "Ready for Test" no Jira.
           </InfoTooltip>
           <button className="btn btn-ghost btn-sm" style={{ marginLeft: 'auto' }} onClick={() => navigate('/jira-issues')}>
             Ver todas
@@ -295,46 +293,17 @@ export function OperacaoTab({ active }: OperacaoTabProps) {
               </div>
             ) : (
               <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-                <div className="table-wrapper" style={{ maxHeight: 420, overflowY: 'auto' }}>
-                  <table>
-                    <thead>
-                      <tr>
-                        <th style={{ width: 130 }}>Chave</th>
-                        <th>Título</th>
-                        <th style={{ width: 110 }}>Tipo</th>
-                        <th style={{ width: 160 }}>Responsável</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {readyForTestIssues.map(issue => (
-                        <tr key={issue.key}>
-                          <td>
-                            <a
-                              href={issue.link}
-                              target="_blank"
-                              rel="noreferrer"
-                              style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--accent)', fontSize: '0.85rem', fontFamily: 'monospace' }}
-                            >
-                              {issue.key} <ArrowSquareOutIcon size={11} />
-                            </a>
-                          </td>
-                          <td style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>{issue.summary}</td>
-                          <td>
-                            {(() => {
-                              const c = typeColor(issue.issuetype);
-                              return (
-                                <span className="tag" style={c ? { background: c.bg, color: c.color } : undefined}>
-                                  {issue.issuetype}
-                                </span>
-                              );
-                            })()}
-                          </td>
-                          <td style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{issue.assignee ?? '—'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                <IssuesTable
+                  issues={readyForTestIssues}
+                  height={readyForTestIssues.length > 5 ? 420 : undefined}
+                  columns={[
+                    { header: 'ID', width: 130, render: issue => <IssueKeyLink issue={issue} /> },
+                    { header: 'Título', render: issue => <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>{issue.summary}</span> },
+                    { header: 'Tipo', width: 110, render: issue => <IssueTypeTag issue={issue} /> },
+                    { header: 'Severidade', width: 110, render: issue => <IssuePriorityTag issue={issue} /> },
+                    { header: 'Responsável', width: 160, render: issue => <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{issue.assignee ?? '—'}</span> },
+                  ]}
+                />
               </div>
             )}
           </>
@@ -347,8 +316,8 @@ export function OperacaoTab({ active }: OperacaoTabProps) {
           <PlusCircleIcon size={18} weight="duotone" style={{ color: 'var(--text-muted)' }} />
           <h2 style={{ fontSize: '1.1rem', fontWeight: 700, letterSpacing: '-0.01em' }}>Últimos Bugs e Melhorias Criados</h2>
           <InfoTooltip>
-            Os {RECENT_ISSUES_LIMIT} bugs/melhorias mais recentes do quadro selecionado, ordenados pela
-            data de criação no Jira (não é uma janela por dias, é sempre a quantidade mais recente).
+            Os {RECENT_ISSUES_LIMIT} mais recentes por data de criação no Jira — sempre {RECENT_ISSUES_LIMIT},
+            não uma janela de dias.
           </InfoTooltip>
           <button className="btn btn-ghost btn-sm" style={{ marginLeft: 'auto' }} onClick={() => navigate('/jira-issues')}>
             Ver todas
@@ -368,50 +337,24 @@ export function OperacaoTab({ active }: OperacaoTabProps) {
           </div>
         ) : (
           <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-            <div className="table-wrapper">
-              <table>
-                <thead>
-                  <tr>
-                    <th style={{ width: 130 }}>Chave</th>
-                    <th>Título</th>
-                    <th style={{ width: 110 }}>Tipo</th>
-                    <th style={{ width: 150 }}>Status</th>
-                    <th style={{ width: 120 }}>Criado em</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {recentIssues.map(issue => (
-                    <tr key={issue.key}>
-                      <td>
-                        <a
-                          href={issue.link}
-                          target="_blank"
-                          rel="noreferrer"
-                          style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--accent)', fontSize: '0.85rem', fontFamily: 'monospace' }}
-                        >
-                          {issue.key} <ArrowSquareOutIcon size={11} />
-                        </a>
-                      </td>
-                      <td style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>{issue.summary}</td>
-                      <td>
-                        {(() => {
-                          const c = typeColor(issue.issuetype);
-                          return (
-                            <span className="tag" style={c ? { background: c.bg, color: c.color } : undefined}>
-                              {issue.issuetype}
-                            </span>
-                          );
-                        })()}
-                      </td>
-                      <td><span className="tag" style={{ whiteSpace: 'nowrap' }}>{issue.status}</span></td>
-                      <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
-                        {issue.created ? new Date(issue.created).toLocaleDateString('pt-BR') : '—'}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <IssuesTable
+              issues={recentIssues}
+              columns={[
+                { header: 'ID', width: 130, render: issue => <IssueKeyLink issue={issue} /> },
+                { header: 'Título', render: issue => <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>{issue.summary}</span> },
+                { header: 'Tipo', width: 110, render: issue => <IssueTypeTag issue={issue} /> },
+                { header: 'Severidade', width: 110, render: issue => <IssuePriorityTag issue={issue} /> },
+                { header: 'Status', width: 150, render: issue => <span className="tag" style={{ whiteSpace: 'nowrap' }}>{issue.status}</span> },
+                {
+                  header: 'Criado em', width: 120, nowrap: true,
+                  render: issue => (
+                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                      {issue.created ? new Date(issue.created).toLocaleDateString('pt-BR') : '—'}
+                    </span>
+                  ),
+                },
+              ]}
+            />
           </div>
         )}
       </section>
@@ -422,8 +365,7 @@ export function OperacaoTab({ active }: OperacaoTabProps) {
           <PlayIcon size={18} weight="duotone" style={{ color: 'var(--secondary)' }} />
           <h2 style={{ fontSize: '1.1rem', fontWeight: 700, letterSpacing: '-0.01em' }}>Execuções em Andamento</h2>
           <InfoTooltip>
-            Execuções com status "Em Andamento". A barra mostra o percentual de casos de teste (ou
-            cenários, quando existem) já executados em relação ao total da execução.
+            A barra mostra quantos casos de teste já foram executados, do total da execução.
           </InfoTooltip>
         </div>
         {activeExecutions.length === 0 ? (
@@ -471,8 +413,10 @@ export function OperacaoTab({ active }: OperacaoTabProps) {
           <ClockCounterClockwiseIcon size={18} weight="duotone" style={{ color: 'var(--text-muted)' }} />
           <h2 style={{ fontSize: '1.1rem', fontWeight: 700, letterSpacing: '-0.01em' }}>Últimas Execuções Concluídas</h2>
           <InfoTooltip>
-            As {RECENT_COMPLETED_DISPLAY} execuções concluídas mais recentes. O ícone indica se a execução
-            teve algum item reprovado (✖ vermelho), bloqueado (⊘ amarelo), ou se tudo foi aprovado (✔ verde).
+            As {RECENT_COMPLETED_DISPLAY} mais recentes. O ícone resume o resultado:<br />
+            ✖ vermelho — teve item reprovado<br />
+            ⊘ amarelo — teve item bloqueado<br />
+            ✔ verde — tudo aprovado
           </InfoTooltip>
           <button className="btn btn-ghost btn-sm" style={{ marginLeft: 'auto' }} onClick={() => navigate('/executions')}>
             Ver todas
@@ -518,9 +462,8 @@ export function OperacaoTab({ active }: OperacaoTabProps) {
           <ChartLineUpIcon size={18} weight="duotone" style={{ color: 'var(--text-muted)' }} />
           <h2 style={{ fontSize: '1.1rem', fontWeight: 700, letterSpacing: '-0.01em' }}>Qualidade</h2>
           <InfoTooltip>
-            Taxa de aprovação de cada uma das últimas {COMPLETED_EXECUTIONS_LIMIT} execuções concluídas — casos
-            de teste (ou cenários, quando existem) marcados como Aprovado dividido pelo total já executado
-            (Aprovado + Reprovado + Bloqueado) naquela execução.
+            Taxa de aprovação de cada uma das últimas {COMPLETED_EXECUTIONS_LIMIT} execuções: aprovados ÷ total
+            executado (aprovados + reprovados + bloqueados).
           </InfoTooltip>
         </div>
         {chartData.length === 0 ? (

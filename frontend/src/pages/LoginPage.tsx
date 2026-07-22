@@ -1,4 +1,8 @@
+import { motion } from 'framer-motion';
 import { WarningCircle } from '@phosphor-icons/react';
+import { ThemeToggle } from '../components/ThemeToggle';
+import { BrandLogo } from '../components/BrandLogo';
+import { fadeInUp } from '../utils/motion';
 
 const BACKEND_URL = 'http://localhost:3000';
 
@@ -11,29 +15,33 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="page" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
-      <div className="card" style={{ maxWidth: 400, width: '100%', textAlign: 'center' }}>
-        <img src="/tr-logo.svg" alt="Testrun" style={{ height: 40, margin: '0 auto 1.5rem' }} />
+    <div className="login-page">
+      <div className="login-theme-toggle">
+        <ThemeToggle />
+      </div>
+      <motion.div className="login-card" variants={fadeInUp} initial="hidden" animate="visible">
+        <BrandLogo style={{ height: 40, margin: '0 auto 1.5rem' }} />
         <h1 className="page-title" style={{ marginBottom: '0.5rem' }}>Bem-vindo ao TestRun</h1>
         <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
           Entre com sua conta Atlassian para gerenciar suítes e execuções de teste.
         </p>
 
         {error && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 'var(--radius-sm)', marginBottom: '1rem', fontSize: '0.85rem', color: 'var(--status-failed)', textAlign: 'left' }}>
+          <div className="alert alert-danger" style={{ marginBottom: '1rem', textAlign: 'left', alignItems: 'center' }}>
             <WarningCircle size={16} /> Não foi possível concluir o login. Tente novamente.
           </div>
         )}
 
-        <button
+        <motion.button
           type="button"
           className="btn btn-primary"
           onClick={handleLogin}
           style={{ width: '100%', justifyContent: 'center' }}
+          whileTap={{ scale: 0.97 }}
         >
           Entrar com Atlassian
-        </button>
-      </div>
+        </motion.button>
+      </motion.div>
     </div>
   );
 }

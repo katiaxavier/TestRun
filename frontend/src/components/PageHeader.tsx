@@ -13,12 +13,12 @@ export function PageHeader({ backLabel, onBack, eyebrow, title, actions }: PageH
   return (
     <div className="page-header">
       <div style={{ flex: 1 }}>
-        <button className="btn btn-ghost btn-sm" onClick={onBack} style={{ marginBottom: '2rem', paddingLeft: 0, fontSize: '1rem' }}>
+        <button className="btn btn-ghost btn-sm" onClick={onBack} style={{ marginBottom: '1.5rem', paddingLeft: 0, fontSize: '0.95rem' }}>
           <ArrowLeft size={15} /> {backLabel}
         </button>
         <div>
           {eyebrow != null && (
-            <span style={{ fontFamily: 'monospace', fontSize: '1.25rem', opacity: 0.7, display: 'inline-block', marginBottom: '0.35rem' }}>
+            <span style={{ fontFamily: 'var(--font-mono)', fontSize: '1.1rem', color: 'var(--accent)', opacity: 0.85, display: 'inline-block', marginBottom: '0.35rem' }}>
               {eyebrow}
             </span>
           )}

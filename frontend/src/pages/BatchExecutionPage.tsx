@@ -116,7 +116,7 @@ export default function BatchExecutionPage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
             {activeSuites.map(s => (
               <span key={s.id} style={{ fontSize: '0.85rem', fontWeight: 400 }}>
-                {(s.jiraKey ?? s.manualKey) && <span style={{ fontWeight: 600, fontFamily: 'monospace' }}>{s.jiraKey ?? s.manualKey} · </span>}{s.title}
+                {(s.jiraKey ?? s.manualKey) && <span style={{ fontWeight: 600, fontFamily: 'var(--font-mono)' }}>{s.jiraKey ?? s.manualKey} · </span>}{s.title}
               </span>
             ))}
           </div>
@@ -152,6 +152,7 @@ export default function BatchExecutionPage() {
             suiteMap={suiteMap}
             onDelete={handleRemoveTestCase}
             renderExtra={tc => <ScenarioPreview tc={tc} />}
+            height={520}
           />
         </div>
       </motion.div>

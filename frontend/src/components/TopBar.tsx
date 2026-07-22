@@ -1,5 +1,6 @@
 import { useLocation } from 'react-router-dom';
 import { GaugeIcon, FlaskIcon, PlayIcon, CopyIcon, ClockCounterClockwiseIcon, BugIcon } from '@phosphor-icons/react';
+import { ThemeToggle } from './ThemeToggle';
 
 type RouteConfig = {
   match: (pathname: string) => boolean;
@@ -29,6 +30,9 @@ export function TopBar() {
     <div className="topbar">
       <Icon size={18} weight="duotone" className="topbar-icon" />
       <span className="topbar-title">{title}</span>
+      <div className="topbar-actions">
+        <ThemeToggle />
+      </div>
     </div>
   );
 }

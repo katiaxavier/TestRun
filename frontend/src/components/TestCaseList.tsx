@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowSquareOut, CaretLeft, CaretRight, Flask, MagnifyingGlass, Trash } from '@phosphor-icons/react';
 import type { Suite, TestCase } from '../api/client';
@@ -12,13 +12,15 @@ interface TestCaseListProps {
   suiteMap?: Record<string, Suite>;
   renderExtra?: (tc: TestCase) => React.ReactNode;
   isManual?: boolean;
+  /** Ativa scroll vertical com cabeçalho fixo (sticky): altura fixa em px, independente da quantidade de itens. */
+  height?: number;
 }
 
 type PriorityFilter = 'all' | 'Gravíssima' | 'Crítica' | 'Alta' | 'Média' | 'Normal' | 'Trivial';
 
 const PAGE_SIZES = [10, 25, 50, 100] as const;
 
-export function TestCaseList({ testCases, onDelete, onToggleAutomated, suiteMap, renderExtra, isManual }: TestCaseListProps) {
+export function TestCaseList({ testCases, onDelete, onToggleAutomated, suiteMap, renderExtra, isManual, height }: TestCaseListProps) {
   const [search, setSearch] = useState('');
   const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>('all');
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -48,6 +50,9 @@ export function TestCaseList({ testCases, onDelete, onToggleAutomated, suiteMap,
   const currentPage = Math.min(page, totalPages);
   const pageStartIndex = pageSize === 'all' ? 0 : (currentPage - 1) * pageSize;
   const displayed = pageSize === 'all' ? filtered : filtered.slice(pageStartIndex, pageStartIndex + pageSize);
+
+  const scrollRef = useRef<HTMLDivElement>(null);
+  useEffect(() => { scrollRef.current?.scrollTo(0, 0); }, [currentPage]);
 
   const handleToggleAutomated = async (id: string, automated: boolean) => {
     if (!onToggleAutomated) return;
@@ -121,7 +126,7 @@ export function TestCaseList({ testCases, onDelete, onToggleAutomated, suiteMap,
       </div>
 
       {/* Table */}
-      <div className="table-wrapper">
+      <div ref={scrollRef} className="table-wrapper" style={height ? { height, overflowY: 'auto' } : undefined}>
         <table>
           <thead>
             <tr>
@@ -151,7 +156,7 @@ export function TestCaseList({ testCases, onDelete, onToggleAutomated, suiteMap,
                         <Link
                           to={`/suite/${suite.id}`}
                           onClick={e => e.stopPropagation()}
-                          style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--accent)', fontSize: '0.85rem', fontFamily: 'monospace' }}
+                          style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--accent)', fontSize: '0.85rem', fontFamily: 'var(--font-mono)' }}
                         >
                           {suite.jiraKey ?? suite.manualKey ?? suite.title}
                         </Link>
@@ -167,7 +172,7 @@ export function TestCaseList({ testCases, onDelete, onToggleAutomated, suiteMap,
                         target="_blank"
                         rel="noreferrer"
                         onClick={e => e.stopPropagation()}
-                        style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--accent)', fontSize: '0.85rem', fontFamily: 'monospace' }}
+                        style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--accent)', fontSize: '0.85rem', fontFamily: 'var(--font-mono)' }}
                       >
                         {tc.jiraKey} <ArrowSquareOut size={11} />
                       </a>

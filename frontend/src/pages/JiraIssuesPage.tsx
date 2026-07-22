@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowSquareOut, CaretLeft, CaretRight, Bug, MagnifyingGlass } from '@phosphor-icons/react';
+import { CaretLeft, CaretRight, Bug, MagnifyingGlass } from '@phosphor-icons/react';
 import { jiraIssuesApi } from '../api/client';
 import type { JiraIssue, JiraIssueFilters } from '../api/client';
 import { useProject } from '../context/ProjectContext';
 import { useBoard } from '../context/BoardContext';
-import { PRIORITY_COLORS, priorityLabel, typeColor } from '../utils/priority';
+import { IssuesTable, IssueKeyLink, IssueTypeTag, IssuePriorityTag } from '../components/IssuesTable';
 
 const PAGE_SIZES = [10, 25, 50, 100] as const;
 const EMPTY_FILTERS: JiraIssueFilters = { types: [], statuses: [], priorities: [] };
@@ -88,9 +88,14 @@ export default function JiraIssuesPage() {
   }
 
   return (
-    <div className="page">
-      <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
-        <div className="page-header">
+    <div className="page" style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - var(--topbar-height))' }}>
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+        style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}
+      >
+        <div className="page-header" style={{ flexShrink: 0 }}>
           <div>
             <h1 className="page-title">Bugs e Melhorias</h1>
             <p className="page-subtitle">Bugs e melhorias registrados no Jira do quadro selecionado</p>
@@ -116,7 +121,7 @@ export default function JiraIssuesPage() {
             <p>Selecione um quadro real do Jira no menu lateral para ver bugs e melhorias.</p>
           </div>
         ) : (
-          <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+          <div className="card" style={{ padding: 0, overflow: 'hidden', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
             {/* Busca + filtros */}
             <div style={{
               padding: '1rem',
@@ -125,6 +130,7 @@ export default function JiraIssuesPage() {
               flexWrap: 'wrap',
               gap: '0.75rem',
               alignItems: 'center',
+              flexShrink: 0,
             }}>
               <div style={{ position: 'relative', flex: '1 1 160px', minWidth: 160 }}>
                 <MagnifyingGlass
@@ -165,72 +171,31 @@ export default function JiraIssuesPage() {
             {loading ? (
               <div className="loading-page" style={{ padding: '2.5rem' }}><div className="spinner" /> Carregando...</div>
             ) : (
-              <div className="table-wrapper">
-                <table>
-                  <thead>
-                    <tr>
-                      <th style={{ width: 130 }}>Chave</th>
-                      <th>Título</th>
-                      <th style={{ width: 110 }}>Tipo</th>
-                      <th style={{ width: 150 }}>Status</th>
-                      <th style={{ width: 130 }}>Severidade</th>
-                      <th style={{ width: 160 }}>Responsável</th>
-                      <th style={{ width: 140, whiteSpace: 'nowrap' }}>Atualizado em</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.length === 0 ? (
-                      <tr>
-                        <td colSpan={7} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
-                          {hasFilters ? 'Nenhum resultado com os filtros aplicados.' : 'Sem bugs ou melhorias neste quadro.'}
-                        </td>
-                      </tr>
-                    ) : data.map(issue => (
-                      <tr key={issue.key}>
-                        <td>
-                          <a
-                            href={issue.link}
-                            target="_blank"
-                            rel="noreferrer"
-                            style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--accent)', fontSize: '0.85rem', fontFamily: 'monospace' }}
-                          >
-                            {issue.key} <ArrowSquareOut size={11} />
-                          </a>
-                        </td>
-                        <td style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>{issue.summary}</td>
-                        <td>
-                          {(() => {
-                            const c = typeColor(issue.issuetype);
-                            return (
-                              <span className="tag" style={c ? { background: c.bg, color: c.color } : undefined}>
-                                {typeLabel(issue.issuetype)}
-                              </span>
-                            );
-                          })()}
-                        </td>
-                        <td><span className="tag" style={{ whiteSpace: 'nowrap' }}>{issue.status}</span></td>
-                        <td>
-                          {issue.priority ? (
-                            <span className="tag" style={{ background: `${PRIORITY_COLORS[priorityLabel(issue.priority)]}20`, color: PRIORITY_COLORS[priorityLabel(issue.priority)] }}>
-                              {priorityLabel(issue.priority)}
-                            </span>
-                          ) : (
-                            <span style={{ color: 'var(--text-muted)' }}>—</span>
-                          )}
-                        </td>
-                        <td style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{issue.assignee ?? '—'}</td>
-                        <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
-                          {issue.updated ? new Date(issue.updated).toLocaleDateString('pt-BR') : '—'}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <IssuesTable
+                issues={data}
+                fillHeight
+                emptyMessage={hasFilters ? 'Nenhum resultado com os filtros aplicados.' : 'Sem bugs ou melhorias neste quadro.'}
+                columns={[
+                  { header: 'ID', width: 130, render: issue => <IssueKeyLink issue={issue} /> },
+                  { header: 'Título', render: issue => <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>{issue.summary}</span> },
+                  { header: 'Tipo', width: 110, render: issue => <IssueTypeTag issue={issue} label={typeLabel(issue.issuetype)} /> },
+                  { header: 'Status', width: 150, render: issue => <span className="tag" style={{ whiteSpace: 'nowrap' }}>{issue.status}</span> },
+                  { header: 'Severidade', width: 130, render: issue => <IssuePriorityTag issue={issue} /> },
+                  { header: 'Responsável', width: 160, render: issue => <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{issue.assignee ?? '—'}</span> },
+                  {
+                    header: 'Atualizado em', width: 140, nowrap: true,
+                    render: issue => (
+                      <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                        {issue.updated ? new Date(issue.updated).toLocaleDateString('pt-BR') : '—'}
+                      </span>
+                    ),
+                  },
+                ]}
+              />
             )}
 
             {!loading && totalPages > 1 && (
-              <div style={{ display: 'flex', justifyContent: 'center', padding: '0.75rem 1.25rem', borderTop: '1px solid var(--border-subtle)' }}>
+              <div style={{ display: 'flex', justifyContent: 'center', padding: '0.75rem 1.25rem', borderTop: '1px solid var(--border-subtle)', flexShrink: 0 }}>
                 <div className="filters" style={{ gap: 0 }}>
                   <button className="filter-item" onClick={() => setPage(p => p - 1)} disabled={page <= 1} style={{ opacity: page <= 1 ? 0.35 : 1 }}>
                     <CaretLeft size={15} /> Anterior

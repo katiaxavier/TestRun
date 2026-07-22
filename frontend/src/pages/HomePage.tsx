@@ -1,16 +1,33 @@
 import { useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { GaugeIcon } from '@phosphor-icons/react';
+import { springSnappy } from '../utils/motion';
 import { useProject } from '../context/ProjectContext';
 import { useBoard } from '../context/BoardContext';
 import { OperacaoTab } from './dashboard/OperacaoTab';
 import { QualidadeTab } from './dashboard/QualidadeTab';
 import { EficienciaTab } from './dashboard/EficienciaTab';
-import { InfoTooltip } from '../components/InfoTooltip';
 
+// A pergunta desperta a curiosidade; o resumo diz o que a aba entrega.
 const TABS = [
-  { key: 'operacao', label: 'Operação', question: 'O que está acontecendo agora?' },
-  { key: 'qualidade', label: 'Qualidade', question: 'Qual a saúde do produto?' },
-  { key: 'eficiencia', label: 'Eficiência', question: 'Estamos resolvendo os problemas no tempo esperado?' },
+  {
+    key: 'operacao',
+    label: 'Operação',
+    question: 'O que está acontecendo agora?',
+    summary: 'Alertas, execuções em andamento e itens aguardando validação.',
+  },
+  {
+    key: 'qualidade',
+    label: 'Qualidade',
+    question: 'Como está a saúde do produto?',
+    summary: 'Taxa de aprovação, densidade de defeitos e cobertura de testes.',
+  },
+  {
+    key: 'eficiencia',
+    label: 'Eficiência',
+    question: 'Estamos resolvendo os problemas no tempo esperado?',
+    summary: 'MTTR, idade dos bugs abertos e SLA.',
+  },
 ] as const;
 type TabKey = typeof TABS[number]['key'];
 
@@ -67,17 +84,35 @@ export default function HomePage() {
         </div>
       </div>
 
-      <div className="filters" style={{ marginBottom: '2rem' }}>
+      <div className="tabs">
         {TABS.map(tab => (
           <button
             key={tab.key}
-            className={`filter-item ${activeTab === tab.key ? 'active' : ''}`}
+            className={`tab ${activeTab === tab.key ? 'active' : ''}`}
             onClick={() => selectTab(tab.key)}
           >
-            {tab.label}
-            <InfoTooltip>{tab.question}</InfoTooltip>
+            {activeTab === tab.key && (
+              <motion.span className="tab-pill" layoutId="dashboard-tab-pill" transition={springSnappy} />
+            )}
+            <span>{tab.label}</span>
           </button>
         ))}
+      </div>
+
+      {/* Subtítulo sempre visível: explica a aba ativa sem exigir hover num ícone de info. */}
+      <div className="tabs-subtitle">
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={activeTab}
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 4 }}
+            transition={{ duration: 0.18 }}
+          >
+            <p className="tabs-subtitle-question">{TABS.find(t => t.key === activeTab)!.question}</p>
+            <p className="tabs-subtitle-summary">{TABS.find(t => t.key === activeTab)!.summary}</p>
+          </motion.div>
+        </AnimatePresence>
       </div>
 
       {visitedTabs.has('operacao') && (

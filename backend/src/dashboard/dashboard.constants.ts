@@ -26,12 +26,34 @@ export const SLA_DAYS_BY_PRIORITY: Record<string, number> = {
   Lowest: 45,
 };
 
+// Normaliza a prioridade bruta do Jira (qualquer idioma/grafia) pra uma das 6 severidades
+// canônicas em português — mesma tabela de frontend/src/utils/priority.ts (priorityLabel),
+// duplicada aqui porque não há pacote compartilhado front/back neste repo (mesmo padrão já
+// usado por SLA_DAYS_BY_PRIORITY e reaproveitado por reports.service.ts). É o que permite um
+// override de SLA por quadro (chave = severidade canônica) valer tanto pra sites Jira em
+// português quanto no esquema padrão em inglês.
+const CANONICAL_SEVERITY_BY_NORMALIZED: Record<string, string> = {
+  highest: 'Gravíssima', critical: 'Gravíssima', gravissima: 'Gravíssima',
+  high: 'Crítica', critica: 'Crítica',
+  alta: 'Alta',
+  medium: 'Média', media: 'Média',
+  low: 'Normal', normal: 'Normal',
+  trivial: 'Trivial',
+};
+
+export function canonicalSeverityLabel(priority: string): string {
+  const normalized = priority.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  return CANONICAL_SEVERITY_BY_NORMALIZED[normalized] ?? priority;
+}
+
 // Fração do prazo de SLA a partir da qual um bug em aberto (ainda dentro do prazo) já conta
 // como "próximo do SLA" em vez de "dentro do SLA" — ex. 0.8 = últimos 20% do prazo. Editável,
 // mesmo padrão de constante ajustável de SLA_DAYS_BY_PRIORITY.
 export const SLA_WARNING_THRESHOLD = 0.8;
 
-// Meta de MTTR (aba Eficiência), em dias. Valor placeholder (mesmo exemplo do documento de
-// proposta do stakeholder) — AINDA NÃO CONFIRMADO com o usuário/time; ajustar antes de
-// considerar essa métrica validada, mesmo risco já assumido para SLA_DAYS_BY_PRIORITY.
-export const MTTR_TARGET_DAYS = 20;
+// Janela de tempo do MTTR (aba Eficiência): só entram bugs resolvidos nos últimos N dias,
+// pra refletir o ritmo atual do time em vez da história inteira do projeto (que arrasta bugs
+// de anos atrás e só tende a piorar a média conforme a base cresce). A meta de cada bug
+// resolvido é o próprio prazo de SLA da severidade dele (SLA_DAYS_BY_PRIORITY) — não há mais
+// uma meta única fixa.
+export const MTTR_WINDOW_DAYS = 90;

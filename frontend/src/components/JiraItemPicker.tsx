@@ -183,7 +183,7 @@ export function JiraItemPicker({ projectId, type, value, onChange, placeholder }
                   }}
                   className="picker-option"
                 >
-                  <span style={{ fontFamily: 'monospace', fontSize: '0.8rem', color: 'var(--accent)' }}>
+                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', color: 'var(--accent)' }}>
                     {issue.key}
                   </span>
                   <div style={{ flex: 1, minWidth: 0 }}>

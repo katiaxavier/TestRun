@@ -33,28 +33,17 @@ export function DropdownMenu({ trigger, items }: DropdownMenuProps) {
       <AnimatePresence>
         {open && (
           <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            style={{
-              position: 'absolute', top: '100%', right: 0, marginTop: 4,
-              background: 'var(--bg-surface)', border: '1px solid var(--border)',
-              borderRadius: 'var(--radius-sm)', minWidth: 140, zIndex: 100,
-              boxShadow: '0 4px 12px rgba(0,0,0,0.15)', padding: '0.25rem 0',
-            }}
+            className="menu"
+            initial={{ opacity: 0, scale: 0.95, y: -4 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: -4 }}
+            transition={{ duration: 0.15 }}
           >
             {items.map((item, i) => (
               <button
                 key={i}
+                className={`menu-item${item.danger ? ' danger' : ''}`}
                 onClick={e => { e.stopPropagation(); item.onClick(); setOpen(false); }}
-                style={{
-                  width: '100%', display: 'flex', alignItems: 'center', gap: '0.5rem',
-                  padding: '0.5rem 0.75rem', fontSize: '0.85rem',
-                  background: 'none', border: 'none', cursor: 'pointer',
-                  color: item.danger ? 'var(--status-failed)' : 'var(--text-primary)',
-                }}
-                onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-subtle)'}
-                onMouseLeave={e => e.currentTarget.style.background = 'none'}
               >
                 {item.icon}
                 {item.label}

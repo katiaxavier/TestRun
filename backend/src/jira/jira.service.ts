@@ -382,26 +382,11 @@ export class JiraService {
     return { issues, total: issues.length, startAt: 0, maxResults: pageSize };
   }
 
-  // Conta issues do projeto sem paginar/trazer o payload completo — usa
-  // /search/approximate-count (só JQL no corpo, devolve { count }), pra casos como
-  // o dashboard de qualidade que só precisa do total de épicos, não dos dados deles.
-  async countIssuesByProject(
-    userId: string,
-    jiraProjectKey: string,
-    opts: { type?: 'Bug' | 'Improvement' | 'Epic' | Array<'Bug' | 'Improvement'> } = {},
-  ): Promise<number> {
+  // Conta issues via /search/approximate-count (só JQL no corpo, devolve { count }) — sem
+  // paginar/trazer o payload completo. Reaproveitado tanto por contagem de projeto inteiro
+  // quanto por contagem escopada a um quadro (ver countEpicsByBoard).
+  private async approximateCount(userId: string, jql: string): Promise<number> {
     const { accessToken, apiBaseUrl } = await this.authContext(userId);
-
-    const clauses = [`project = "${this.escapeJql(jiraProjectKey)}"`];
-    if (opts.type) {
-      const types = Array.isArray(opts.type) ? opts.type : [opts.type];
-      clauses.push(
-        types.length === 1
-          ? `issuetype = "${types[0]}"`
-          : `issuetype in (${types.map((t) => `"${t}"`).join(', ')})`,
-      );
-    }
-    const jql = clauses.join(' AND ');
 
     const response = await this.fetchWithRetry(`${apiBaseUrl}/rest/api/3/search/approximate-count`, {
       method: 'POST',
@@ -416,13 +401,93 @@ export class JiraService {
     if (!response.ok) {
       const body = await response.text().catch(() => '');
       throw new HttpException(
-        `Erro ao contar issues do projeto no Jira (${response.statusText}): ${body}`,
+        `Erro ao contar issues no Jira (${response.statusText}): ${body}`,
         HttpStatus.BAD_REQUEST,
       );
     }
 
     const data = await response.json();
     return data.count ?? 0;
+  }
+
+  async countIssuesByProject(
+    userId: string,
+    jiraProjectKey: string,
+    opts: { type?: 'Bug' | 'Improvement' | 'Epic' | Array<'Bug' | 'Improvement'> } = {},
+  ): Promise<number> {
+    const clauses = [`project = "${this.escapeJql(jiraProjectKey)}"`];
+    if (opts.type) {
+      const types = Array.isArray(opts.type) ? opts.type : [opts.type];
+      clauses.push(
+        types.length === 1
+          ? `issuetype = "${types[0]}"`
+          : `issuetype in (${types.map((t) => `"${t}"`).join(', ')})`,
+      );
+    }
+    return this.approximateCount(userId, clauses.join(' AND '));
+  }
+
+  private boardFilterJqlCache = new Map<string, { jql: string; expiresAt: number }>();
+  private static readonly BOARD_FILTER_JQL_TTL_MS = 30 * 60 * 1000;
+
+  // JQL salva do filtro do quadro (ex. "project = PD AND labels in (dt-polimeros)") — usada
+  // pra escopar contagens (como Épicos) ao que o board realmente mostra, em vez de assumir
+  // sempre o projeto inteiro. board/{id}/configuration devolve o filterId; filter/{id} devolve
+  // a JQL salva. Cacheada em memória (TTL curto) porque o filtro de um board muda raramente e
+  // essa busca roda a cada carregamento do dashboard de Qualidade.
+  private async getBoardFilterJql(userId: string, jiraBoardId: string): Promise<string> {
+    const cached = this.boardFilterJqlCache.get(jiraBoardId);
+    if (cached && cached.expiresAt > Date.now()) {
+      return cached.jql;
+    }
+
+    const { accessToken, apiBaseUrl } = await this.authContext(userId);
+
+    const configResponse = await this.fetchWithRetry(
+      `${apiBaseUrl}/rest/agile/1.0/board/${jiraBoardId}/configuration`,
+      { method: 'GET', headers: { Authorization: `Bearer ${accessToken}`, Accept: 'application/json' } },
+    );
+    if (!configResponse.ok) {
+      throw new HttpException(
+        `Erro ao buscar configuração do quadro no Jira (${configResponse.statusText}).`,
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    const configData = await configResponse.json();
+    const filterId = configData.filter?.id;
+    if (!filterId) {
+      throw new HttpException('Quadro sem filtro configurado no Jira.', HttpStatus.BAD_REQUEST);
+    }
+
+    const filterResponse = await this.fetchWithRetry(`${apiBaseUrl}/rest/api/3/filter/${filterId}`, {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${accessToken}`, Accept: 'application/json' },
+    });
+    if (!filterResponse.ok) {
+      throw new HttpException(
+        `Erro ao buscar filtro do quadro no Jira (${filterResponse.statusText}).`,
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    const filterData = await filterResponse.json();
+    // ORDER BY não faz sentido (e nem é sempre aceito) dentro de uma subcláusula composta —
+    // removido antes de compor com outros critérios (ex. `AND issuetype = "Epic"`).
+    const jql = String(filterData.jql ?? '').replace(/\s+ORDER\s+BY\s+.*/i, '').trim();
+
+    this.boardFilterJqlCache.set(jiraBoardId, {
+      jql,
+      expiresAt: Date.now() + JiraService.BOARD_FILTER_JQL_TTL_MS,
+    });
+    return jql;
+  }
+
+  // Conta Épicos escopados ao filtro real do quadro (não ao projeto inteiro) — o filtro do
+  // board pode ter qualquer combinação de critérios (status, labels, etc.) e raramente
+  // restringe issuetype, então Épicos que também atendam a esses critérios entram na conta.
+  async countEpicsByBoard(userId: string, jiraBoardId: string): Promise<number> {
+    const boardJql = await this.getBoardFilterJql(userId, jiraBoardId);
+    const jql = boardJql ? `(${boardJql}) AND issuetype = "Epic"` : 'issuetype = "Epic"';
+    return this.approximateCount(userId, jql);
   }
 
   // Status possíveis pros tipos Bug/Improvement dentro do workflow do projeto — não é

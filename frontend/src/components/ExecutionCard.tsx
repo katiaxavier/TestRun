@@ -12,19 +12,19 @@ const EXECUTION_STATUS_MAP: Record<string, { label: string; color: string; bg: s
     label: 'Em Andamento',
     color: 'var(--secondary)',
     bg: 'var(--secondary-subtle)',
-    border: 'rgba(0, 102, 255, 0.25)',
+    border: 'var(--info-border)',
   },
   COMPLETED: {
     label: 'Concluído',
     color: 'var(--status-passed)',
     bg: 'var(--status-passed-bg)',
-    border: 'rgba(34, 197, 94, 0.25)',
+    border: 'color-mix(in srgb, var(--status-passed) 25%, transparent)',
   },
   PENDING: {
     label: 'Pendente',
     color: 'var(--text-muted)',
-    bg: 'rgba(107, 114, 128, 0.10)',
-    border: 'rgba(107, 114, 128, 0.2)',
+    bg: 'var(--status-pending-bg)',
+    border: 'color-mix(in srgb, var(--status-pending) 25%, transparent)',
   },
 };
 
@@ -103,7 +103,7 @@ export function ExecutionCard({ execution, title, onClick }: ExecutionCardProps)
           {/* Meta row */}
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', color: 'var(--text-muted)', fontSize: '0.8rem', fontWeight: 500 }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-              <CalendarBlank size={14} color="white" />
+              <CalendarBlank size={14} />
               {dateRange}
             </span>
             {execution.sprint && (
@@ -145,7 +145,7 @@ export function ExecutionCard({ execution, title, onClick }: ExecutionCardProps)
           <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
             Progresso da Execução
           </span>
-          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: progressColor, fontFamily: "'JetBrains Mono', monospace" }}>
+          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: progressColor, fontFamily: 'var(--font-mono)' }}>
             {progressPct}% Completo
           </span>
         </div>
@@ -157,7 +157,7 @@ export function ExecutionCard({ execution, title, onClick }: ExecutionCardProps)
               background: progressColor,
               borderRadius: 99,
               transition: 'width 0.6s ease',
-              boxShadow: progressPct > 0 ? `0 0 8px ${progressColor}66` : 'none',
+              boxShadow: progressPct > 0 ? `0 0 8px color-mix(in srgb, ${progressColor} 40%, transparent)` : 'none',
             }}
           />
         </div>

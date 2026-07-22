@@ -13,7 +13,7 @@ function CustomCheckbox({ checked, onChange }: { checked: boolean; onChange: (ch
       cursor: 'pointer', transition: 'all 0.15s',
     }}>
       <input type="checkbox" checked={checked} onChange={e => onChange(e.target.checked)} style={{ display: 'none' }} />
-      {checked && <Check size={12} weight="bold" style={{ color: '#fff' }} />}
+      {checked && <Check size={12} weight="bold" style={{ color: 'var(--on-accent)' }} />}
     </label>
   );
 }
@@ -34,15 +34,15 @@ export function SuiteCard({ suite, selected, onSelect, onDelete }: SuiteCardProp
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.75rem' }}>
-        <span className="tag" style={{ fontFamily: 'monospace', fontSize: '0.7rem', background: 'var(--accent-subtle)', color: 'var(--accent)', flexShrink: 0 }}>
+        <span className="tag" style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem', background: 'var(--accent-subtle)', color: 'var(--accent)', flexShrink: 0 }}>
           SUITE
         </span>
         {suite.jiraKey ? (
-          <span className="tag" style={{ fontFamily: 'monospace', fontSize: '0.7rem', flexShrink: 0 }}>
+          <span className="tag" style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem', flexShrink: 0 }}>
             {suite.jiraKey}
           </span>
         ) : suite.isManual ? (
-          <span className="tag" style={{ fontFamily: 'monospace', fontSize: '0.7rem', flexShrink: 0 }}>
+          <span className="tag" style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem', flexShrink: 0 }}>
             {suite.manualKey ?? 'Manual'}
           </span>
         ) : null}
