@@ -295,7 +295,7 @@ export function OperacaoTab({ active }: OperacaoTabProps) {
               <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
                 <IssuesTable
                   issues={readyForTestIssues}
-                  height={420}
+                  height={readyForTestIssues.length > 5 ? 420 : undefined}
                   columns={[
                     { header: 'ID', width: 130, render: issue => <IssueKeyLink issue={issue} /> },
                     { header: 'Título', render: issue => <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>{issue.summary}</span> },
