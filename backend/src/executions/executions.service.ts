@@ -1,5 +1,6 @@
 import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { JiraService } from '../jira/jira.service';
 
 export class CreateExecutionDto {
   suiteId!: string;
@@ -71,7 +72,10 @@ export class UpdateScenarioDto {
 
 @Injectable()
 export class ExecutionsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly jiraService: JiraService,
+  ) {}
 
   // boardId === 'none' é o pseudo-quadro "Sem quadro" (suítes/lotes sem quadro no banco).
   async findRecentExecutions(projectId: string, boardId?: string, status?: string, limit = 3) {
@@ -143,7 +147,7 @@ export class ExecutionsService {
     return { data, total, page: Math.max(page, 1), pageSize: take };
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, userId?: string) {
     const execution = await this.prisma.execution.findUnique({
       where: { id },
       include: {
@@ -172,7 +176,43 @@ export class ExecutionsService {
         HttpStatus.NOT_FOUND,
       );
     }
+
+    if (userId) {
+      await this.refreshIssuesFromJira(execution, userId);
+    }
+
     return execution;
+  }
+
+  // Os campos title/status/jiraPriority/jiraLabels do model Issue são um snapshot gravado
+  // no momento da vinculação (addIssue/addScenarioIssue) — se o bug/melhoria mudar depois no
+  // Jira, esse snapshot fica desatualizado. Aqui revalida contra o Jira ao carregar a
+  // execução, sobrescrevendo o snapshot em memória na resposta (sem persistir), para exibir
+  // sempre o estado atual. Falha ao falar com o Jira não deve quebrar o carregamento da
+  // execução — mantém o snapshot salvo nesse caso.
+  private async refreshIssuesFromJira(execution: any, userId: string) {
+    const allIssues = execution.testCases.flatMap((etc: any) => [
+      ...etc.issues,
+      ...etc.scenarios.flatMap((scenario: any) => scenario.issues),
+    ]);
+
+    const keys = allIssues.map((issue: any) => issue.jiraKey).filter((key: unknown): key is string => !!key);
+    if (keys.length === 0) return;
+
+    try {
+      const liveData = await this.jiraService.fetchIssuesByKeys(userId, keys);
+      for (const issue of allIssues) {
+        const live = issue.jiraKey && liveData.get(issue.jiraKey.toUpperCase());
+        if (live) {
+          issue.title = live.title;
+          issue.status = live.status;
+          issue.jiraPriority = live.priority ?? null;
+          issue.jiraLabels = live.labels;
+        }
+      }
+    } catch (error) {
+      console.error('Falha ao atualizar bugs/melhorias com dados ao vivo do Jira:', error);
+    }
   }
 
   async create(dto: CreateExecutionDto) {
