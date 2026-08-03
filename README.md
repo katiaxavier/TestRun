@@ -296,6 +296,7 @@ TestRun/
 - Registro de comentários por caso/cenário
 - Registro de issues (bugs e melhorias) vinculados ao caso ou ao cenário
   - Campos: tipo, chave Jira, título, severidade, status
+  - Título, status, prioridade e labels são revalidados ao vivo contra o Jira sempre que a execução é carregada (issues sem chave Jira mantêm o valor salvo manualmente)
 
 ### Bugs e Melhorias
 
@@ -304,6 +305,8 @@ TestRun/
 - Indisponível quando o quadro selecionado é "Sem quadro" (não há quadro real do Jira para consultar)
 
 ### Relatórios
+
+- Título, status e prioridade de cada bug/melhoria são revalidados ao vivo contra o Jira no momento da geração (mesma regra da tela de Execução), tanto no Excel quanto no PDF, individual ou de lote
 
 - **Excel (.xlsx)** — duas abas:
   - *Visualizar Resultado*: metadados do ciclo (sprint, versão, datas, suíte), fórmulas automáticas de contagem por status e tabela completa de casos de teste com ID clicável (link Jira), título, prioridade, status colorido, responsável, comentários e issues. Cenários aparecem como sublinhas dentro do caso de teste.

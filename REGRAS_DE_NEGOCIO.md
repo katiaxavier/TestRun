@@ -1,7 +1,7 @@
 # Regras de Negócio — TestRun
 
-**Versão:** 2.2  
-**Data:** 21/07/2026  
+**Versão:** 2.4  
+**Data:** 03/08/2026  
 **Sistema:** TestRun — Plataforma de Gestão de Testes de QA
 
 ---
@@ -114,11 +114,11 @@ Bug ou melhoria vinculado a um caso de teste ou a um cenário.
 |---|---|
 | `type` | `BUG`, `IMPROVEMENT` |
 | `jiraKey` | string (opcional) — chave do ticket no Jira |
-| `title` | string — obrigatório |
+| `title` | string — obrigatório; snapshot gravado na vinculação, reatualizado ao vivo na tela de Execução (ver 6.4) |
 | `severity` | Campo legado, preenchido manualmente: Trivial, Normal, Low, Medium, High, Critical, Gravissima |
-| `jiraPriority` | Campo atual, sincronizado do Jira — tem prioridade sobre `severity` sempre que ambos existem (`severity` só é usado como fallback em registros antigos, ex.: em relatórios) |
-| `jiraLabels` | string[] — labels do Jira; usado no cálculo de "Densidade por Label" do Dashboard (ver 17.2) |
-| `status` | Open, In Progress, Resolved, Cancelled |
+| `jiraPriority` | Campo atual, gravado a partir do Jira no momento da vinculação — tem prioridade sobre `severity` sempre que ambos existem (`severity` só é usado como fallback em registros antigos, ex.: em relatórios). Reatualizado ao vivo na tela de Execução quando há `jiraKey` (ver 6.4) |
+| `jiraLabels` | string[] — labels do Jira; usado no cálculo de "Densidade por Label" do Dashboard (ver 17.2). Reatualizado ao vivo na tela de Execução quando há `jiraKey` (ver 6.4) |
+| `status` | Open, In Progress, Resolved, Cancelled — reatualizado ao vivo na tela de Execução quando há `jiraKey` (ver 6.4) |
 
 ### 2.12 Lote (`ExecutionBatch`)
 Agrupa múltiplas suítes para execução conjunta.
@@ -267,6 +267,23 @@ Quando o último cenário de um `ExecutionTestCase` é excluído:
 - Tipo (`BUG` ou `IMPROVEMENT`) e título são obrigatórios.
 - Chave Jira é opcional.
 
+### 6.4 Atualização ao Vivo dos Dados do Jira
+- `title`, `status`, `jiraPriority` e `jiraLabels` são gravados como um snapshot no momento da vinculação
+  (ou de uma edição manual) — não são atualizados automaticamente em background caso o ticket mude no Jira
+  depois disso.
+- Para evitar que a tela de Execução mostre dados desatualizados (ex.: um bug fechado no Jira ainda
+  aparecendo como aberto), ao carregar uma execução (`GET /executions/:id`) o sistema busca ao vivo, em
+  lote, os dados atuais de todas as issues vinculadas que possuem `jiraKey` e sobrescreve esses campos
+  apenas na resposta (o snapshot salvo no banco não é alterado por essa revalidação).
+- Issues sem `jiraKey` (vinculação manual, sem ticket real do Jira) mantêm sempre o valor gravado
+  manualmente — não há o que revalidar.
+- Se o Jira estiver indisponível no momento da revalidação, a tela de Execução (ou o relatório, ver
+  abaixo) exibe o snapshot salvo em vez de falhar o carregamento/geração (fail-safe, mesmo espírito do
+  fail-open de 10.2).
+- A mesma revalidação ao vivo é aplicada na geração dos relatórios Excel e PDF (individual e de lote, ver
+  seção 12): os campos exibidos nas planilhas/documentos gerados refletem o estado do Jira no momento do
+  download, não o snapshot antigo salvo na vinculação.
+
 ---
 
 ## 7. Regras de Contagem Efetiva (Effective Count)
@@ -388,6 +405,10 @@ qualquer busca de issues por JQL deve usar `/rest/api/3/search/jql`.
 ---
 
 ## 12. Relatórios
+
+Os campos de bug/melhoria exibidos nos relatórios (título, status, severidade/prioridade) são
+revalidados ao vivo contra o Jira no momento da geração, mesma regra da tela de Execução (ver 6.4) — o
+relatório reflete o estado atual da execução, não o snapshot congelado no banco.
 
 ### 12.1 Estrutura do Relatório Excel
 **Aba 1 — Visualizar Resultado:**

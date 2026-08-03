@@ -3,9 +3,10 @@ import { ExecutionsService } from './executions.service';
 import { ExecutionsController } from './executions.controller';
 import { BatchController } from './batch.controller';
 import { ProjectsModule } from '../projects/projects.module';
+import { JiraModule } from '../jira/jira.module';
 
 @Module({
-  imports: [ProjectsModule],
+  imports: [ProjectsModule, JiraModule],
   providers: [ExecutionsService],
   controllers: [ExecutionsController, BatchController],
   exports: [ExecutionsService],

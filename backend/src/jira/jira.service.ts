@@ -602,6 +602,55 @@ export class JiraService {
     };
   }
 
+  // Busca dados atuais (título, status, prioridade, labels) de várias issues de uma vez via
+  // JQL `key in (...)` — usado para revalidar bugs/melhorias já vinculados a um caso de teste
+  // (o Postgres guarda um snapshot desses campos no momento da vinculação, que fica "congelado"
+  // se a issue mudar depois no Jira). Em lotes de 50 chaves por chamada por segurança de tamanho
+  // de JQL/URL.
+  async fetchIssuesByKeys(
+    userId: string,
+    keys: string[],
+  ): Promise<Map<string, { title: string; status: string; priority?: string; labels: string[] }>> {
+    const uniqueKeys = Array.from(new Set(keys.map((k) => k.trim().toUpperCase()).filter(Boolean)));
+    const result = new Map<string, { title: string; status: string; priority?: string; labels: string[] }>();
+    if (uniqueKeys.length === 0) return result;
+
+    const { accessToken, apiBaseUrl } = await this.authContext(userId);
+    const fields = 'key,summary,status,priority,labels';
+    const chunkSize = 50;
+
+    for (let i = 0; i < uniqueKeys.length; i += chunkSize) {
+      const chunk = uniqueKeys.slice(i, i + chunkSize);
+      const jql = `key in (${chunk.map((k) => `"${this.escapeJql(k)}"`).join(', ')})`;
+      const params = new URLSearchParams({ jql, fields, maxResults: String(chunk.length) });
+
+      const response = await this.fetchWithRetry(
+        `${apiBaseUrl}/rest/api/3/search/jql?${params.toString()}`,
+        { method: 'GET', headers: { Authorization: `Bearer ${accessToken}`, Accept: 'application/json' } },
+      );
+
+      if (!response.ok) {
+        const body = await response.text().catch(() => '');
+        throw new HttpException(
+          `Erro ao buscar issues no Jira (${response.statusText}): ${body}`,
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+
+      const data = await response.json();
+      for (const issue of data.issues ?? []) {
+        result.set(issue.key, {
+          title: issue.fields?.summary || issue.key,
+          status: issue.fields?.status?.name || '—',
+          priority: issue.fields?.priority?.name,
+          labels: issue.fields?.labels ?? [],
+        });
+      }
+    }
+
+    return result;
+  }
+
   async importSuite(userId: string, suiteKey: string): Promise<JiraImportResult> {
     const { accessToken, apiBaseUrl, siteUrl } = await this.authContext(userId);
     const issueUrl = `${apiBaseUrl}/rest/api/3/issue/${suiteKey}`;

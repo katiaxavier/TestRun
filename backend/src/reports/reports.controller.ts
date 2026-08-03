@@ -65,9 +65,9 @@ export class ReportsController {
 
   @Get('batch/:id/xlsx')
   @ProjectAccess('batch', 'id')
-  async downloadBatchXlsx(@Param('id') id: string, @Res() res: any) {
+  async downloadBatchXlsx(@Param('id') id: string, @CurrentUser() user: User, @Res() res: any) {
     try {
-      const buffer = await this.reportsService.generateBatchXlsx(id);
+      const buffer = await this.reportsService.generateBatchXlsx(id, user.id);
 
       res.status(HttpStatus.OK);
       res.setHeader(

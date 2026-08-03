@@ -271,6 +271,39 @@ export class ReportsService {
     return `${day}/${month}/${d.getFullYear()}`;
   }
 
+  // Mesmo mecanismo de revalidação ao vivo usado por ExecutionsService.findOne
+  // (refreshIssuesFromJira lá) — title/status/jiraPriority/jiraLabels do model Issue são um
+  // snapshot gravado no momento da vinculação, que fica desatualizado se o bug/melhoria mudar
+  // depois no Jira. Repetido aqui (em vez de reutilizar ExecutionsService) para que o relatório
+  // exportado reflita o mesmo estado exibido na tela de Execução no momento da geração.
+  private async refreshIssuesFromJira(
+    testCases: Array<{ issues: any[]; scenarios?: Array<{ issues: any[] }> }>,
+    userId: string,
+  ) {
+    const allIssues = testCases.flatMap((etc) => [
+      ...etc.issues,
+      ...(etc.scenarios ?? []).flatMap((scenario) => scenario.issues),
+    ]);
+
+    const keys = allIssues.map((issue) => issue.jiraKey).filter((key: unknown): key is string => !!key);
+    if (keys.length === 0) return;
+
+    try {
+      const liveData = await this.jiraService.fetchIssuesByKeys(userId, keys);
+      for (const issue of allIssues) {
+        const live = issue.jiraKey && liveData.get(issue.jiraKey.toUpperCase());
+        if (live) {
+          issue.title = live.title;
+          issue.status = live.status;
+          issue.jiraPriority = live.priority ?? null;
+          issue.jiraLabels = live.labels;
+        }
+      }
+    } catch (error) {
+      console.error('Falha ao atualizar bugs/melhorias com dados ao vivo do Jira no relatório:', error);
+    }
+  }
+
   // ── Excel – ciclo individual ────────────────────────────────────────────────
 
   async generateXlsx(executionId: string, userId: string): Promise<Buffer> {
@@ -294,6 +327,8 @@ export class ReportsService {
     if (!execution) {
       throw new HttpException('Ciclo de execução não encontrado.', HttpStatus.NOT_FOUND);
     }
+
+    await this.refreshIssuesFromJira(execution.testCases, userId);
 
     const batchSuites = await this.resolveBatchSuites(execution.batch?.suiteIds);
     const isBatch = batchSuites.length > 0;
@@ -550,7 +585,7 @@ export class ReportsService {
 
   // ── Batch report data ───────────────────────────────────────────────────────
 
-  async getBatchReport(batchId: string) {
+  async getBatchReport(batchId: string, userId?: string) {
     const batch = await this.prisma.executionBatch.findUnique({
       where: { id: batchId },
       include: {
@@ -581,6 +616,10 @@ export class ReportsService {
       : [];
 
     const allTestCases = batch.executions.flatMap((ex) => ex.testCases);
+
+    if (userId) {
+      await this.refreshIssuesFromJira(allTestCases, userId);
+    }
 
     const summary = {
       totalTests:  allTestCases.length,
@@ -618,8 +657,8 @@ export class ReportsService {
 
   // ── Excel – lote ────────────────────────────────────────────────────────────
 
-  async generateBatchXlsx(batchId: string): Promise<Buffer> {
-    const report = await this.getBatchReport(batchId);
+  async generateBatchXlsx(batchId: string, userId: string): Promise<Buffer> {
+    const report = await this.getBatchReport(batchId, userId);
     const { batch, summary } = report;
 
     const workbook = new ExcelJS.Workbook();
@@ -716,7 +755,7 @@ export class ReportsService {
 
   async generateBatchPdf(batchId: string, userId: string): Promise<Buffer> {
     const jiraBaseUrl = await this.jiraService.getSiteUrl(userId);
-    const report = await this.getBatchReport(batchId);
+    const report = await this.getBatchReport(batchId, userId);
     const { batch, summary } = report;
 
     const executedTests = summary.passed + summary.failed + summary.blocked;
@@ -862,6 +901,8 @@ export class ReportsService {
     if (!execution) {
       throw new HttpException('Ciclo de execução não encontrado.', HttpStatus.NOT_FOUND);
     }
+
+    await this.refreshIssuesFromJira(execution.testCases, userId);
 
     const batchSuites = await this.resolveBatchSuites(execution.batch?.suiteIds);
     const isBatch = batchSuites.length > 0;

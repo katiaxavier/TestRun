@@ -10,6 +10,7 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
+import type { User } from '@prisma/client';
 import {
   ExecutionsService,
   CreateExecutionDto,
@@ -22,6 +23,7 @@ import {
 } from './executions.service';
 import { ProjectAccessGuard } from '../projects/project-access.guard';
 import { ProjectAccess } from '../projects/project-access.decorator';
+import { CurrentUser } from '../auth/current-user.decorator';
 
 @Controller('executions')
 @UseGuards(ProjectAccessGuard)
@@ -68,8 +70,8 @@ export class ExecutionsController {
 
   @Get(':id')
   @ProjectAccess('execution')
-  async findOne(@Param('id') id: string) {
-    return this.executionsService.findOne(id);
+  async findOne(@Param('id') id: string, @CurrentUser() user: User) {
+    return this.executionsService.findOne(id, user.id);
   }
 
   @Post()
