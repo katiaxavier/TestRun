@@ -302,6 +302,17 @@ export const jiraIssuesApi = {
     }),
 };
 
+export interface JiraAssignableUser {
+  accountId: string;
+  displayName: string;
+  avatarUrl?: string;
+}
+
+export const jiraUsersApi = {
+  searchPicker: (projectId: string, search: string) =>
+    api.get<{ data: JiraAssignableUser[] }>('/jira-users/picker', { params: { projectId, search } }),
+};
+
 export interface DashboardQuality {
   density: { key: string; labels: string[]; count: number }[];
   severityByExecution: {

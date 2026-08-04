@@ -332,14 +332,21 @@ TestRun/
 O login usa **OAuth 2.0 (3LO) da Atlassian**. Para configurar:
 
 1. Registre um app em [developer.atlassian.com/console](https://developer.atlassian.com/console/myapps/)
-2. Adicione o produto **Jira API** e habilite os escopos (na aba **Granular scopes**, dentro da
-   própria "Jira API" — não é um produto separado):
+2. Adicione o produto **Jira API** e habilite os escopos abaixo. Os granulares ficam na aba
+   **Granular scopes**, dentro da própria "Jira API" — não é um produto separado; os clássicos
+   ficam na visão padrão ("Jira platform REST API"):
    - `read:me`
    - `read:jira-work`
+   - `read:jira-user` (clássico — busca de pessoas atribuíveis no seletor de responsável)
    - `read:project:jira`
    - `read:board-scope:jira-software`
+   - `read:board-scope.admin:jira-software`
    - `read:issue-details:jira`
+   - `read:filter:jira`
    - `offline_access` (necessário para o refresh token)
+
+   Ao adicionar um escopo novo, quem já estava logado precisa deslogar e logar de novo para o
+   consentimento ser pedido outra vez.
 3. Configure a **Callback URL** apontando para `OAUTH_REDIRECT_URI` (ex: `http://localhost:3000/auth/callback`)
 4. Preencha no `.env`: `ATLASSIAN_CLIENT_ID`, `ATLASSIAN_CLIENT_SECRET`, `OAUTH_REDIRECT_URI` e,
    opcionalmente, `JIRA_CLOUD_ID` (fixa o site Jira quando a conta tem acesso a mais de um)

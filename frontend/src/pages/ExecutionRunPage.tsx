@@ -14,6 +14,7 @@ import { Modal } from '../components/Modal';
 import { Tooltip } from '../components/Tooltip';
 import { ExecutionFormModal, type ExecutionFormData } from '../components/ExecutionFormModal';
 import { JiraItemPicker } from '../components/JiraItemPicker';
+import { JiraUserPicker } from '../components/JiraUserPicker';
 import { PRIORITY_COLORS, SEVERITY_COLORS, priorityLabel, normalize } from '../utils/priority';
 
 const STATUS_OPTIONS = ['PENDING', 'PASSED', 'FAILED', 'BLOCKED'];
@@ -1372,7 +1373,15 @@ export default function ExecutionRunPage() {
   const [priorityFilter, setPriorityFilter] = useState<string>('all');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<number | 'all'>(10);
+  const [toasts, setToasts] = useState<{ id: number; message: string; type: 'success' | 'error' }[]>([]);
+  const [savingResponsibleId, setSavingResponsibleId] = useState<string | null>(null);
   const tcsScrollRef = useRef<HTMLDivElement>(null);
+
+  const addToast = (message: string, type: 'success' | 'error' = 'success') => {
+    const id = Date.now();
+    setToasts(prev => [...prev, { id, message, type }]);
+    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 2500);
+  };
   useEffect(() => {
     const container = tcsScrollRef.current;
     if (!container) return;
@@ -1446,6 +1455,24 @@ export default function ExecutionRunPage() {
       return { ...prev, testCases, status };
     });
     setSelectedEtc(updated);
+  };
+
+  // Salva o responsável direto da tabela (sem abrir o drawer) — ao contrário de
+  // handleUpdated, não mexe em selectedEtc, já que essa edição não deve abrir o drawer.
+  const handleResponsibleCommit = async (etc: ExecutionTestCase, value: string) => {
+    if (value === (etc.responsible ?? '')) return;
+    setSavingResponsibleId(etc.id);
+    try {
+      const { data } = await executionsApi.updateTestCase(etc.executionId, etc.id, { responsible: value });
+      setExecution(prev => {
+        if (!prev) return prev;
+        return { ...prev, testCases: prev.testCases.map(tc => tc.id === data.id ? data : tc) };
+      });
+    } catch {
+      addToast('Erro ao salvar responsável', 'error');
+    } finally {
+      setSavingResponsibleId(null);
+    }
   };
 
   const handleTestCaseRemoved = (etcId: string) => {
@@ -1733,7 +1760,21 @@ export default function ExecutionRunPage() {
                           <StatusBadge status={etc.status} />
                         )}
                       </td>
-                      <td style={{ fontSize: '0.83rem', color: 'var(--text-secondary)' }}>{etc.responsible ?? '—'}</td>
+                      <td onClick={e => e.stopPropagation()}>
+                        <JiraUserPicker
+                          projectId={execution.suite?.projectId ?? ''}
+                          value={etc.responsible ?? ''}
+                          onChange={(v) => setExecution(prev => {
+                            if (!prev) return prev;
+                            return { ...prev, testCases: prev.testCases.map(tc => tc.id === etc.id ? { ...tc, responsible: v } : tc) };
+                          })}
+                          onCommit={(v) => handleResponsibleCommit(etc, v)}
+                          placeholder="—"
+                        />
+                        {savingResponsibleId === etc.id && (
+                          <div className="spinner" style={{ width: 12, height: 12, marginTop: 2 }} />
+                        )}
+                      </td>
                       <td style={{ textAlign: 'center' }}>
                         {(() => {
                           const allIssues = (etc.scenarios?.length ?? 0) > 0
@@ -1822,6 +1863,7 @@ export default function ExecutionRunPage() {
           submitLabel="Salvar Alterações"
           submitIcon={<Check size={16} />}
           errorFallback="Erro ao atualizar execução."
+          projectId={execution.suite?.projectId ?? ''}
           initialData={{
             sprint: execution.sprint,
             version: execution.version ?? '',
@@ -1832,6 +1874,17 @@ export default function ExecutionRunPage() {
           onSubmit={handleUpdateExecution}
         />
       )}
+
+      <div className="toast-area">
+        <AnimatePresence>
+          {toasts.map(t => (
+            <motion.div key={t.id} className={`toast toast-${t.type}`}
+              initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }}>
+              {t.message}
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </div>
     </div>
   );
 }

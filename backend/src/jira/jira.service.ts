@@ -38,6 +38,12 @@ export interface JiraIssuePage {
   maxResults: number;
 }
 
+export interface JiraAssignableUser {
+  accountId: string;
+  displayName: string;
+  avatarUrl?: string;
+}
+
 @Injectable()
 export class JiraService {
   constructor(private readonly authService: AuthService) {}
@@ -380,6 +386,47 @@ export class JiraService {
     } while (opts.all && nextPageToken);
 
     return { issues, total: issues.length, startAt: 0, maxResults: pageSize };
+  }
+
+  // Busca pessoas atribuíveis de um projeto (usado no seletor de "Responsável"). Requer o
+  // escopo OAuth read:jira-user — contas que ainda não reconectaram após a adição desse
+  // escopo recebem 403 aqui, e o chamador (JiraUsersService/frontend) trata isso como "sem
+  // sugestões", sem quebrar o fluxo.
+  async searchAssignableUsers(
+    userId: string,
+    jiraProjectKey: string,
+    query: string,
+  ): Promise<JiraAssignableUser[]> {
+    const { accessToken, apiBaseUrl } = await this.authContext(userId);
+    const params = new URLSearchParams({
+      project: jiraProjectKey,
+      query,
+      maxResults: '8',
+    });
+    const url = `${apiBaseUrl}/rest/api/3/user/assignable/search?${params.toString()}`;
+    const response = await this.fetchWithRetry(url, {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${accessToken}`, Accept: 'application/json' },
+    });
+
+    if (!response.ok) {
+      const body = await response.text().catch(() => '');
+      throw new HttpException(
+        `Erro ao buscar pessoas do projeto no Jira (${response.statusText}): ${body}`,
+        response.status,
+      );
+    }
+
+    const data = (await response.json()) as Array<{
+      accountId: string;
+      displayName: string;
+      avatarUrls?: Record<string, string>;
+    }>;
+    return data.map((u) => ({
+      accountId: u.accountId,
+      displayName: u.displayName,
+      avatarUrl: u.avatarUrls?.['24x24'],
+    }));
   }
 
   // Conta issues via /search/approximate-count (só JQL no corpo, devolve { count }) — sem

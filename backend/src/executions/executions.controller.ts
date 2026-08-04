@@ -76,8 +76,8 @@ export class ExecutionsController {
 
   @Post()
   @ProjectAccess('suite', 'suiteId', 'body')
-  async create(@Body() dto: CreateExecutionDto) {
-    return this.executionsService.create(dto);
+  async create(@Body() dto: CreateExecutionDto, @CurrentUser() user: User) {
+    return this.executionsService.create(dto, user.displayName);
   }
 
   @Delete(':id')

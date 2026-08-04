@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Play, WarningCircle } from '@phosphor-icons/react';
 import { Modal } from './Modal';
+import { JiraUserPicker } from './JiraUserPicker';
+import { useCurrentUser } from '../context/CurrentUserContext';
 
 export interface ExecutionFormData {
   sprint: string;
@@ -10,10 +12,10 @@ export interface ExecutionFormData {
   responsible: string;
 }
 
-function blankForm(): ExecutionFormData {
+function blankForm(defaultResponsible = ''): ExecutionFormData {
   const n = new Date();
   const t = `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`;
-  return { sprint: '', version: '', startDate: t, endDate: t, responsible: '' };
+  return { sprint: '', version: '', startDate: t, endDate: t, responsible: defaultResponsible };
 }
 
 interface ExecutionFormModalProps {
@@ -25,22 +27,28 @@ interface ExecutionFormModalProps {
   submitLabel?: string;
   submitIcon?: React.ReactNode;
   errorFallback?: string;
+  // Necessário para a busca de pessoas do Jira no seletor de responsável; sem ele o
+  // JiraUserPicker nunca busca e se comporta como um input de texto comum.
+  projectId?: string;
 }
 
 export function ExecutionFormModal({
   open, onClose, onSubmit, title = 'Novo Ciclo de Execução',
   initialData, submitLabel = 'Iniciar Execução', submitIcon = <Play size={16} />,
-  errorFallback = 'Erro ao criar execução.',
+  errorFallback = 'Erro ao criar execução.', projectId,
 }: ExecutionFormModalProps) {
+  const currentUser = useCurrentUser();
   const [form, setForm] = useState<ExecutionFormData>(initialData ?? blankForm());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
     if (open) {
-      setForm(initialData ?? blankForm());
+      setForm(initialData ?? blankForm(currentUser.displayName));
       setError('');
     }
+    // currentUser não muda durante a sessão do modal aberto, não precisa entrar nas deps.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -94,7 +102,12 @@ export function ExecutionFormModal({
         </div>
         <div className="form-group">
           <label className="form-label">Responsável pela execução *</label>
-          <input placeholder="Nome do QA responsável" value={form.responsible} onChange={set('responsible')} />
+          <JiraUserPicker
+            projectId={projectId ?? ''}
+            value={form.responsible}
+            onChange={(v) => setForm(f => ({ ...f, responsible: v }))}
+            placeholder="Nome do QA responsável"
+          />
         </div>
         <div className="form-row">
           <div className="form-group">

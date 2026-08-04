@@ -51,7 +51,11 @@ export class AuthService {
       // "admin" separada da leitura normal do board) — sem ele o Jira devolve 401 mesmo com
       // read:board-scope:jira-software concedido. read:filter:jira é necessário para
       // /rest/api/3/filter/{id} (ler a JQL salva de um filtro).
-      scope: 'read:me read:jira-work read:board-scope:jira-software read:board-scope.admin:jira-software read:issue-details:jira read:project:jira read:filter:jira offline_access',
+      // read:jira-user é necessário para /rest/api/3/user/assignable/search (buscar pessoas
+      // atribuíveis de um projeto, usado no seletor de responsável). Contas já conectadas só
+      // ganham esse escopo após reconectar — enquanto isso, a busca falha com 403 e a UI cai
+      // para texto livre.
+      scope: 'read:me read:jira-work read:board-scope:jira-software read:board-scope.admin:jira-software read:issue-details:jira read:project:jira read:filter:jira read:jira-user offline_access',
       redirect_uri: process.env.OAUTH_REDIRECT_URI ?? '',
       state,
       response_type: 'code',
