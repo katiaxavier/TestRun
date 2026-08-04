@@ -17,6 +17,7 @@ import { authApi } from './api/client';
 import type { AuthUser } from './api/client';
 import { ProjectProvider, useProject } from './context/ProjectContext';
 import { BoardProvider, useBoard } from './context/BoardContext';
+import { CurrentUserProvider } from './context/CurrentUserContext';
 import './index.css';
 
 // Sai de telas de detalhe (suíte/execução/lote) quando o usuário troca de
@@ -104,20 +105,22 @@ export default function App() {
 
   return (
     <MotionConfig reducedMotion="user">
-      <ProjectProvider>
-        <BoardProvider>
-          <BrowserRouter>
-            <ExitDetailOnContextSwitch />
-            <div className={`app-layout${sidebarCollapsed ? ' app-layout--collapsed' : ''}`}>
-              <Sidebar collapsed={sidebarCollapsed} onToggle={handleSidebarToggle} user={user} onLogout={handleLogout} />
-              <main className="main-content">
-                <TopBar />
-                <AnimatedRoutes />
-              </main>
-            </div>
-          </BrowserRouter>
-        </BoardProvider>
-      </ProjectProvider>
+      <CurrentUserProvider user={user}>
+        <ProjectProvider>
+          <BoardProvider>
+            <BrowserRouter>
+              <ExitDetailOnContextSwitch />
+              <div className={`app-layout${sidebarCollapsed ? ' app-layout--collapsed' : ''}`}>
+                <Sidebar collapsed={sidebarCollapsed} onToggle={handleSidebarToggle} user={user} onLogout={handleLogout} />
+                <main className="main-content">
+                  <TopBar />
+                  <AnimatedRoutes />
+                </main>
+              </div>
+            </BrowserRouter>
+          </BoardProvider>
+        </ProjectProvider>
+      </CurrentUserProvider>
     </MotionConfig>
   );
 }

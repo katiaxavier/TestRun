@@ -215,7 +215,7 @@ export class ExecutionsService {
     }
   }
 
-  async create(dto: CreateExecutionDto) {
+  async create(dto: CreateExecutionDto, creatorDisplayName: string) {
     // 1. Validar suite
     const suite = await this.prisma.suite.findUnique({
       where: { id: dto.suiteId },
@@ -249,14 +249,16 @@ export class ExecutionsService {
       },
     });
 
-    // 3. Vincular casos de teste da suite na execução, copiando cenários template
+    // 3. Vincular casos de teste da suite na execução, copiando cenários template.
+    // responsible do caso de teste = quem criou o ciclo agora (não o dto.responsible do
+    // formulário, que pode indicar outra pessoa como dona do ciclo).
     for (const tc of suite.testCases) {
       const etc = await this.prisma.executionTestCase.create({
         data: {
           executionId: execution.id,
           testCaseId: tc.id,
           status: 'PENDING',
-          responsible: dto.responsible,
+          responsible: creatorDisplayName,
         },
       });
       for (const template of (tc as any).scenarioTemplates ?? []) {
@@ -553,7 +555,11 @@ export class ExecutionsService {
     });
   }
 
-  async createBatchExecution(batchId: string, dto: CreateBatchExecutionItemDto) {
+  async createBatchExecution(
+    batchId: string,
+    dto: CreateBatchExecutionItemDto,
+    creatorDisplayName: string,
+  ) {
     const batch = await this.prisma.executionBatch.findUnique({
       where: { id: batchId },
     });
@@ -589,7 +595,7 @@ export class ExecutionsService {
             executionId: execution.id,
             testCaseId: tc.id,
             status: 'PENDING',
-            responsible: dto.responsible,
+            responsible: creatorDisplayName,
           },
         });
         for (const template of (tc as any).scenarioTemplates ?? []) {

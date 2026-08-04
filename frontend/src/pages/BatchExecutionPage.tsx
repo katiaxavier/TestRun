@@ -161,6 +161,7 @@ export default function BatchExecutionPage() {
         <ExecutionFormModal
           open={newExecOpen}
           onClose={() => setNewExecOpen(false)}
+          projectId={suites[0]?.projectId}
           onSubmit={async (form) => {
             const { data } = await executionsApi.createBatchExecution(id, form);
             navigate(`/execution/${data.id}`);

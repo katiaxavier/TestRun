@@ -358,6 +358,7 @@ export default function SuiteDetailPage() {
       <ExecutionFormModal
         open={newExecOpen}
         onClose={() => setNewExecOpen(false)}
+        projectId={suite.projectId}
         onSubmit={async (form) => {
           const { data } = await executionsApi.create({ suiteId: suite.id, ...form });
           navigate(`/execution/${data.id}`);

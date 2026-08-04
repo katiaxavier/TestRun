@@ -1,4 +1,5 @@
 import { Controller, Get, Post, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
+import type { User } from '@prisma/client';
 import {
   ExecutionsService,
   CreateBatchExecutionDto,
@@ -6,6 +7,7 @@ import {
 } from './executions.service';
 import { ProjectAccessGuard } from '../projects/project-access.guard';
 import { ProjectAccess } from '../projects/project-access.decorator';
+import { CurrentUser } from '../auth/current-user.decorator';
 
 @Controller('batch')
 @UseGuards(ProjectAccessGuard)
@@ -44,8 +46,9 @@ export class BatchController {
   async createExecution(
     @Param('id') id: string,
     @Body() dto: CreateBatchExecutionItemDto,
+    @CurrentUser() user: User,
   ) {
-    return this.executionsService.createBatchExecution(id, dto);
+    return this.executionsService.createBatchExecution(id, dto, user.displayName);
   }
 
   @Delete(':id')
