@@ -36,6 +36,16 @@ const STATUS_FILTERS = [
 
 type StatusFilterKey = 'all' | 'PASSED' | 'FAILED' | 'BLOCKED' | 'PENDING';
 
+// Ordem de exibição da quebra de cenários por status na tabela (resultados primeiro,
+// pendências por último). Status sem nenhum cenário são omitidos.
+const SCENARIO_BREAKDOWN_ORDER = ['PASSED', 'FAILED', 'BLOCKED', 'IN_PROGRESS', 'PENDING'];
+
+function scenarioBreakdown(scenarios: Scenario[]) {
+  return SCENARIO_BREAKDOWN_ORDER
+    .map(status => ({ status, count: scenarios.filter(s => s.status === status).length }))
+    .filter(item => item.count > 0);
+}
+
 function formatDate(value?: string) {
   if (!value) return '—';
   return new Date(value.slice(0, 10) + 'T00:00:00').toLocaleDateString('pt-BR');
@@ -1824,9 +1834,23 @@ export default function ExecutionRunPage() {
                       </td>
                       <td>
                         {(etc.scenarios?.length ?? 0) > 0 ? (
-                          <span className="tag">
-                            {etc.scenarios.length} cenário{etc.scenarios.length !== 1 ? 's' : ''}
-                          </span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                            <span className="tag">
+                              {etc.scenarios.length} cenário{etc.scenarios.length !== 1 ? 's' : ''}
+                            </span>
+                            <Tooltip
+                              content={scenarioBreakdown(etc.scenarios)
+                                .map(b => `${b.count} ${STATUS_LABELS[b.status].toLowerCase()}`)
+                                .join(', ')}
+                              placement="top"
+                            >
+                              <span style={{ display: 'inline-flex', gap: '0.35rem', fontFamily: 'var(--font-mono)', fontSize: '0.8rem', fontWeight: 600 }}>
+                                {scenarioBreakdown(etc.scenarios).map(b => (
+                                  <span key={b.status} style={{ color: STATUS_COLORS[b.status] }}>{b.count}</span>
+                                ))}
+                              </span>
+                            </Tooltip>
+                          </div>
                         ) : (
                           <StatusBadge status={etc.status} />
                         )}
