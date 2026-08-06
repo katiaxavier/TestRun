@@ -388,7 +388,7 @@ function ScenarioView({
   projectId: string;
   onBack: () => void;
   onUpdated: (s: Scenario) => void;
-  onDeleted: (issues?: Issue[]) => void;
+  onDeleted: (updatedEtc: ExecutionTestCase) => void;
   allScenarios?: Scenario[];
   currentScenarioIndex?: number;
   onNavigate?: (s: Scenario) => void;
@@ -479,8 +479,8 @@ function ScenarioView({
   const handleDelete = async () => {
     setDeleting(true);
     try {
-      await executionsApi.deleteScenario(executionId, etcId, scenario.id);
-      onDeleted(issues);
+      const { data } = await executionsApi.deleteScenario(executionId, etcId, scenario.id);
+      onDeleted(data.testCase);
     } catch {
       addToast('Erro ao excluir cenário', 'error');
       setDeleting(false);
@@ -861,15 +861,14 @@ function TestCaseDrawer({
     onUpdated({ ...etc, scenarios: newScenarios, status: etcStatus });
   };
 
-  const handleScenarioDeleted = (deletedScenarioIssues?: Issue[]) => {
-    if (!activeScenario) return;
-    const newScenarios = scenarios.filter(s => s.id !== activeScenario.id);
-    const isLast = newScenarios.length === 0;
-    const restoredIssues = isLast ? (deletedScenarioIssues ?? []) : issues;
-    setScenarios(newScenarios);
-    setIssues(restoredIssues);
+  // O backend devolve o item já atualizado (status recalculado/restaurado e issues
+  // migradas de volta ao TC quando era o último cenário) — usar essa resposta em vez de
+  // remontar o item em memória, que deixava o status do TC desatualizado.
+  const handleScenarioDeleted = (updatedEtc: ExecutionTestCase) => {
+    setScenarios(updatedEtc.scenarios ?? []);
+    setIssues(updatedEtc.issues ?? []);
     setActiveScenario(null);
-    onUpdated({ ...etc, scenarios: newScenarios, issues: restoredIssues });
+    onUpdated(updatedEtc);
     addToast('Cenário excluído');
   };
 
@@ -878,16 +877,11 @@ function TestCaseDrawer({
     if (!ids.length) return;
     setDeletingSelected(true);
     try {
-      await executionsApi.deleteScenarioBatch(executionId, etc.id, ids);
-      const newScenarios = scenarios.filter(s => !selectedScenarios.has(s.id));
-      const isLast = newScenarios.length === 0;
-      // When all scenarios are deleted, backend restores issues to test-case level
-      const deletedIssues = isLast
-        ? scenarios.filter(s => selectedScenarios.has(s.id)).flatMap(s => s.issues)
-        : issues;
-      setScenarios(newScenarios);
-      if (isLast) setIssues(deletedIssues);
-      onUpdated({ ...etc, scenarios: newScenarios, issues: isLast ? deletedIssues : issues });
+      const { data } = await executionsApi.deleteScenarioBatch(executionId, etc.id, ids);
+      // Mesma regra do handleScenarioDeleted: a resposta já traz o item consolidado.
+      setScenarios(data.testCase.scenarios ?? []);
+      setIssues(data.testCase.issues ?? []);
+      onUpdated(data.testCase);
       setSelectedScenarios(new Set());
       setDeleteSelectedConfirm(false);
       addToast(`${ids.length} cenário${ids.length !== 1 ? 's' : ''} excluído${ids.length !== 1 ? 's' : ''}`);

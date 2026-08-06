@@ -247,11 +247,16 @@ Quando o primeiro cenário é criado em um `ExecutionTestCase` que já possui is
 - Cenários criados durante a execução (sem template base) têm `templateId = null`.
 - Ao criar um cenário ad-hoc na execução, um `TestCaseScenario` (template) correspondente também é criado na suíte, para reuso em execuções futuras.
 
-### 5.5 Exclusão do Último Cenário
-Quando o último cenário de um `ExecutionTestCase` é excluído:
+### 5.5 Exclusão de Cenários
+
+**Último cenário do TC:**
 1. Todas as issues do cenário são movidas de volta para o TC pai.
-2. O status do TC é restaurado a partir de `originalStatus`.
-3. O campo `originalStatus` é limpo (`null`).
+2. O status do TC é restaurado a partir de `originalStatus` e o campo é limpo (`null`).
+3. Se não houver `originalStatus` gravado — caso dos TCs cujos cenários vieram dos templates da suíte (criação da execução ou sincronização, ver 4.4), que não passam pelo fluxo de 5.1 —, o TC **mantém o status derivado que tinha**; nada é sobrescrito.
+
+**Cenário não-último (ainda restam outros):** o status do TC é recalculado a partir dos cenários restantes, pela mesma regra de agregação de 5.6/4.2. Excluir o único cenário que falhou, por exemplo, faz o TC deixar de estar `FAILED`.
+
+Em ambos os casos o status da execução é recalculado em seguida, e a resposta da API devolve o `ExecutionTestCase` já consolidado — a tela usa esse retorno em vez de remontar o item em memória, para o status exibido não divergir do que foi gravado.
 
 ### 5.6 Impacto dos Cenários no Status do TC
 - Enquanto o TC tem cenários ativos, seu status não é exibido nas células de resultado (fica em branco nos relatórios) para evitar dupla contagem.

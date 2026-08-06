@@ -1057,7 +1057,31 @@ export class ExecutionsService {
 
     await this.prisma.scenario.delete({ where: { id: scenarioId } });
 
-    return { success: true };
+    if (isLast) {
+      // O status do TC já foi restaurado a partir de originalStatus (ou mantido, se não
+      // havia um); só o rollup da execução precisa ser refeito.
+      const etc = await this.prisma.executionTestCase.findUnique({ where: { id: etcId } });
+      if (etc) await this.recomputeExecutionStatus(etc.executionId);
+    } else {
+      // Ainda restam cenários: o status do TC é derivado deles e precisa ser recalculado.
+      const executionId = await this.recomputeTestCaseStatus(etcId);
+      await this.recomputeExecutionStatus(executionId);
+    }
+
+    return { success: true, testCase: await this.findExecutionTestCase(etcId) };
+  }
+
+  // Item de execução com o mesmo formato usado em findOne, para o frontend poder
+  // substituir o item em memória sem refazer o GET da execução inteira.
+  private findExecutionTestCase(etcId: string) {
+    return this.prisma.executionTestCase.findUnique({
+      where: { id: etcId },
+      include: {
+        testCase: true,
+        issues: true,
+        scenarios: { include: { issues: true }, orderBy: { createdAt: 'asc' } },
+      },
+    });
   }
 
   async deleteScenarioBatch(etcId: string, scenarioIds: string[]) {
@@ -1099,7 +1123,10 @@ export class ExecutionsService {
       await this.recomputeExecutionStatus(executionId);
     }
 
-    return { deleted: scenarios.length };
+    return {
+      deleted: scenarios.length,
+      testCase: await this.findExecutionTestCase(etcId),
+    };
   }
 
   async addScenarioIssue(scenarioId: string, dto: CreateIssueDto) {

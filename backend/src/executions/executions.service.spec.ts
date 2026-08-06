@@ -316,6 +316,8 @@ describe('ExecutionsService — Cenários', () => {
         prisma.scenario.count.mockResolvedValue(0);
         prisma.executionTestCase.findUnique.mockResolvedValue(etc);
         prisma.scenario.delete.mockResolvedValue(sc);
+        prisma.executionTestCase.findMany.mockResolvedValue([{ status: 'PASSED' }]);
+        prisma.execution.update.mockResolvedValue({});
 
         await service.deleteScenario('etc-1', 'sc-1');
 
@@ -379,8 +381,15 @@ describe('ExecutionsService — Cenários', () => {
         await service.deleteScenario('etc-1', 'sc-1');
 
         expect(prisma.scenario.delete).toHaveBeenCalledWith({ where: { id: 'sc-1' } });
-        expect(prisma.executionTestCase.findUnique).not.toHaveBeenCalled();
         expect(prisma.issue.updateMany).not.toHaveBeenCalled();
+        // Status do TC recalculado a partir dos cenários restantes, sem restaurar nada.
+        expect(prisma.executionTestCase.update).toHaveBeenCalledWith(
+          expect.objectContaining({ data: { status: 'PASSED' } }),
+        );
+        const restaurou = prisma.executionTestCase.update.mock.calls.some(
+          (call: any[]) => call[0]?.data?.originalStatus !== undefined,
+        );
+        expect(restaurou).toBe(false);
       });
     });
 
@@ -397,7 +406,8 @@ describe('ExecutionsService — Cenários', () => {
       prisma.execution.update.mockResolvedValue({});
 
       const result = await service.deleteScenario('etc-1', 'sc-1');
-      expect(result).toEqual({ success: true });
+      // Devolve o item de execução consolidado, para o frontend atualizar sem refetch.
+      expect(result).toEqual({ success: true, testCase: expect.objectContaining({ id: 'etc-1' }) });
     });
   });
 
