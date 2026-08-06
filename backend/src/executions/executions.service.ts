@@ -1,6 +1,7 @@
 import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { JiraService } from '../jira/jira.service';
+import { SuitesService } from '../suites/suites.service';
 
 export class CreateExecutionDto {
   suiteId!: string;
@@ -75,6 +76,7 @@ export class ExecutionsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jiraService: JiraService,
+    private readonly suitesService: SuitesService,
   ) {}
 
   // boardId === 'none' é o pseudo-quadro "Sem quadro" (suítes/lotes sem quadro no banco).
@@ -274,6 +276,161 @@ export class ExecutionsService {
     }
 
     return this.findOne(execution.id);
+  }
+
+  // Sincroniza um ciclo já criado com a(s) suíte(s) de origem: atualiza as suítes a partir
+  // do Jira e traz para dentro da execução o que faltava (casos de teste e cenários novos).
+  // Nunca remove nem altera o que já foi testado.
+  async syncExecution(
+    executionId: string,
+    userId: string,
+    creatorDisplayName: string,
+  ) {
+    // 1. Carregar a execução e descobrir as suítes de origem
+    const execution = await this.prisma.execution.findUnique({
+      where: { id: executionId },
+      include: { testCases: { include: { scenarios: true } } },
+    });
+
+    if (!execution) {
+      throw new HttpException(
+        'Ciclo de execução não encontrado.',
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    let suiteIds: string[];
+    let excluded: string[] = [];
+
+    if (execution.batchId) {
+      const batch = await this.prisma.executionBatch.findUnique({
+        where: { id: execution.batchId },
+      });
+      if (!batch) {
+        throw new HttpException('Lote não encontrado.', HttpStatus.NOT_FOUND);
+      }
+      suiteIds = (batch.suiteIds as string[]) ?? [];
+      excluded = (batch.excludedTestCaseIds as string[]) ?? [];
+    } else if (execution.suiteId) {
+      suiteIds = [execution.suiteId];
+    } else {
+      throw new HttpException(
+        'Esta execução não está vinculada a nenhuma suíte.',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    // 2. Atualizar as suítes a partir do Jira. Falhas não abortam o sync — o diff local
+    // continua rodando (mesmo padrão de SuitesService.syncBoardSuites).
+    const jiraFailed: Array<{ key: string; error: string }> = [];
+    const suitesToImport = await this.prisma.suite.findMany({
+      where: { id: { in: suiteIds } },
+      select: { id: true, jiraKey: true, projectId: true },
+    });
+
+    for (const suite of suitesToImport) {
+      // Suítes manuais não têm origem no Jira.
+      if (!suite.jiraKey) continue;
+      try {
+        await this.suitesService.importFromJira(
+          suite.jiraKey,
+          userId,
+          suite.projectId,
+        );
+      } catch (error) {
+        jiraFailed.push({
+          key: suite.jiraKey,
+          error: error instanceof HttpException ? error.message : String(error),
+        });
+      }
+    }
+
+    // 3. Recarregar as suítes já atualizadas
+    const suites = await this.prisma.suite.findMany({
+      where: { id: { in: suiteIds } },
+      include: {
+        testCases: {
+          include: { scenarioTemplates: true },
+          orderBy: { jiraKey: 'asc' },
+        },
+      },
+    });
+
+    // 4. Casos de teste que ainda não estão na execução
+    const etcByTestCaseId = new Map(
+      execution.testCases.map((etc) => [etc.testCaseId, etc]),
+    );
+    const addedTestCases: Array<{ jiraKey: string; title: string }> = [];
+
+    for (const suite of suites) {
+      for (const tc of suite.testCases) {
+        if (etcByTestCaseId.has(tc.id) || excluded.includes(tc.id)) continue;
+
+        const etc = await this.prisma.executionTestCase.create({
+          data: {
+            executionId: execution.id,
+            testCaseId: tc.id,
+            status: 'PENDING',
+            responsible: creatorDisplayName,
+          },
+        });
+        for (const template of (tc as any).scenarioTemplates ?? []) {
+          await this.prisma.scenario.create({
+            data: {
+              executionTestCaseId: etc.id,
+              templateId: template.id,
+              name: template.name,
+              status: 'PENDING',
+            },
+          });
+        }
+        addedTestCases.push({ jiraKey: tc.jiraKey, title: tc.title });
+      }
+    }
+
+    // 5. Cenários novos em casos de teste que já estavam na execução. Reusa createScenario
+    // para herdar o tratamento do "primeiro cenário do item" (originalStatus + migração
+    // das issues) e o reaproveitamento do template pelo nome.
+    let addedScenarios = 0;
+    const touchedEtcIds: string[] = [];
+
+    for (const suite of suites) {
+      for (const tc of suite.testCases) {
+        const etc = etcByTestCaseId.get(tc.id);
+        if (!etc) continue;
+
+        const existingNames = new Set(etc.scenarios.map((s) => s.name));
+        for (const template of (tc as any).scenarioTemplates ?? []) {
+          if (existingNames.has(template.name)) continue;
+          try {
+            await this.createScenario(etc.id, { name: template.name });
+            existingNames.add(template.name);
+            addedScenarios++;
+            if (!touchedEtcIds.includes(etc.id)) touchedEtcIds.push(etc.id);
+          } catch (error) {
+            // Conflito de nome (corrida com outra aba) — ignorar e seguir.
+            if (
+              !(
+                error instanceof HttpException &&
+                error.getStatus() === HttpStatus.CONFLICT
+              )
+            ) {
+              throw error;
+            }
+          }
+        }
+      }
+    }
+
+    // 6. Recalcular os status derivados dos casos que ganharam cenários
+    for (const etcId of touchedEtcIds) {
+      await this.recomputeTestCaseStatus(etcId);
+    }
+    if (addedTestCases.length > 0 || touchedEtcIds.length > 0) {
+      await this.recomputeExecutionStatus(execution.id);
+    }
+
+    return { addedTestCases, addedScenarios, jiraFailed };
   }
 
   private async recomputeTestCaseStatus(etcId: string): Promise<string> {

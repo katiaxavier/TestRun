@@ -205,6 +205,12 @@ export const executionsApi = {
       },
     }),
   get: (id: string) => api.get<Execution>(`/executions/${id}`),
+  sync: (id: string) =>
+    api.post<{
+      addedTestCases: { jiraKey: string; title: string }[];
+      addedScenarios: number;
+      jiraFailed: { key: string; error: string }[];
+    }>(`/executions/${id}/sync`),
   update: (id: string, data: { sprint?: string; version?: string; startDate?: string; endDate?: string; responsible?: string }) =>
     api.patch<Execution>(`/executions/${id}`, data),
   delete: (id: string) => api.delete(`/executions/${id}`),
