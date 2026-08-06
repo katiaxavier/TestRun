@@ -5,7 +5,7 @@ import {
   ArrowLeft, X, Plus, Trash, FileXls, FilePdf,
   ArrowSquareOut, CheckCircle, MagnifyingGlass,
   CaretLeft, CaretRight, Pencil, FolderOpen,
-  CheckSquare, Square, Check,
+  CheckSquare, Square, Check, ArrowsClockwise, WarningCircle,
 } from '@phosphor-icons/react';
 import { executionsApi, reportsApi, suitesApi, jiraApi } from '../api/client';
 import type { Execution, ExecutionTestCase, Issue, Suite, Scenario } from '../api/client';
@@ -1365,6 +1365,12 @@ export default function ExecutionRunPage() {
   const [loading, setLoading] = useState(true);
   const [selectedEtc, setSelectedEtc] = useState<ExecutionTestCase | null>(null);
   const [exporting, setExporting] = useState<'xlsx' | 'pdf' | null>(null);
+  const [syncing, setSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState<{
+    addedTestCases: { jiraKey: string; title: string }[];
+    addedScenarios: number;
+    jiraFailed: { key: string; error: string }[];
+  } | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -1437,6 +1443,27 @@ export default function ExecutionRunPage() {
       );
     } catch {}
     setDeleting(false);
+  };
+
+  // Sincroniza o ciclo com a(s) suíte(s): atualiza as suítes no Jira e traz os casos de
+  // teste e cenários criados depois que o ciclo começou.
+  const handleSync = async () => {
+    if (!id || syncing) return;
+    setSyncing(true);
+    setSyncResult(null);
+    try {
+      const { data } = await executionsApi.sync(id);
+      setSyncResult(data);
+      await fetchExecution();
+    } catch (err: any) {
+      const msg = err?.response?.data?.message ?? 'Erro ao sincronizar a execução.';
+      setSyncResult({
+        addedTestCases: [],
+        addedScenarios: 0,
+        jiraFailed: [{ key: '', error: Array.isArray(msg) ? msg.join(' ') : msg }],
+      });
+    }
+    setSyncing(false);
   };
 
   const handleUpdateExecution = async (form: ExecutionFormData) => {
@@ -1588,6 +1615,13 @@ export default function ExecutionRunPage() {
             )}
           </div>
           <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0, alignSelf: 'flex-start' }}>
+            <Tooltip content="Atualiza as suítes no Jira e traz para esta execução os casos de teste e cenários criados depois." placement="top">
+              <button className="btn btn-secondary" style={{ height: 48 }} onClick={handleSync} disabled={syncing}>
+                {syncing
+                  ? <><div className="spinner" style={{ width: 14, height: 14 }} /> Sincronizando...</>
+                  : <><ArrowsClockwise size={16} /> Sincronizar</>}
+              </button>
+            </Tooltip>
             <button className="btn" onClick={() => handleExport('xlsx')} disabled={!!exporting} style={{ background: 'transparent', border: '1px solid var(--accent)', color: 'var(--accent)', height: 48 }}>
               {exporting === 'xlsx' ? <div className="spinner" style={{ width: 14, height: 14 }} /> : <FileXls size={16} />}
               Excel
@@ -1601,6 +1635,49 @@ export default function ExecutionRunPage() {
             </button>
           </div>
         </div>
+
+        {syncResult && (
+          <div
+            style={{
+              display: 'flex', alignItems: 'flex-start', gap: '0.5rem', padding: '0.75rem 1rem',
+              marginBottom: '1rem', borderRadius: 'var(--radius-sm)', fontSize: '0.83rem',
+              background: syncResult.jiraFailed.length > 0 ? 'var(--danger-bg)' : 'var(--status-passed-bg)',
+              border: `1px solid ${syncResult.jiraFailed.length > 0 ? 'var(--danger-border)' : 'color-mix(in srgb, var(--status-passed) 25%, transparent)'}`,
+            }}
+          >
+            {syncResult.jiraFailed.length > 0
+              ? <WarningCircle size={16} style={{ flexShrink: 0, marginTop: 2, color: 'var(--status-failed)' }} />
+              : <CheckCircle size={16} style={{ flexShrink: 0, marginTop: 2, color: 'var(--status-passed)' }} />}
+            <div style={{ flex: 1 }}>
+              <span>
+                {syncResult.addedTestCases.length === 0 && syncResult.addedScenarios === 0
+                  ? 'Execução já está em dia com a suíte. Nenhum caso de teste novo.'
+                  : `Sincronização concluída: ${syncResult.addedTestCases.length} caso(s) de teste e ${syncResult.addedScenarios} cenário(s) adicionados.`}
+              </span>
+              {syncResult.addedTestCases.length > 0 && (
+                <ul style={{ margin: '0.35rem 0 0', paddingLeft: '1.1rem' }}>
+                  {syncResult.addedTestCases.map((tc, i) => (
+                    <li key={i}><span style={{ fontFamily: 'var(--font-mono)' }}>{tc.jiraKey}</span> · {tc.title}</li>
+                  ))}
+                </ul>
+              )}
+              {syncResult.jiraFailed.length > 0 && (
+                <ul style={{ margin: '0.35rem 0 0', paddingLeft: '1.1rem', color: 'var(--status-failed)' }}>
+                  {syncResult.jiraFailed.map((f, i) => (
+                    <li key={i}>Não foi possível atualizar do Jira — {f.key ? `${f.key}: ` : ''}{f.error}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => setSyncResult(null)}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '0.9rem' }}
+            >
+              ✕
+            </button>
+          </div>
+        )}
 
         {/* Dashboard: Metadata + Progress */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '1rem', marginBottom: '1rem' }}>

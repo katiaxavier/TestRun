@@ -1,7 +1,7 @@
 # Regras de Negócio — TestRun
 
-**Versão:** 2.4  
-**Data:** 03/08/2026  
+**Versão:** 2.5  
+**Data:** 06/08/2026  
 **Sistema:** TestRun — Plataforma de Gestão de Testes de QA
 
 ---
@@ -181,6 +181,7 @@ Override, por Quadro, dos prazos de SLA usados na aba Eficiência do Dashboard (
 - Falhas de importação individuais **não abortam o lote de sincronização**: as suítes que falharem são reportadas separadamente (`failed: [{ key, error }]`), e as demais são sincronizadas normalmente.
 - Uma suíte já existente que é sincronizada por um novo quadro **ganha esse quadro adicionalmente** — a associação com quadros anteriores não é removida (relação muitos-para-muitos: a mesma suíte pode pertencer a mais de um quadro ao mesmo tempo).
 - Chamadas ao Jira durante a sincronização re-tentam automaticamente em caso de erro `429` (rate limit), respeitando o header `Retry-After` (com backoff exponencial como alternativa).
+- Sincronizar a suíte **não** atualiza as execuções já criadas a partir dela; para isso existe a sincronização no nível da execução (ver 4.4), que engloba esta etapa de importação do Jira.
 
 ---
 
@@ -190,6 +191,7 @@ Override, por Quadro, dos prazos de SLA usados na aba Eficiência do Dashboard (
 - A suíte deve existir e possuir ao menos um caso de teste.
 - Os campos obrigatórios são: sprint, data de início, data de término, responsável. Versão é opcional (assume `''` se omitida).
 - Ao criar, todos os casos de teste da suíte são copiados para a execução como `ExecutionTestCase` com status `PENDING`.
+- A execução nasce como um snapshot da suíte naquele momento; para trazer para dentro dela o que foi criado depois, existe a sincronização da execução (ver 4.4).
 
 ### 4.2 Status da Execução (Calculado Automaticamente)
 O status é recalculado sempre que qualquer caso de teste da execução é atualizado:
@@ -203,6 +205,24 @@ Nenhum PENDING             → COMPLETED
 ### 4.3 Atualização de Casos de Teste
 - Status, responsável e comentários podem ser editados individualmente.
 - Valores de status são sempre normalizados para maiúsculas.
+
+### 4.4 Sincronização de Casos de Teste na Execução
+Um ciclo em andamento pode precisar cobrir casos de teste criados **depois** da sua abertura. Em vez de exigir um ciclo novo, a tela de Execução tem um botão **Sincronizar** (`POST /executions/:id/sync`) que atualiza a execução em um único passo.
+
+**O que a sincronização faz, nesta ordem:**
+1. **Atualiza as suítes de origem a partir do Jira**, reaproveitando a mesma regra da sincronização de suítes (ver 3.7 e 3.2). Execução de suíte → uma suíte; execução de lote → todas as suítes do lote. Suítes manuais (sem `jiraKey`) são puladas nesta etapa, já que não têm origem no Jira.
+2. **Adiciona à execução os casos de teste da suíte que ainda não estão nela**, com status `PENDING`, responsável = usuário logado, e um `Scenario` `PENDING` para cada cenário template do caso.
+3. **Adiciona os cenários template que faltam** nos casos de teste que já estavam na execução, aplicando as mesmas regras de criação de cenário (ver 5.1, 5.2 e 5.7): unicidade por nome dentro do TC, migração das issues quando é o primeiro cenário do item e gravação do `originalStatus`.
+4. **Recalcula os status derivados** dos casos afetados e da execução (ver 4.2 e 5.6). Um caso que estava `PASSED` e ganhou um cenário novo volta a `PENDING`/`IN_PROGRESS` — corretamente, pois há algo novo a testar; a restauração via `originalStatus` (ver 5.5) continua valendo.
+
+**Regras e limites:**
+- **A sincronização nunca remove nem altera o que já foi testado.** Ela só adiciona: status, responsáveis, comentários, cenários e issues existentes permanecem intactos.
+- Casos de teste que sumiram da suíte (ou do Jira) **não** são removidos da execução — mesma política da sincronização de suítes (ver 3.7), que também nunca apaga.
+- **É um espelho da suíte:** um caso de teste removido manualmente da execução volta a ser adicionado na próxima sincronização. Não há lista de exclusões no nível da execução.
+- Em execução de lote, os TCs em `excludedTestCaseIds` continuam sendo respeitados e **não** são adicionados (ver 8.3).
+- Falhas de importação do Jira **não abortam a sincronização**: são reportadas separadamente (`jiraFailed: [{ key, error }]`) e o restante — o cruzamento local entre suíte e execução — roda normalmente, mesmo espírito do fail-safe de 6.4.
+- A operação é idempotente: sincronizar de novo sem novidade não duplica nada e não altera status.
+- Retorno: `{ addedTestCases: [{ jiraKey, title }], addedScenarios, jiraFailed }`, exibido na tela como um resumo com a lista dos casos adicionados.
 
 ---
 
@@ -247,9 +267,10 @@ Quando o último cenário de um `ExecutionTestCase` é excluído:
 **Ad-hoc na execução com template de mesmo nome já existente na suíte:** o cenário é criado normalmente na execução, e o `templateId` é vinculado ao template já existente na suíte — nenhum template novo é criado.
 
 ### 5.8 Adição de Cenário Template após Execução Criada
-- Cenários template (`TestCaseScenario`) adicionados à lista de TCs de uma suíte ou lote **após** a criação de uma execução **não afetam execuções já existentes**.
-- A execução é um snapshot imutável do momento de sua criação (ver 4.1 e 8.3); templates adicionados posteriormente só terão efeito em **execuções futuras**.
-- Para refletir o novo template em uma execução em andamento, o testador deve criar o cenário manualmente de forma ad-hoc (ver 5.4).
+- Cenários template (`TestCaseScenario`) adicionados à lista de TCs de uma suíte ou lote **após** a criação de uma execução não entram automaticamente nas execuções já existentes — a execução nasce como um snapshot do momento de sua criação (ver 4.1 e 8.3) e não é atualizada em background.
+- Para trazê-los para uma execução em andamento há dois caminhos:
+  - **Sincronizar a execução** (ver 4.4): traz de uma vez todos os templates que faltam, em todos os casos de teste do ciclo.
+  - **Criar o cenário ad-hoc** no próprio caso de teste (ver 5.4), quando se quer apenas um cenário pontual.
 
 ---
 
@@ -313,7 +334,7 @@ Isso evita dupla contagem e reflete fielmente o progresso real da execução.
 ### 8.3 Exclusão de TC do Lote
 - O TC é adicionado à lista `excludedTestCaseIds` do lote.
 - Não remove o TC da suíte original; apenas o omite nas execuções **futuras** daquele lote.
-- **Execuções já criadas são imutáveis (snapshot):** a exclusão de um TC do lote não altera execuções existentes.
+- **Execuções já criadas são imutáveis (snapshot):** a exclusão de um TC do lote não altera execuções existentes. A sincronização da execução (ver 4.4) também não o reintroduz — TCs excluídos do lote continuam sendo respeitados.
 - **Não é permitido remover o último TC ativo do lote.** Se a operação resultaria em zero TCs ativos, ela é bloqueada com mensagem orientando o usuário a excluir o lote inteiro caso queira encerrá-lo.
 
 ### 8.4 Remoção Automática de Suítes "Esvaziadas"

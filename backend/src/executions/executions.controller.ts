@@ -80,6 +80,12 @@ export class ExecutionsController {
     return this.executionsService.create(dto, user.displayName);
   }
 
+  @Post(':id/sync')
+  @ProjectAccess('execution')
+  async sync(@Param('id') id: string, @CurrentUser() user: User) {
+    return this.executionsService.syncExecution(id, user.id, user.displayName);
+  }
+
   @Delete(':id')
   @ProjectAccess('execution')
   async delete(@Param('id') id: string) {
