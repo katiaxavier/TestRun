@@ -260,7 +260,7 @@ Em ambos os casos o status da execução é recalculado em seguida, e a resposta
 
 ### 5.6 Impacto dos Cenários no Status do TC
 - Enquanto o TC tem cenários ativos, seu status não é exibido nas células de resultado (fica em branco nos relatórios) para evitar dupla contagem.
-- Na tabela da tela de Execução, a célula exibe no lugar a quantidade de cenários e, abaixo dela, a quebra por status — um selo por status presente, no mesmo estilo dos demais selos de status (cor + ponto) e com o detalhe por extenso em tooltip. É informação dos cenários, não do TC: o status do próprio TC continua oculto ali.
+- Na tabela da tela de Execução, a célula exibe no lugar a quantidade de cenários; passando o mouse sobre ela, um tooltip mostra a quebra por status (ex.: "2 passou / 1 falhou", com o ponto na cor de cada status). É informação dos cenários, não do TC: o status do próprio TC continua oculto ali.
 - O status do TC segue sendo calculado e gravado mesmo quando oculto, porque alimenta o status da execução (ver 4.2), que agrega o `status` de todos os `ExecutionTestCase`.
 
 ### 5.7 Unicidade de Nome de Cenário por TC

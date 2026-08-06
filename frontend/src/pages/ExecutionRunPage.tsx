@@ -1834,24 +1834,23 @@ export default function ExecutionRunPage() {
                       </td>
                       <td>
                         {(etc.scenarios?.length ?? 0) > 0 ? (
-                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '0.3rem' }}>
+                          <Tooltip
+                            placement="top"
+                            content={
+                              <span style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                {scenarioBreakdown(etc.scenarios).map(b => (
+                                  <span key={b.status} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: STATUS_COLORS[b.status], display: 'inline-block', flexShrink: 0 }} />
+                                    {b.count} {STATUS_LABELS[b.status].toLowerCase()}
+                                  </span>
+                                ))}
+                              </span>
+                            }
+                          >
                             <span className="tag">
                               {etc.scenarios.length} cenário{etc.scenarios.length !== 1 ? 's' : ''}
                             </span>
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem' }}>
-                              {scenarioBreakdown(etc.scenarios).map(b => (
-                                <Tooltip key={b.status} content={`${b.count} ${STATUS_LABELS[b.status].toLowerCase()}`} placement="top">
-                                  <span
-                                    className={`status-badge status-${b.status.toLowerCase()}`}
-                                    style={{ padding: '0.15rem 0.5rem', fontSize: '0.7rem', gap: '0.3rem' }}
-                                  >
-                                    <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'currentColor', display: 'inline-block', flexShrink: 0 }} />
-                                    {b.count}
-                                  </span>
-                                </Tooltip>
-                              ))}
-                            </div>
-                          </div>
+                          </Tooltip>
                         ) : (
                           <StatusBadge status={etc.status} />
                         )}
