@@ -38,7 +38,12 @@ O **TestRun** é uma aplicação web de QA que centraliza a gestão de ciclos de
 
 ### Backend
 ```
-NestJS 11 | TypeScript | Prisma ORM | PostgreSQL | Node.js 20
+NestJS 11 | TypeScript | Node.js 20
+```
+
+### Banco de Dados
+```
+PostgreSQL 16 | Prisma ORM 6 (migrations versionadas)
 ```
 
 ### Frontend
@@ -50,32 +55,64 @@ React 19 | TypeScript | Vite 8 | Tailwind CSS 4 | Recharts | Framer Motion
 
 ## Modelo de Dados
 
-```
-Suite
-├── TestCase[]
-│   └── TestCaseScenario[]   (templates de cenários)
-└── Execution[]
-    └── ExecutionTestCase[]
-        ├── Scenario[]        (execução dos cenários)
-        │   └── Issue[]
-        └── Issue[]
+O modelo se organiza em duas metades. O **catálogo** (`Suite` → `TestCase` → `TestCaseScenario`) é o
+que se cadastra uma vez: o que existe para ser testado. O **registro de execução**
+(`Execution` → `ExecutionTestCase` → `Scenario`) é copiado do catálogo quando um ciclo é aberto e
+guarda os resultados daquele ciclo. Por isso as entidades vêm em pares — o mesmo caso de teste tem um
+`ExecutionTestCase` por ciclo em que participou, sem que um histórico interfira no outro.
 
-ExecutionBatch
-└── Execution[]              (lote de múltiplas suites)
+Acima de tudo isso está o **Projeto** do Jira, que é a raiz do escopo e o nível de compartilhamento.
+
+```
+User
+└── ProjectMembership[]      (cache de acesso do usuário ao projeto)
+
+Project                      ← raiz: tudo pertence a um projeto
+├── Board[]                  (quadros do Jira dentro do projeto)
+├── BoardSlaConfig[]         (prazos de SLA customizados por quadro)
+├── ExecutionBatch[]
+│   └── Execution[]          (lote de múltiplas suítes → uma execução por suíte)
+└── Suite[]                  ↔ Board[]  (muitos-para-muitos)
+    ├── TestCase[]
+    │   └── TestCaseScenario[]   (templates de cenários)
+    └── Execution[]
+        └── ExecutionTestCase[]
+            ├── Scenario[]        (execução dos cenários)
+            │   └── Issue[]
+            └── Issue[]
 ```
 
 ### Entidades
 
+**Contexto e acesso**
+
 | Entidade | Descrição |
 |---|---|
-| **Suite** | Agrupa casos de teste — importada do Jira ou criada manualmente |
-| **TestCase** | Caso de teste com chave Jira, título e prioridade |
+| **User** | Conta local criada a partir do login OAuth com a Atlassian; guarda os tokens cifrados |
+| **Project** | Espelha um projeto do Jira — raiz do escopo e nível de compartilhamento entre usuários |
+| **Board** | Quadro (board) do Jira dentro de um projeto; segmenta a sincronização de suítes |
+| **ProjectMembership** | Cache de "este usuário pode acessar este projeto no Jira", usado na autorização |
+| **BoardSlaConfig** | Prazos de SLA customizados por quadro, usados na aba Eficiência do Dashboard |
+
+**Catálogo — o que existe para testar**
+
+| Entidade | Descrição |
+|---|---|
+| **Suite** | Agrupa casos de teste — importada do Jira ou criada manualmente. Pertence a um projeto e pode estar em vários quadros ao mesmo tempo |
+| **TestCase** | Caso de teste com chave Jira, título, prioridade e marcação de automação |
 | **TestCaseScenario** | Template de cenário reutilizável vinculado a um caso de teste |
+
+**Execução — o que aconteceu em cada ciclo**
+
+| Entidade | Descrição |
+|---|---|
 | **Execution** | Ciclo de execução de uma suite (sprint, versão, responsável, datas) |
-| **ExecutionBatch** | Lote que agrupa múltiplas suites numa execução unificada |
-| **ExecutionTestCase** | Resultado de um caso de teste numa execução (Pass/Fail/Blocked) |
+| **ExecutionBatch** | Lote que agrupa múltiplas suites; gera uma execução por suite |
+| **ExecutionTestCase** | Resultado de um caso de teste numa execução (Pass/Fail/Blocked/Pending) |
 | **Scenario** | Execução de um cenário específico dentro de um caso de teste |
-| **Issue** | Bug ou melhoria vinculado a um caso de teste ou cenário |
+| **Issue** | Bug ou melhoria vinculado a um caso de teste **ou** a um cenário |
+
+> As regras de cada campo estão detalhadas na seção 2 do [REGRAS_DE_NEGOCIO.md](REGRAS_DE_NEGOCIO.md).
 
 ---
 
@@ -166,7 +203,7 @@ O Docker vai recompilar as imagens e, se houver alterações no schema do banco,
 
 - **Node.js** >= 20
 - **npm**
-- **PostgreSQL** >= 14 rodando localmente (ou via `docker compose up -d postgres`)
+- **PostgreSQL** >= 14 rodando localmente (ou via `docker compose up -d postgres`, que sobe a 16)
 
 ### Passo a passo
 
