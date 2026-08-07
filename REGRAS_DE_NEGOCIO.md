@@ -1,7 +1,7 @@
 # Regras de Negócio — TestRun
 
-**Versão:** 2.5  
-**Data:** 06/08/2026  
+**Versão:** 2.6  
+**Data:** 07/08/2026  
 **Sistema:** TestRun — Plataforma de Gestão de Testes de QA
 
 ---
@@ -63,7 +63,7 @@ Conjunto de casos de teste. Pode ser criada manualmente ou importada do Jira. Pe
 | `manualKey` | string (opcional) | Preenchido apenas em suítes manuais (ex.: `SUITE-001`, gerado automaticamente); único por projeto (`projectId` + `manualKey`) |
 | `title` | string | Obrigatório |
 | `isManual` | boolean | `true` = criada manualmente; `false` = importada do Jira |
-| `epicKey`, `epicSummary` | string (opcionais) | Chave e resumo do Epic do Jira associado; usados no cálculo de cobertura de requisitos do Dashboard (ver 17.2) |
+| `epicKey`, `epicSummary` | string (opcionais) | Chave e resumo do Epic do Jira associado; alimentam a cobertura de épicos do Dashboard, hoje calculada mas não exibida (ver 17.3) |
 
 ### 2.6 Caso de Teste (`TestCase`)
 Item individual de teste pertencente a uma suíte.
@@ -72,7 +72,7 @@ Item individual de teste pertencente a uma suíte.
 |---|---|---|
 | `jiraKey` | string | Obrigatório (mesmo para suítes manuais) |
 | `priority` | string | Importada do Jira ou definida manualmente |
-| `automated` | boolean | `default false`; marca se o caso é coberto por automação — alimenta a métrica de cobertura de automação do Dashboard (ver 17.2) |
+| `automated` | boolean | `default false`; marca se o caso é coberto por automação — alimenta a métrica de automação do Dashboard (ver 17.3) |
 | `link` | string (opcional) | Link do ticket no Jira |
 | `suiteId` | FK | Cada caso pertence a exatamente uma suíte |
 
@@ -117,7 +117,7 @@ Bug ou melhoria vinculado a um caso de teste ou a um cenário.
 | `title` | string — obrigatório; snapshot gravado na vinculação, reatualizado ao vivo na tela de Execução (ver 6.4) |
 | `severity` | Campo legado, preenchido manualmente: Trivial, Normal, Low, Medium, High, Critical, Gravissima |
 | `jiraPriority` | Campo atual, gravado a partir do Jira no momento da vinculação — tem prioridade sobre `severity` sempre que ambos existem (`severity` só é usado como fallback em registros antigos, ex.: em relatórios). Reatualizado ao vivo na tela de Execução quando há `jiraKey` (ver 6.4) |
-| `jiraLabels` | string[] — labels do Jira; usado no cálculo de "Densidade por Label" do Dashboard (ver 17.2). Reatualizado ao vivo na tela de Execução quando há `jiraKey` (ver 6.4) |
+| `jiraLabels` | string[] — labels do Jira; usado no cálculo de "Densidade por Label" do Dashboard (ver 17.3). Reatualizado ao vivo na tela de Execução quando há `jiraKey` (ver 6.4) |
 | `status` | Open, In Progress, Resolved, Cancelled — reatualizado ao vivo na tela de Execução quando há `jiraKey` (ver 6.4) |
 
 ### 2.12 Lote (`ExecutionBatch`)
@@ -190,6 +190,7 @@ Override, por Quadro, dos prazos de SLA usados na aba Eficiência do Dashboard (
 ### 4.1 Criação de Execução
 - A suíte deve existir e possuir ao menos um caso de teste.
 - Os campos obrigatórios são: sprint, data de início, data de término, responsável. Versão é opcional (assume `''` se omitida).
+- O **responsável** vem pré-preenchido com o usuário logado e pode ser trocado por qualquer pessoa atribuível no projeto, buscada ao vivo no Jira (`GET /jira-users/picker`, que consulta `/rest/api/3/user/assignable/search` — ver 11.2). O valor gravado é o nome de exibição, não uma FK: a execução não fica vinculada a um `User` do TestRun.
 - Ao criar, todos os casos de teste da suíte são copiados para a execução como `ExecutionTestCase` com status `PENDING`.
 - A execução nasce como um snapshot da suíte naquele momento; para trazer para dentro dela o que foi criado depois, existe a sincronização da execução (ver 4.4).
 
@@ -413,11 +414,16 @@ Isso evita dupla contagem e reflete fielmente o progresso real da execução.
 | Finalidade | Endpoint Jira |
 |---|---|
 | Recursos acessíveis / cloudId | `GET https://api.atlassian.com/oauth/token/accessible-resources` |
-| Perfil do usuário logado | `GET https://api.atlassian.com/me` |
+| Perfil do usuário logado | `GET https://api.atlassian.com/me` e `GET /rest/api/3/myself` |
 | Listar projetos acessíveis | `GET /rest/api/3/project/search` (paginado) |
-| Buscar quadros de um projeto | API Agile do Jira (`/rest/agile/1.0/board`) |
+| Buscar quadros de um projeto | `GET /rest/agile/1.0/board` (API Agile) |
+| Listar issues de um quadro | `GET /rest/agile/1.0/board/{id}/issue` — paginação clássica (`startAt`/`total`), diferente do `/search/jql` usado nos demais pontos |
 | Buscar suítes ("Test Suite") de um quadro | `POST /rest/api/3/search/jql` (JQL, paginação por `nextPageToken`) |
 | Buscar detalhes de issue | `GET /rest/api/3/issue/{key}` |
+| Contar issues por JQL (ex.: Épicos, ver 17.3) | `POST /rest/api/3/search/approximate-count` |
+| Resolver o filtro JQL de um quadro | `GET /rest/agile/1.0/board/{id}/configuration` → `GET /rest/api/3/filter/{id}` |
+| Pessoas atribuíveis (seletor de responsável, ver 4.1) | `GET /rest/api/3/user/assignable/search` — exige o escopo `read:jira-user` |
+| Valores de filtro da tela Bugs e Melhorias (ver 18.1) | `GET /rest/api/3/project/{key}/statuses` e `GET /rest/api/3/priority` |
 
 O endpoint clássico `GET/POST /rest/api/3/search` foi **descontinuado pela Atlassian** (retorna `410 Gone`);
 qualquer busca de issues por JQL deve usar `/rest/api/3/search/jql`.
@@ -558,14 +564,23 @@ Não há restrição de transição; o testador pode alterar para qualquer statu
 - Mesmo escopo de dados do restante do sistema: Projeto + Quadro selecionados na sidebar. Uma aba só busca seus dados na primeira vez que é visitada; depois permanece montada (não refaz a busca ao trocar de aba).
 
 ### 17.2 Aba Operação
-- Conteúdo herdado do antigo dashboard: KPIs gerais, execuções em andamento, últimas 3 execuções concluídas, totais de bugs/melhorias, issues recentes, lista de "pronto para teste" e gráfico de taxa de sucesso.
-- Reaproveita os mesmos endpoints de Execuções/Issues; não tem endpoint de backend próprio.
+Não tem endpoint de backend próprio: reaproveita os endpoints de Execuções (`GET /executions/recent`) e de issues ao vivo do Jira (`GET /jira-issues`). Seções, na ordem em que aparecem:
+- **Atenção**: alertas derivados em memória, sem endpoint próprio — bugs *Ready for Test* aguardando validação, execuções concluídas com item reprovado e execuções concluídas com item bloqueado (as duas últimas calculadas sobre as últimas 3 concluídas). Sem nenhuma condição atendida, a seção exibe "Tudo certo".
+- **KPIs**: execuções em andamento, bugs *Ready for Test*, melhorias *Ready for Test* e taxa de sucesso. As contagens de bug/melhoria são as issues do Jira no status "Ready for test" — não os totais de issues do quadro nem as issues registradas nas execuções do TestRun.
+- **Ready for Test**: tabela com as issues do Jira nesse status (teto de 100 itens, limite de `pageSize` do endpoint). Se o workflow do quadro não tiver um status "Ready for test", a tabela informa isso em vez de aparecer vazia.
+- **Últimos Bugs e Melhorias Criados**: issues do Jira mais recentes do quadro.
+- **Execuções em Andamento** e **Últimas Execuções Concluídas** (limitadas a 3), com polling a cada 15s enquanto houver execução ativa — mesmo comportamento de 16.2.
+- **Qualidade**: gráfico de taxa de sucesso por execução concluída, ao longo das últimas 3.
+- As seções que consultam o Jira ao vivo (Ready for Test, últimos bugs/melhorias e o alerta de bugs aguardando validação) ficam indisponíveis quando o quadro selecionado é o pseudo-quadro "Sem quadro" (`boardId === 'none'`), pela mesma razão de 18.1. As seções de execuções continuam funcionando normalmente.
 
 ### 17.3 Aba Qualidade (`GET /dashboard/quality`)
 - Considera as últimas 10 execuções `COMPLETED` escopadas a Projeto+Quadro.
 - **Densidade por Label**: conta apenas bugs (`type = BUG`; melhorias são ignoradas), deduplicados globalmente por `jiraKey`, agrupados pela combinação ordenada de `jiraLabels` (labels concatenadas com `" + "`; sem label → `"Sem label"`). Exibida como tabela (não como gráfico de barras).
 - **Taxa de Sucesso × Severidade**: por execução concluída, bugs distintos (deduplicados dentro da execução) agrupados por `jiraPriority` (sem prioridade → `"Sem severidade"`), com `totalTests`/`failedTests` como contexto no tooltip.
-- **Cobertura de requisitos e automação**: `epicsWithSuite` = quantidade de `epicKey` distintos entre as suítes do projeto (contagem no nível do projeto, não do quadro, pois quadros não têm conceito de Epic no Jira); `totalEpics` = total de issues tipo Epic no projeto no Jira (não calculado para o projeto sentinela `MANUAL`); `totalTestCases`/`automatedTestCases` = contagem de `TestCase.automated`, escopada ao quadro.
+- **Casos de Teste + Automação**: `totalTestCases`/`automatedTestCases` = contagem de `TestCase` e de `TestCase.automated`, escopadas ao Projeto+Quadro.
+- **Cobertura de épicos** (calculada, mas não exibida): o endpoint continua devolvendo `coverage.epicsWithSuite` (quantidade de `epicKey` distintos entre as suítes do escopo) e `coverage.totalEpics`, mas os cards que mostravam esses números foram removidos da aba. Os campos seguem no contrato da API e não devem ser tratados como mortos.
+  - `totalEpics` é escopado ao quadro quando há um selecionado, usando o **filtro JQL real do board** (`JiraService.countEpicsByBoard`). Como o filtro de um board pode combinar quaisquer critérios (só projeto, ou projeto + status + labels) e raramente restringe `issuetype`, entram na conta os Épicos que também atendam a esses critérios. Sem `boardId` (ou em "Sem quadro"), vale o projeto inteiro; para o projeto sentinela `MANUAL` a contagem não é feita (`0`).
+  - `epicsWithSuite` usa o mesmo filtro de quadro das Suítes, para numerador e denominador ficarem no mesmo escopo.
 
 ### 17.4 Aba Eficiência (`GET /dashboard/efficiency`)
 - Busca **todos** os bugs do Jira do Projeto/Quadro diretamente (não só os que passaram por execuções no TestRun), paginado.

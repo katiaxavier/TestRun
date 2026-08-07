@@ -30,6 +30,7 @@ O **TestRun** é uma aplicação web de QA que centraliza a gestão de ciclos de
 - **Interface guiada** para execução de testes (Pass / Fail / Blocked)
 - **Rastreamento de issues** (bugs e melhorias) por caso de teste e por cenário
 - **Geração automática** de relatórios em .xlsx e .pdf
+- **Tema claro e escuro**, com a preferência mantida entre sessões
 
 ---
 
@@ -212,9 +213,11 @@ TestRun/
 │   │   ├── executions/      # Execuções individuais e lotes (batch)
 │   │   ├── jira/            # Integração com a API do Jira
 │   │   ├── jira-issues/     # Listagem ao vivo de bugs/melhorias do Jira
-│   │   ├── dashboard/       # KPIs de Operação, Qualidade e Eficiência
+│   │   ├── jira-users/      # Busca de pessoas atribuíveis (seletor de responsável)
+│   │   ├── dashboard/       # KPIs de Operação, Qualidade e Eficiência + config de SLA
 │   │   ├── reports/         # Geração de relatórios .xlsx e .pdf
 │   │   ├── suites/          # Suites, casos de teste e cenários
+│   │   ├── common/          # Utilitários compartilhados (cifragem de tokens)
 │   │   └── prisma/          # Serviço do Prisma ORM
 │   ├── prisma/
 │   │   ├── schema.prisma    # Schema do banco de dados (PostgreSQL)
@@ -226,7 +229,11 @@ TestRun/
 │   │   ├── components/
 │   │   │   ├── ProjectSelector.tsx     # Seleção de projeto (Espaço) na sidebar
 │   │   │   ├── BoardSelector.tsx       # Seleção de quadro na sidebar
+│   │   │   ├── JiraUserPicker.tsx      # Seletor de responsável com busca no Jira
+│   │   │   ├── ThemeToggle.tsx         # Alternância entre tema claro e escuro
 │   │   │   └── ...                     # Demais componentes reutilizáveis
+│   │   ├── context/
+│   │   │   └── ThemeContext.tsx        # Estado do tema (claro/escuro)
 │   │   ├── pages/
 │   │   │   ├── LoginPage.tsx           # Login via OAuth Atlassian
 │   │   │   ├── HomePage.tsx            # Dashboard (home): abas Operação / Qualidade / Eficiência
@@ -242,6 +249,8 @@ TestRun/
 │   │       └── client.ts    # Cliente HTTP (Axios)
 │   └── Dockerfile
 │
+├── planos/                  # Planos de feature (documentos de planejamento)
+├── REGRAS_DE_NEGOCIO.md     # Regras de negócio detalhadas
 └── docker-compose.yml
 ```
 
@@ -252,10 +261,12 @@ TestRun/
 ### Dashboard
 
 - Tela inicial (`/dashboard`) com três abas, cada uma respondendo a uma pergunta central:
-  - **Operação** — "O que está acontecendo agora?": execuções em andamento, últimas execuções concluídas, totais de bugs/melhorias e taxa de sucesso
-  - **Qualidade** — "Qual a saúde do produto?": densidade de bugs por label, taxa de sucesso por severidade e cobertura de requisitos/automação
-  - **Eficiência** — "Estamos resolvendo os problemas no tempo esperado?": MTTR, idade dos bugs em aberto e SLA em 3 estados (dentro do prazo, próximo do prazo, violado)
+  - **Operação** — "O que está acontecendo agora?": seção *Atenção* com o que precisa de ação, KPIs (execuções em andamento, bugs e melhorias *Ready for Test*, taxa de sucesso), tabela *Ready for Test* com as issues do Jira nesse status, últimos bugs e melhorias criados, execuções em andamento e últimas execuções concluídas
+  - **Qualidade** — "Qual a saúde do produto?": densidade de defeitos por label, taxa de sucesso × severidade e casos de teste + automação
+  - **Eficiência** — "Estamos resolvendo os problemas no tempo esperado?": MTTR (média, mediana, P90 e tendência), idade dos defeitos em aberto, SLA em 3 estados (dentro do prazo, próximo do prazo, acima do prazo) e a lista dos bugs acima do SLA
+- **Prazos de SLA editáveis por quadro**: na aba Eficiência é possível ajustar o prazo (em dias) de cada prioridade e restaurar os valores padrão a qualquer momento
 - Escopado ao Projeto+Quadro selecionados na sidebar; cada aba busca seus dados só na primeira vez que é visitada
+- As tabelas *Ready for Test* e *Últimos Bugs e Melhorias Criados* consultam o Jira ao vivo e ficam indisponíveis quando o quadro selecionado é "Sem quadro"
 
 ### Execuções
 
@@ -267,7 +278,7 @@ TestRun/
 
 ### Todas as Execuções
 
-- Tela (`/executions`) acessível pela sidebar ou pelo botão "Ver mais" na seção "Últimas Execuções" da tela Execuções
+- Tela (`/executions`) acessível pela sidebar ou pelo link "Ver todas" na seção "Últimas Execuções" da tela Execuções
 - Lista todas as execuções (individuais e de lote) do Projeto+Quadro selecionado, com paginação (10/25/50/100 itens por página)
 - Filtros por **status** (Em Andamento / Concluído / Pendente) e por **período** (data início e fim)
 
@@ -282,17 +293,25 @@ TestRun/
 - Cada caso tem chave (ID), título, link e prioridade
 - Suporte a **templates de cenários**: pré-cadastre os cenários que serão executados em cada ciclo
 
-### Execuções
+### Ciclos de Execução
 
 - **Execução individual**: vinculada a uma suite, com sprint, versão, datas, responsável
 - **Lote de execução (Batch)**: agrupa múltiplas suites em um único ciclo de teste
   - Permite excluir casos de teste específicos do lote
   - Gera uma execução por suite dentro do lote
+- **Responsável**: vem pré-preenchido com o usuário logado e pode ser trocado por qualquer pessoa
+  atribuível no projeto, buscada ao vivo no Jira
+- **Sincronizar (`POST /executions/:id/sync`)**: atualiza a(s) suíte(s) de origem a partir do Jira e
+  traz para dentro do ciclo em andamento os casos de teste e cenários que faltavam. A operação só
+  adiciona — nada que já foi testado é removido ou alterado — e é idempotente. Suítes manuais são
+  puladas e o lote respeita os casos excluídos dele
 
 ### Registro de Resultados
 
 - Status por caso de teste: **Pass / Fail / Blocked / Pending**
-- Status por cenário (quando configurados)
+- Status por cenário (quando configurados) — o status do caso é derivado automaticamente dos
+  cenários, inclusive quando um cenário é excluído
+- Na tabela da execução, a contagem de cenários mostra a quebra por status num tooltip
 - Registro de comentários por caso/cenário
 - Registro de issues (bugs e melhorias) vinculados ao caso ou ao cenário
   - Campos: tipo, chave Jira, título, severidade, status
@@ -319,6 +338,13 @@ TestRun/
   - Detalhamento dos casos de teste com status colorido (cenários como sublinhas)
   - Tabela de bugs e melhorias reportados
   - Rodapé com data de geração e paginação
+
+### Interface
+
+- **Tema claro e escuro**, alternável pelo botão na barra superior (e também na tela de login).
+  A escolha é persistida entre sessões
+- Cores, espaçamentos e tipografia (DM Sans / Bricolage Grotesque) centralizados em tokens CSS,
+  aplicados aos dois temas
 
 ### Projetos e Quadros
 
@@ -406,11 +432,17 @@ grupo, é necessário fazer logout/login (grupos não são recarregados em sess�
 
 Verifique se o backend está rodando em `http://localhost:3000`. O frontend assume essa URL por padrão.
 
-**Erro de credenciais Jira**
+**Erro no login / acesso ao Jira**
 
-- Confirme que o token API não expirou
-- Verifique se o e-mail é o mesmo da conta Atlassian
-- Teste manualmente: `curl -u email:token https://sua-empresa.atlassian.net/rest/api/3/myself`
+- Confirme que `ATLASSIAN_CLIENT_ID`, `ATLASSIAN_CLIENT_SECRET` e `OAUTH_REDIRECT_URI` estão
+  preenchidos no `.env` e que a Callback URL registrada no console da Atlassian é exatamente a mesma
+  de `OAUTH_REDIRECT_URI`
+- Verifique se todos os escopos listados em [Integração com o Jira](#integração-com-o-jira) estão
+  habilitados no app. Ao adicionar um escopo novo é preciso deslogar e logar de novo para o
+  consentimento ser pedido outra vez
+- Se a conta Atlassian tem acesso a mais de um site Jira, fixe o site em `JIRA_CLOUD_ID`
+- Só aparece no TestRun o que a conta logada já enxerga no Jira — se um projeto ou quadro não
+  aparecer, confirme a permissão dessa conta no próprio Jira
 
 ---
 
@@ -425,3 +457,6 @@ Verifique se o backend está rodando em `http://localhost:3000`. O frontend assu
 - [x] Autorização por projeto (acesso espelhado do Jira)
 - [x] Dashboard (Operação / Qualidade / Eficiência)
 - [x] Tela "Bugs e Melhorias" com listagem ao vivo do Jira
+- [x] Prazos de SLA editáveis por quadro
+- [x] Sincronizar casos de teste dentro de uma execução em andamento
+- [x] Tema claro e escuro
